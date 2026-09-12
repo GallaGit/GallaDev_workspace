@@ -4,7 +4,9 @@
 **App:** raíz de este repositorio  
 **Stack:** Next.js App Router, React, TypeScript, Tailwind, shadcn/ui, Lucide
 
-No reabrir las decisiones de producto salvo petición explícita. Notion sigue siendo la fuente de verdad; no introducir Supabase como DB primaria en estas fases.
+Producto v1.0: 8 fases completadas (ver REPORTE_VERIFICACION_ROADMAP.md).
+Decision DB v2.0: Sustituir Notion por Supabase (PostgreSQL) — planificado en v2.0 Core Features.
+No reabrir decisiones v1 salvo que sean los items explicitly planificados en v2.0.
 
 **Alineación n8n (2026-09-10):** el workflow de captación escribe estado `Nuevo`, `Origen=n8n`, email plano y cuerpo vacío; filtro operativo 3–10 empleados. Detalle en [`INTEGRACIONES.md`](./INTEGRACIONES.md). Webhooks CRM → n8n siguen fuera de v1 (decisión #12).
 
@@ -110,11 +112,99 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 
 ---
 
-## Fuera de roadmap v1
+## v2.0 — Core Features (Planificación 2026-09 en adelante)
 
-- Multi-usuario, roles, billing  
-- Tags / Responsable  
-- Sustituir Notion por otra DB  
-- Envío automático de email / marketing automation  
-- Añadir webhooks al workflow n8n (solo preparar el cliente)  
-- Optimización mobile exhaustiva  
+**Decision strategica**: Sustituir Notion por Supabase (PostgreSQL) para habilitar multi-usuario, roles, billing y reemplazar DB fuente de verdad.
+
+**Arquitectura v2.0**:
+- Supabase: Proyecto creado, RLS policies, schema leads (status enum, tags text[], responsable UUID)
+- Billing: Stripe integration (planes Free/Pro/Enterprise, webhooks)
+- n8n: Node migration from Notion a Supabase/PostgreSQL/HTTP (documentado pero pospuesto v2.1)
+- Email marketing: SendGrid/Mailgun triggers por status changes y tag updates
+- Real-time: Supabase subscriptions para triggers instantáneos
+
+### Fases v2.0
+
+#### Fase 1 — Supabase Setup & Migration (Semana 1-2)
+- [ ] Proyecto Supabase creado y configurado
+- [ ] Migración Notion → Supabase: CSV import leads, tags, users
+- [ ] Schema definition: leads table con status enum, tags text[], responsable UUID
+- [ ] Row-level security policies implementadas
+- [ ] Stripe integration preparada (webhooks endpoints)
+- [ ] n8n nodes actualizados: Replace Notion nodes con Supabase/PostgreSQL/HTTP nodes
+- [ ] Test migration: Validar leads migrados correctamente
+
+#### Fase 2 — Multi-usuario & Roles (Semana 2-3)
+- [ ] Roles definidos: Admin, Vendedor, Viewer
+- [ ] Permisos RLS por rol (solo sus leads, ver todos, solo lectura)
+- [ ] Autenticación: NextAuth.js + Supabase JWT
+- [ ] Routing protegido: Routes `/leads`, `/kanban`, `/settings` por rol
+- [ ] n8n workflows: Actualizados triggers con contexto usuario
+
+#### Fase 3 — Tags / Responsable & Billing (Semana 3-4)
+- [ ] UI Tags: Chips component con autocomplete tags
+- [ ] Assign Responsable: Dropdown users per lead
+- [ ] Billing UI: Plan selector, subscription status display
+- [ ] Email triggers: Status change → SendGrid notification
+- [ ] Marketing basic: Tag-based segmentation
+
+#### Fase 4 — Webhooks n8n & Marketing Automation (Semana 4-5)
+- [ ] n8n webhook cliente: TypeScript interfaces definidas
+- [ ] Webhooks configurados: Lead created, status changed, tag updated
+- [ ] Automation flows: n8n → Supabase → Email/Mailing
+- [ ] Real-time subscribers: Supabase channels para triggers instantáneos
+
+#### Fase 5 — Optimización Mobile Exhaustiva (Semana 5-6)
+- [ ] Responsive audit: Todas las páginas v1.2 + v2.0 en mobile
+- [ ] Touch gestures: Swipe kanban, tap tags, mobile status select
+- [ ] Performance: Lazy loading, reduced motion mobile, font scaling
+- [ ] Device testing: iPhone SE, iPhone 15, Android flagship, iPad
+- [ ] WCAG 2.2 AA: Contrast móvil, viewport, keyboard navigation
+
+### Dependencias v2.0
+```bash
+npm install @supabase/ssr @supabase/js-sdk stripe @sendgrid/mail
+# n8n nodes: evaluar @n8n/nodes-base supabase node o PostgreSQL node
+```
+
+### Skills requeridos v2.0
+- `supabase` - configuración y RLS policies
+- `stripe` - billing integration
+- `sendgrid` o `mailgun` - email automation
+- `n8n` - workflow node migration from Notion
+
+### Migración Notion → Supabase
+- Mapping exacto de propiedades Notion a columnas Supabase
+- Tags array handling: Notion multi-select → PostgreSQL text[]
+- Responsable reference: Notion user ID → Supabase auth.users UUID
+- Status pipeline: 9 estados Notion → lead_status enum PostgreSQL
+
+### Riesgos y Mitigación
+- Datos perdidos en migración: Backup Notion antes de export, validar conteo rows
+- RLS bloqueando accesos: Testing exhaustivo permisos por rol
+- n8n workflows rotos: Parallel run Notion + Supabase 2 semanas mínimo
+- Precios Stripe inesperados: Monitoring webhooks y alertas
+
+#### Fase 8 — Statistics (Prompt 3)
+
+- [x] Breakdowns: estado, provincia, ciudad, tamaño
+- [x] Tasas: validación, email preparado, respuesta, reunión, cliente, funnel
+- [x] Sin gráficos decorativos
+
+---
+
+## v2.0 Plan — Items "Fuera de roadmap v1"
+
+- [ ] **Multi-usuario, roles, billing** — Supabase RLS + Stripe integration
+- [ ] **Tags / Responsable** — UI chips + DB assignment + filtering
+- [ ] **Sustituir Notion por otra DB** — Supabase migration from CSV, schema mapping
+- [ ] **Envío automático de email / marketing automation** — SendGrid triggers por status/tag changes
+- [ ] **Añadir webhooks al workflow n8n (solo preparar el cliente)** — TypeScript interfaces, webhook schemas preparados, sin activar toggles v1
+- [ ] **Optimización mobile exhaustiva** — Responsive audit, touch gestures, device testing, WCAG 2.2 AA mobile
+
+### Estado actual
+- v1.0: 8 phases completadas y verificadas
+- v1.2: Visual/UX/UI Refresh en planificación (diseño tokens, dark mode, motion)
+- v2.0: Planificación iniciada, DB decision Supabase tomada, migración pending
+
+Siguiente paso: Fase 1 v2.0 — Supabase setup y migración datos desde Notion.
