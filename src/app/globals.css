@@ -42,34 +42,31 @@
 }
 
 .dark {
+  /*
+   * IMPORTANT: the gris / grafito / blanco palette is NOT inverted here.
+   * Every component switches modes with explicit `dark:` variants
+   * (e.g. `bg-blanco dark:bg-grafito`, `bg-gris-100 dark:bg-gris-800`,
+   * `text-grafito dark:text-gris-100`). Re-inverting the scale would
+   * double-invert those utilities and turn dark surfaces white.
+   * Only the brand accent + semantic surface tokens change per mode.
+   */
+
+  /* Rojo brightens slightly so it stays legible as an accent/text on dark */
   --color-rojo: #EF5350;
   --color-rojo-hover: #E53935;
-  --color-rojo-light: #FF6B6B;
-  --color-grafito: #F9FAFB;
-  --color-grafito-light: #E5E7EB;
-  --color-blanco: #111827;
+  --color-rojo-light: #FF8A80;
 
-  --color-gris-50: #111827;
-  --color-gris-100: #1F2937;
-  --color-gris-200: #374151;
-  --color-gris-300: #4B5563;
-  --color-gris-400: #9CA3AF;
-  --color-gris-500: #6B7280;
-  --color-gris-600: #9CA3AF;
-  --color-gris-700: #D1D5DB;
-  --color-gris-800: #E5E7EB;
-  --color-gris-900: #F9FAFB;
-
-  --bg: #0F0F0F;
-  --fg: #F9FAFB;
+  /* Semantic surface tokens — elevation: bg < sidebar < panel < muted */
+  --bg: #16191D;
+  --fg: #F3F4F6;
   --panel: #1F2328;
-  --sidebar: #111827;
-  --muted: #1F2328;
-  --muted-hover: #2D333A;
+  --sidebar: #131619;
+  --muted: #2D333A;
+  --muted-hover: #374151;
   --muted-fg: #9CA3AF;
-  --border: #374151;
+  --border: #2D333A;
   --accent: #EF5350;
-  --accent-fg: #1F2328;
+  --accent-fg: #FFFFFF;
   --ring: #EF5350;
 }
 

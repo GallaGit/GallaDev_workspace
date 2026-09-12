@@ -35,34 +35,41 @@ export function DailyWorkPage() {
     <>
       <Topbar title="Daily Work" />
       <div className="min-h-0 flex-1 overflow-auto p-6">
-        <p className="mb-4 text-sm text-(--muted-fg)">
+        <p className="mb-4 text-sm text-muted-fg">
           Colas accionables del día. Abre una cola para filtrar leads y trabajar
           el primero.
         </p>
         {syncState === "syncing" && leads.length === 0 ? (
-          <p className="text-sm text-(--muted-fg)">Sincronizando…</p>
+          <p className="text-sm text-muted-fg">Sincronizando…</p>
         ) : null}
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {queues.map((q) => (
-            <button
+            <div
               key={q.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => openQueue(q)}
-              className="rounded-lg border border-(--border) bg-(--panel) p-4 text-left transition-colors hover:border-(--accent) hover:bg-(--muted)"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openQueue(q);
+                }
+              }}
+              className="cursor-pointer rounded-lg border border-border bg-panel p-4 text-left transition-colors hover:border-accent hover:bg-muted"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h2 className="text-sm font-semibold">{q.title}</h2>
-                  <p className="mt-0.5 text-[12px] text-(--muted-fg)">
+                  <p className="mt-0.5 text-[12px] text-muted-fg">
                     {q.description}
                   </p>
                 </div>
-                <span className="rounded-md bg-(--muted) px-2 py-0.5 text-sm font-semibold tabular-nums">
+                <span className="rounded-md bg-muted px-2 py-0.5 text-sm font-semibold tabular-nums">
                   {q.count}
                 </span>
               </div>
               {q.previewNames.length > 0 ? (
-                <ul className="mt-3 space-y-1 text-[12px] text-(--muted-fg)">
+                <ul className="mt-3 space-y-1 text-[12px] text-muted-fg">
                   {q.previewNames.map((name) => (
                     <li key={name} className="truncate">
                       · {name}
@@ -70,16 +77,23 @@ export function DailyWorkPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-[12px] text-(--muted-fg)">
+                <p className="mt-3 text-[12px] text-muted-fg">
                   Nada pendiente
                 </p>
               )}
               <div className="mt-3">
-                <Button size="sm" variant="secondary" onClick={() => openQueue(q)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openQueue(q);
+                  }}
+                >
                   Abrir cola
                 </Button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>

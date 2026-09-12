@@ -84,7 +84,7 @@ export function EmailEditor({
         ) : null}
       </div>
       {to ? (
-        <p className="mt-2 text-[11px] text-(--muted-fg)">
+        <p className="mt-2 text-[11px] text-muted-fg">
           Destinatario: {to}
         </p>
       ) : (

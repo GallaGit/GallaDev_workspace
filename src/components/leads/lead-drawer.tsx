@@ -265,8 +265,8 @@ function LeadDrawerBody({
 
   return (
     <>
-      <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-(--border) bg-(--panel)">
-        <div className="flex h-12 items-center justify-between border-b border-(--border) px-3">
+      <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border bg-(--panel)">
+        <div className="flex h-12 items-center justify-between border-b border-border px-3">
           <span className="truncate text-sm font-semibold">
             {lead?.companyName ?? "Lead"}
           </span>
@@ -570,10 +570,14 @@ function Action({
   tip: string;
 }) {
   return (
-    <Button variant="outline" size="icon" asChild title={tip}>
-      <a href={href} target="_blank" rel="noreferrer">
-        <Icon className="h-3.5 w-3.5" />
-      </a>
-    </Button>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={tip}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gris-300 bg-transparent text-gris-500 transition-colors hover:bg-gris-100 hover:text-grafito dark:border-gris-600 dark:hover:bg-gris-800 dark:hover:text-gris-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo focus-visible:ring-offset-2"
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </a>
   );
 }
