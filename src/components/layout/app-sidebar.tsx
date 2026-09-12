@@ -31,8 +31,8 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-55 shrink-0 flex-col border-r border-border bg-sidebar">
-      <div className="flex h-12 items-center gap-2 border-b border-border px-4">
+    <aside className="flex h-full w-55 shrink-0 flex-col bg-sidebar">
+      <div className="flex h-12 items-center gap-2 px-4">
         <div className="h-5 w-5 rounded bg-accent" />
         <span className="text-sm font-semibold tracking-tight text-fg">
           Leads_CRM
@@ -59,7 +59,7 @@ export function AppSidebar() {
           );
         })}
       </nav>
-      <div className="border-t border-border p-3 text-[11px] text-muted-fg">
+      <div className="p-3 text-[11px] text-muted-fg">
         Gestorías · Valencia
       </div>
     </aside>

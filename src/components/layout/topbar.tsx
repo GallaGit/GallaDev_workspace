@@ -17,7 +17,7 @@ export function Topbar({
   const syncError = useUiStore((s) => s.syncError);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between bg-blanco dark:bg-grafito px-4">
       <div>
         <h1 className="text-lg font-semibold text-grafito dark:text-gris-100">{title}</h1>
         {subtitle && (
