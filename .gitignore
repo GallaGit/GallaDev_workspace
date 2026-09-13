@@ -58,6 +58,7 @@ data/
 # Solo locales en esta máquina — no van al remoto de la app
 .agents/
 .cursor/
+.opencode/
 Nicho/
 Notas/
 Notas-de-ideas/
