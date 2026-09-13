@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 import type { Lead, LeadFilters, LeadStatus } from "@/lib/domain/lead";
 import type { WorkQueueId } from "@/lib/leads/work-queues";
 import type { DbProvider } from "@/lib/supabase/env";
+import type { DbHealth } from "@/lib/supabase/health";
 
 export type SyncState = "idle" | "syncing" | "error";
 
@@ -18,6 +19,7 @@ interface UiState {
   syncState: SyncState;
   syncError: string | null;
   dbProvider: DbProvider | null;
+  dbHealth: DbHealth | null;
   leads: Lead[];
   setSelectedLeadId: (id: string | null) => void;
   setSelectedIds: (ids: string[]) => void;
@@ -28,6 +30,7 @@ interface UiState {
   setColumnVisibility: (v: Record<string, boolean>) => void;
   setLeads: (leads: Lead[]) => void;
   setDbProvider: (p: DbProvider) => void;
+  setDbHealth: (h: DbHealth | null) => void;
   upsertLead: (lead: Lead) => void;
   removeLead: (id: string) => void;
   setSync: (s: {
@@ -62,6 +65,7 @@ export const useUiStore = create<UiState>()(
       syncState: "idle",
       syncError: null,
       dbProvider: null,
+      dbHealth: null,
       leads: [],
       setSelectedLeadId: (id) => set({ selectedLeadId: id }),
       setSelectedIds: (ids) => set({ selectedIds: ids }),
@@ -79,6 +83,7 @@ export const useUiStore = create<UiState>()(
       setColumnVisibility: (v) => set({ columnVisibility: v }),
       setLeads: (leads) => set({ leads }),
       setDbProvider: (p) => set({ dbProvider: p }),
+      setDbHealth: (h) => set({ dbHealth: h }),
       upsertLead: (lead) => {
         const existing = get().leads;
         const idx = existing.findIndex((l) => l.id === lead.id);

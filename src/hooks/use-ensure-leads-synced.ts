@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { Lead } from "@/lib/domain/lead";
+import type { DbHealth } from "@/lib/supabase/health";
 import { useUiStore } from "@/store/ui-store";
 
 export type SyncLeadsOptions = {
@@ -44,6 +45,8 @@ export async function syncLeadsFromApi(
     if (data.provider === "supabase" || data.provider === "notion") {
       useUiStore.getState().setDbProvider(data.provider);
     }
+    // Semáforo de conexión (no bloquea el sync si falla).
+    void refreshDbStatus();
     if (options.notifySuccess) {
       toast.success(`Sincronizado · ${data.count} leads`);
     }
@@ -53,6 +56,33 @@ export async function syncLeadsFromApi(
     setSync({ state: "error", error: message });
     toast.error(message);
     return { ok: false, count: 0 };
+  }
+}
+
+/**
+ * Consulta /api/db-status y guarda el semáforo en el store.
+ * Se llama tras cada sync y al montar el Topbar.
+ */
+export async function refreshDbStatus(): Promise<void> {
+  try {
+    const res = await fetch("/api/db-status");
+    const data = (await res.json()) as Partial<DbHealth>;
+    if (
+      (data.provider === "supabase" || data.provider === "notion") &&
+      (data.status === "ok" ||
+        data.status === "auth" ||
+        data.status === "config" ||
+        data.status === "down")
+    ) {
+      useUiStore.getState().setDbHealth({
+        provider: data.provider,
+        status: data.status,
+        message: typeof data.message === "string" ? data.message : "",
+        latencyMs: typeof data.latencyMs === "number" ? data.latencyMs : 0,
+      });
+    }
+  } catch {
+    // Sin semáforo antes que un semáforo falso: el badge queda en "comprobando".
   }
 }
 

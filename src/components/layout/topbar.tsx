@@ -1,11 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import { Moon, Sun, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
-import { syncLeadsFromApi } from "@/hooks/use-ensure-leads-synced";
+import {
+  refreshDbStatus,
+  syncLeadsFromApi,
+} from "@/hooks/use-ensure-leads-synced";
 import { useUiStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
+
+const DB_DOT: Record<string, string> = {
+  ok: "bg-emerald-500",
+  auth: "bg-amber-500",
+  config: "bg-amber-500",
+  down: "bg-red-500",
+};
 
 export function Topbar({
   title,
@@ -16,6 +27,11 @@ export function Topbar({
   const lastSyncAt = useUiStore((s) => s.lastSyncAt);
   const syncError = useUiStore((s) => s.syncError);
   const dbProvider = useUiStore((s) => s.dbProvider);
+  const dbHealth = useUiStore((s) => s.dbHealth);
+
+  useEffect(() => {
+    void refreshDbStatus();
+  }, []);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between bg-blanco dark:bg-grafito px-4">
@@ -28,9 +44,20 @@ export function Topbar({
       <div className="flex items-center gap-2">
         {dbProvider && (
           <span
-            title={`Fuente de datos activa: ${dbProvider === "supabase" ? "Supabase" : "Notion"}`}
-            className="rounded-full border border-gris-200 px-2 py-0.5 text-[11px] font-medium text-gris-500 dark:border-gris-700 dark:text-gris-400"
+            title={
+              dbHealth
+                ? `${dbHealth.message} (${dbHealth.latencyMs} ms)`
+                : "Comprobando conexión…"
+            }
+            className="flex items-center gap-1.5 rounded-full border border-gris-200 px-2 py-0.5 text-[11px] font-medium text-gris-500 dark:border-gris-700 dark:text-gris-400"
           >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                dbHealth ? (DB_DOT[dbHealth.status] ?? DB_DOT.down) : "animate-pulse bg-zinc-400",
+              )}
+            />
             DB: {dbProvider === "supabase" ? "Supabase" : "Notion"}
           </span>
         )}
