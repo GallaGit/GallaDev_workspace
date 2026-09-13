@@ -15,6 +15,7 @@ export function Topbar({
   const syncState = useUiStore((s) => s.syncState);
   const lastSyncAt = useUiStore((s) => s.lastSyncAt);
   const syncError = useUiStore((s) => s.syncError);
+  const dbProvider = useUiStore((s) => s.dbProvider);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between bg-blanco dark:bg-grafito px-4">
@@ -25,6 +26,14 @@ export function Topbar({
         )}
       </div>
       <div className="flex items-center gap-2">
+        {dbProvider && (
+          <span
+            title={`Fuente de datos activa: ${dbProvider === "supabase" ? "Supabase" : "Notion"}`}
+            className="rounded-full border border-gris-200 px-2 py-0.5 text-[11px] font-medium text-gris-500 dark:border-gris-700 dark:text-gris-400"
+          >
+            DB: {dbProvider === "supabase" ? "Supabase" : "Notion"}
+          </span>
+        )}
         <div className="hidden text-sm text-gris-500 dark:text-gris-400 sm:block">
           {syncState === "syncing" && (
             <span className="flex items-center gap-1.5 text-info">

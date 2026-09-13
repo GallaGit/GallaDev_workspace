@@ -26,8 +26,15 @@ export function supabaseServiceRoleKey(): string {
 }
 
 /** Fuente de verdad de leads: notion (default, seguro) | supabase. */
-export function leadsDbProvider(): "notion" | "supabase" {
+export type DbProvider = "notion" | "supabase";
+
+export function leadsDbProvider(): DbProvider {
   return envValue("LEADS_DB_PROVIDER").toLowerCase() === "supabase"
     ? "supabase"
     : "notion";
+}
+
+/** Alias para UI/diagnóstico. */
+export function getActiveProvider(): DbProvider {
+  return leadsDbProvider();
 }

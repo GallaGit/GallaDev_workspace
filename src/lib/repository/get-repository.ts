@@ -3,7 +3,10 @@ import "server-only";
 import type { LeadRepository } from "./lead-repository";
 import { getLeadRepository as getNotionLeadRepository } from "@/lib/notion/notion-lead-repository";
 import { SupabaseLeadRepository } from "@/lib/supabase/supabase-lead-repository";
-import { leadsDbProvider } from "@/lib/supabase/env";
+import { leadsDbProvider, type DbProvider } from "@/lib/supabase/env";
+
+export type { DbProvider };
+export { getActiveProvider } from "@/lib/supabase/env";
 
 let supabaseRepo: SupabaseLeadRepository | null = null;
 

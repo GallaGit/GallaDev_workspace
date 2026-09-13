@@ -41,6 +41,9 @@ export async function syncLeadsFromApi(
     }
     setLeads(data.leads as Lead[]);
     setSync({ state: "idle", at: data.syncedAt, error: null });
+    if (data.provider === "supabase" || data.provider === "notion") {
+      useUiStore.getState().setDbProvider(data.provider);
+    }
     if (options.notifySuccess) {
       toast.success(`Sincronizado · ${data.count} leads`);
     }
