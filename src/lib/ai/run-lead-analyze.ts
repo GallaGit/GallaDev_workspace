@@ -19,7 +19,7 @@ import {
 import { dispatchLeadAnalyzed } from "@/lib/automations/dispatch";
 import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import { getLeadRepository } from "@/lib/repository/get-repository";
 import { getSettingsService } from "@/lib/settings/service";
 
 export type AnalyzeLeadResult =

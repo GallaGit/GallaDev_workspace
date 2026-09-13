@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import { getLeadRepository } from "@/lib/repository/get-repository";
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
