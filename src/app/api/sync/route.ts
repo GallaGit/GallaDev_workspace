@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import {
+  getActiveProvider,
+  getLeadRepository,
+} from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,7 @@ export async function POST() {
       ok: true,
       count: leads.length,
       syncedAt: new Date().toISOString(),
+      provider: getActiveProvider(),
       leads,
     });
   } catch (e) {

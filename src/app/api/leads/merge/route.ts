@@ -3,7 +3,7 @@ import {
   buildEmptyFieldMerge,
   MERGEABLE_FIELD_LABELS,
 } from "@/lib/leads/merge-leads";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import { getLeadRepository } from "@/lib/repository/get-repository";
 import {
   changedKeys,
   dispatchLeadUpdated,

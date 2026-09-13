@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import {
+  getActiveProvider,
+  getLeadRepository,
+} from "@/lib/repository/get-repository";
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
@@ -51,6 +54,7 @@ export async function GET(request: Request) {
       leads: filtered,
       total: filtered.length,
       syncedAt: new Date().toISOString(),
+      provider: getActiveProvider(),
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al listar leads";

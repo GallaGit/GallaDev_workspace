@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { detectDuplicateGroups } from "@/lib/leads/detect-duplicates";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import { getLeadRepository } from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
 

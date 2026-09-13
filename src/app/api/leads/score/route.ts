@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { scoreLead } from "@/lib/leads/lead-scorer";
-import { getLeadRepository } from "@/lib/notion/notion-lead-repository";
+import { getLeadRepository } from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
 
