@@ -60,7 +60,7 @@ export function AppSidebar() {
         })}
       </nav>
       <div className="p-3 text-[11px] text-muted-fg">
-        Gestorías · Valencia
+        developed by GallaDev
       </div>
     </aside>
   );
