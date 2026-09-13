@@ -126,9 +126,9 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 ### Fases v2.0
 
 #### Fase 1 — Supabase Setup & Migration (Semana 1-2)
-- [ ] Proyecto Supabase creado y configurado
-- [ ] Migración Notion → Supabase: CSV import leads, tags, users
-- [ ] Schema definition: leads table con status enum, tags text[], responsable UUID
+- [x] Proyecto Supabase creado y configurado
+- [x] Migración Notion → Supabase: CSV import leads, tags, users
+- [x] Schema definition: leads table con status enum, tags text[], responsable UUID
 - [ ] Row-level security policies implementadas
 - [ ] Stripe integration preparada (webhooks endpoints)
 - [ ] n8n nodes actualizados: Replace Notion nodes con Supabase/PostgreSQL/HTTP nodes
