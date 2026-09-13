@@ -315,7 +315,6 @@ async function main(): Promise<void> {
     const { error } = await sb.from("lead_activities").delete().neq("lead_id", "00000000-0000-0000-0000-000000000000");
     if (error) throw new Error(`delete activities: ${error.message}`);
   }
-  console.log(`activities: ${fixedActivityRows.length} insertadas`);
   const ABATCH = 500;
   for (let s = 0; s < fixedActivityRows.length; s += ABATCH) {
     const { error } = await sb.from("lead_activities").insert(fixedActivityRows.slice(s, s + ABATCH));
