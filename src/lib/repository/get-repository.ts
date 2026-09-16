@@ -11,9 +11,9 @@ export { getActiveProvider } from "@/lib/supabase/env";
 let supabaseRepo: SupabaseLeadRepository | null = null;
 
 /**
- * Factory de repositorio según LEADS_DB_PROVIDER (default: notion).
- * - notion: fuente de verdad v1 (paralelo seguro durante la migración).
- * - supabase: corta a Supabase cuando la migración esté validada.
+ * Factory de repositorio según LEADS_DB_PROVIDER (default: supabase).
+ * - supabase: fuente de verdad actual.
+ * - notion: legado (solo si LEADS_DB_PROVIDER=notion explícito).
  */
 export function getLeadRepository(): LeadRepository {
   if (leadsDbProvider() === "supabase") {
