@@ -19,8 +19,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Leads_CRM · Gestorías",
-  description: "Leads_CRM — cualificación de leads para asesorías y gestorías",
+  title: "GallaDev Workspace",
+  description: "Herramienta interna GallaDev — revisión y cualificación de leads",
+  robots: "noindex, nofollow",
 };
 
 export default function RootLayout({
