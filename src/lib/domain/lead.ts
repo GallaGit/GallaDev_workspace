@@ -128,6 +128,11 @@ export interface LeadCreateInput {
   software?: string | null;
   notes?: string | null;
   favorite?: boolean;
+  /**
+   * Origen del lead. Por defecto los mappers usan "Manual".
+   * La ingesta pública (form galladev.com) pasa "web-galladev".
+   */
+  source?: string | null;
 }
 
 export interface ActivityEvent {

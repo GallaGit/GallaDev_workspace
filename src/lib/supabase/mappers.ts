@@ -129,7 +129,7 @@ export function leadCreateToRow(input: LeadCreateInput): LeadInsert {
     role: input.role ?? null,
     confidence: input.confidence ?? null,
     software: input.software ?? null,
-    source: "Manual",
+    source: input.source?.trim() || "Manual",
     favorite: Boolean(input.favorite),
     notion_page_id: null,
     email_subject: null,

@@ -83,7 +83,13 @@ export class SupabaseLeadRepository implements LeadRepository {
       .single();
     if (error) throw new Error(`Supabase create: ${error.message}`);
     const lead = mapRowToLead(data as LeadRow);
-    await this.appendActivity(lead.id, "Lead creado manualmente", "create");
+    await this.appendActivity(
+      lead.id,
+      input.source?.trim() === "web-galladev"
+        ? "Lead recibido desde galladev.com"
+        : "Lead creado manualmente",
+      "create",
+    );
     return lead;
   }
 

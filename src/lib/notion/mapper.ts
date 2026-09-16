@@ -350,7 +350,7 @@ export function leadCreateToNotionProperties(
     role: input.role ?? null,
     confidence: input.confidence ?? null,
     software: input.software ?? null,
-    source: "Manual",
+    source: input.source?.trim() || "Manual",
     favorite: Boolean(input.favorite),
   });
 

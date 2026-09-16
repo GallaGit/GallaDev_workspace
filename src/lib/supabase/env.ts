@@ -25,13 +25,13 @@ export function supabaseServiceRoleKey(): string {
   return envValue("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY");
 }
 
-/** Fuente de verdad de leads: notion (default, seguro) | supabase. */
+/** Fuente de verdad de leads: supabase (actual, default) | notion (legado). */
 export type DbProvider = "notion" | "supabase";
 
 export function leadsDbProvider(): DbProvider {
-  return envValue("LEADS_DB_PROVIDER").toLowerCase() === "supabase"
-    ? "supabase"
-    : "notion";
+  return envValue("LEADS_DB_PROVIDER").toLowerCase() === "notion"
+    ? "notion"
+    : "supabase";
 }
 
 /** Alias para UI/diagnóstico. */

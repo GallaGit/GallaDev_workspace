@@ -1,0 +1,154 @@
+import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { getLeadRepository } from "@/lib/repository/get-repository";
+import { findLocalDuplicates } from "@/lib/leads/validate-lead";
+import {
+  appendIngestNote,
+  mapIngestToLeadCreate,
+  validateIngest,
+} from "@/lib/ingest/validate-ingest";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * POST /api/ingest/lead — ingesta pública del formulario galladev.com.
+ *
+ * Auth: `Authorization: Bearer <INGEST_SECRET>` (no la cookie de sesión;
+ * la ruta está exenta del middleware, ver src/middleware.ts).
+ * NO dispara automatizaciones n8n por decisión de producto: solo guarda.
+ *
+ * Rate-limit en memoria best-effort (por instancia; en serverless no es
+ * global — aceptado para v1, herramienta interna + secreto bearer).
+ */
+const MAX_BODY_BYTES = 32 * 1024;
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_MAX = 30;
+const rateHits = new Map<string, number[]>();
+
+function clientIp(request: Request): string {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
+  return "unknown";
+}
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const hits = (rateHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (hits.length >= RATE_MAX) {
+    rateHits.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  rateHits.set(ip, hits);
+  return false;
+}
+
+function readBearer(request: Request): string {
+  const header = request.headers.get("authorization") ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  return (match?.[1] ?? "").trim();
+}
+
+function bearerOk(provided: string, expected: string): boolean {
+  if (!provided || !expected) return false;
+  const a = Buffer.from(provided, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+export async function POST(request: Request) {
+  const secret = process.env.INGEST_SECRET ?? "";
+  if (!secret) {
+    console.error("[ingest] INGEST_SECRET no configurado");
+    return NextResponse.json(
+      { ok: false, error: "Ingesta no configurada" },
+      { status: 503 },
+    );
+  }
+  if (!bearerOk(readBearer(request), secret)) {
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 401 },
+    );
+  }
+
+  if (rateLimited(clientIp(request))) {
+    return NextResponse.json(
+      { ok: false, error: "Demasiadas solicitudes. Inténtalo más tarde." },
+      { status: 429 },
+    );
+  }
+
+  let raw: unknown;
+  try {
+    const text = await request.text();
+    if (text.length > MAX_BODY_BYTES) {
+      return NextResponse.json(
+        { ok: false, error: "Payload demasiado grande" },
+        { status: 413 },
+      );
+    }
+    raw = JSON.parse(text || "{}") as unknown;
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "JSON inválido" },
+      { status: 400 },
+    );
+  }
+  if (!raw || typeof raw !== "object") {
+    return NextResponse.json(
+      { ok: false, error: "Payload inválido" },
+      { status: 400 },
+    );
+  }
+
+  const result = validateIngest(raw as Record<string, unknown>);
+  if (!result.ok || !result.value) {
+    return NextResponse.json(
+      { ok: false, error: "Datos no válidos", fieldErrors: result.errors },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const repo = getLeadRepository();
+
+    // Fusión de duplicados: mismo email → anexar mensaje, sin fila nueva.
+    const existing = await repo.list();
+    const dupes = findLocalDuplicates(
+      { email: result.value.email, phone: null, website: null },
+      existing.map((l) => ({
+        id: l.id,
+        companyName: l.companyName,
+        email: l.email,
+        phone: l.phone,
+        website: l.website,
+      })),
+    );
+    const emailDupe = dupes.find((d) => d.reason === "mismo email");
+    if (emailDupe) {
+      const current = existing.find((l) => l.id === emailDupe.id);
+      const merged = await repo.update(emailDupe.id, {
+        notes: appendIngestNote(current?.notes ?? null, result.value.message),
+      });
+      return NextResponse.json(
+        { ok: true, id: merged.id, deduped: true },
+        { status: 200 },
+      );
+    }
+
+    const lead = await repo.create(mapIngestToLeadCreate(result.value));
+    // Sin dispatch*: no disparamos n8n desde la landing (decisión producto).
+    return NextResponse.json(
+      { ok: true, id: lead.id, deduped: false },
+      { status: 201 },
+    );
+  } catch (e) {
+    console.error("[ingest] error al guardar lead web", e);
+    return NextResponse.json(
+      { ok: false, error: "No se pudo guardar el lead" },
+      { status: 500 },
+    );
+  }
+}
