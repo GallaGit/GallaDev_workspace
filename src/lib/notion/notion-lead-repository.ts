@@ -177,7 +177,12 @@ export class NotionLeadRepository implements LeadRepository {
     }
 
     await this.appendActivity(lead.id, "Lead creado manualmente", "create");
-    await this.addComment(lead.id, "Lead creado manualmente desde Leads_CRM");
+    await this.addComment(
+      lead.id,
+      input.source?.trim() === "web-galladev"
+        ? "Lead recibido desde el formulario de galladev.com"
+        : "Lead creado manualmente desde Leads_CRM",
+    );
 
     return lead;
   }

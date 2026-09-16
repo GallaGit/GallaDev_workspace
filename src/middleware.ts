@@ -3,6 +3,11 @@ import type { NextRequest } from "next/server";
 import { isAuthDisabled } from "@/lib/auth";
 
 export function middleware(request: NextRequest) {
+  // Ingesta pública del form (bearer propio en la ruta, sin sesión).
+  if (request.nextUrl.pathname.startsWith("/api/ingest/")) {
+    return NextResponse.next();
+  }
+
   if (isAuthDisabled()) {
     return NextResponse.next();
   }
