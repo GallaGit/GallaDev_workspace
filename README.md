@@ -23,30 +23,6 @@ AUTH_DISABLED=true
 # Producción: AUTH_SECRET + AUTH_PASSWORD. Sesión: SESSION_TTL_DAYS=1 (1–90).
 ```
 
-## Docker
-
-La imagen es de runtime: hay que **compilar en el host** y luego construir el contenedor. Docker Desktop (o Compose) publica la app en el puerto **3020**. El contenedor se llama `Leads-CRM`.
-
-```bash
-cp .env.example .env.local
-# Configura NOTION_TOKEN en .env.local
-mkdir -p certs
-npm install
-npm run build
-docker compose up -d --build
-```
-
-Abre [http://localhost:3020/leads](http://localhost:3020/leads). Compose lee `.env.local` (no se copia a la imagen).
-
-Si Avast intercepta HTTPS, exporta su CA al directorio `certs/` antes de arrancar:
-
-```powershell
-powershell -File scripts/export-avast-ca.ps1
-```
-
-`docker-compose.yml` monta `./certs` dentro del contenedor. Ese directorio debe existir; si falta el `.pem`, Node ignora `NODE_EXTRA_CA_CERTS`.
-
-Para parar: `docker compose down`. Si Docker Desktop **Start** falla tras mover el proyecto de carpeta, no reutilices el contenedor antiguo: recréalo con `docker compose up -d --force-recreate`.
 
 ## Documentación
 
@@ -61,7 +37,7 @@ Para parar: `docker compose down`. Si Docker Desktop **Start** falla tras mover 
 
 ## Stack
 
-Next.js App Router, React, TypeScript, Tailwind CSS, Lucide, TanStack Query, Zustand y `@notionhq/client`. En local también hay un `Dockerfile` y `docker-compose.yml` para Docker Desktop.
+Next.js App Router, React, TypeScript, Tailwind CSS, Lucide, TanStack Query, Zustand y `@notionhq/client`.
 
 ## Verificación
 

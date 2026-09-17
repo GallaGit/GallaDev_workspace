@@ -74,26 +74,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
-
-  docker:
-    name: Docker Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - name: Build Docker image
-        run: docker build -t leads-crm:test .
-      - name: Test Docker image starts
-        run: |
-          docker run -d --name test-container -p 3020:3000 \
-            -e AUTH_DISABLED=true \
-            leads-crm:test
-          sleep 10
-          curl -f http://localhost:3020/leads || exit 1
-          docker stop test-container
-          docker rm test-container
