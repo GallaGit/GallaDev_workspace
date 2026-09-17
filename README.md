@@ -1,62 +1,73 @@
-# Leads_CRM
+# GallaDev Workspace
 
-Aplicación personal para revisar, cualificar y gestionar leads de asesorías y gestorías. Notion es la fuente de verdad y n8n se ocupa de la prospección.
+CRM for reviewing, qualifying, and managing leads for asesorías y gestorías. **Supabase (PostgreSQL) is the source of truth** (Notion is legacy, only when `LEADS_DB_PROVIDER=notion`); n8n handles prospecting.
 
-## Inicio rápido
+> Formerly `Leads_CRM`. Production: [https://workspace.galladev.com](https://workspace.galladev.com).
+
+## Quickstart
 
 ```bash
 npm install
 cp .env.example .env.local
-# Configura NOTION_TOKEN en .env.local
+# Set Supabase vars in .env.local (see below)
 npm run dev
 ```
 
-Abre [http://localhost:3000/leads](http://localhost:3000/leads). La aplicación intentará sincronizar al cargar; también puedes usar **Sincronizar**.
+Open [http://localhost:3000/leads](http://localhost:3000/leads). The app syncs on load; you can also press **Sincronizar**.
 
-Configuración mínima:
+Minimal config:
 
 ```dotenv
-NOTION_TOKEN=secret_xxxxxxxxx
-NOTION_DATABASE_ID=ed07cdd4c5424f9a8b8ebd73e358c6cd
-NOTION_DATA_SOURCE_ID=27fefc608dfd43569465582d3c49d99f
+LEADS_DB_PROVIDER=supabase
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+SUPABASE_SECRET_KEY=<secret-key-never-commit>
 AUTH_DISABLED=true
-# Producción: AUTH_SECRET + AUTH_PASSWORD. Sesión: SESSION_TTL_DAYS=1 (1–90).
+# Production: AUTH_SECRET + AUTH_PASSWORD. Session: SESSION_TTL_DAYS=1 (1–90).
 ```
 
+> Legacy Notion deployments only: `LEADS_DB_PROVIDER=notion` plus `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_DATA_SOURCE_ID`.
 
-## Documentación
+## Documentation
 
-- [Índice de documentación](./docs/README.md)
-- [Contexto de negocio](./docs/CONTEXTO_NEGOCIO.md)
-- [Decisiones de producto](./docs/DECISIONES.md)
-- [Guía de instalación y uso](./docs/GUIA_USO.md)
-- [Arquitectura](./docs/ARQUITECTURA.md)
-- [Integraciones](./docs/INTEGRACIONES.md)
-- [Estado de implementación](./docs/ESTADO_IMPLEMENTACION.md)
-- [Roadmap](./docs/ROADMAP.md)
+- [Documentation index](./docs/README.md)
+- [Business context](./docs/product/CONTEXTO_NEGOCIO.md)
+- [Product decisions](./docs/product/DECISIONES.md)
+- [Setup & usage guide](./docs/guides/GUIA_USO.md)
+- [Architecture](./docs/architecture/ARQUITECTURA.md)
+- [Integrations](./docs/architecture/INTEGRACIONES.md)
+- [Implementation status](./docs/architecture/ESTADO_IMPLEMENTACION.md)
+- [Roadmap](./docs/product/ROADMAP.md)
 
 ## Stack
 
-Next.js App Router, React, TypeScript, Tailwind CSS, Lucide, TanStack Query, Zustand y `@notionhq/client`.
+Next.js App Router, React, TypeScript, Tailwind CSS, Lucide, TanStack Query, Zustand, Supabase (`@supabase/ssr`, `@supabase/supabase-js`), `@notionhq/client` (legacy), Resend, Groq.
 
-## Verificación
+## Verification
 
 ```bash
 npm run lint
+npx tsc --noEmit
+npm run test:unit
+npm run test:component
 npm run build
 ```
 
-Consulta [Estado de implementación](./docs/ESTADO_IMPLEMENTACION.md) antes de asumir que las secciones previstas en el roadmap ya están completas.
+See [Testing](./TESTING.md) and [Implementation status](./docs/architecture/ESTADO_IMPLEMENTACION.md) before assuming roadmap sections are complete.
 
-## Emails de ingest (formulario web)
+## Web ingest emails
 
-Tras un `POST /api/ingest/lead` exitoso (alta o dedupe), GDW envía con Resend:
+After a successful `POST /api/ingest/lead` (created or deduped), the app sends with Resend:
 
-- Acuse al visitante (`email` del payload)
-- Aviso interno a `EMAIL_NOTIFY_TO`
+- Receipt to the visitor (`email` from the payload)
+- Internal notice to `EMAIL_NOTIFY_TO`
 
-Fail-open: si falta clave o Resend falla, el lead **igual** se guarda y la API responde 201/200.
+Fail-open: if the key is missing or Resend fails, the lead **is still saved** and the API answers 201/200.
 
-Variables (nombres; valores en Vercel, nunca en git): `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, opcional `EMAIL_REPLY_TO`.
+Variables (names; values in Vercel, never in git): `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, optional `EMAIL_REPLY_TO`.
 
-No se usa para marketing ni listas de nurturing.
+Not used for marketing or nurturing lists.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for branches, commits, tests, and the PR process. By participating you agree to our [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md); report vulnerabilities privately per [`SECURITY.md`](./SECURITY.md).
