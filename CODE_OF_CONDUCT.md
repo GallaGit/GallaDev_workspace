@@ -1,5 +1,7 @@
 # Code of Conduct
 
+> **Español:** [Código de conducta en español](./CODE_OF_CONDUCT.es.md)
+
 ## Our pledge
 
 We pledge to make participation in GallaDev Workspace a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
