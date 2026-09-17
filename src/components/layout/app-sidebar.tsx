@@ -12,6 +12,7 @@ import {
   Workflow,
   Settings,
   Copy,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,15 @@ const NAV = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Aun si falla la red, forzar salida al login.
+    }
+    window.location.href = "/login";
+  }
 
   return (
     <aside className="flex h-full w-55 shrink-0 flex-col bg-sidebar">
@@ -59,8 +69,16 @@ export function AppSidebar() {
           );
         })}
       </nav>
-      <div className="p-3 text-[11px] text-muted-fg">
-        developed by GallaDev
+      <div className="flex flex-col gap-1 p-3">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-muted-fg transition-colors hover:bg-muted hover:text-fg"
+        >
+          <LogOut className="h-4 w-4 opacity-70" />
+          Cerrar sesión
+        </button>
+        <div className="text-[11px] text-muted-fg">developed by GallaDev</div>
       </div>
     </aside>
   );
