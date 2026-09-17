@@ -70,4 +70,4 @@ Not used for marketing or nurturing lists.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for branches, commits, tests, and the PR process. By participating you agree to our [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md); report vulnerabilities privately per [`SECURITY.md`](./SECURITY.md).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) ([español](./CONTRIBUTING.es.md)) for branches, commits, tests, and the PR process. By participating you agree to our [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) ([español](./CODE_OF_CONDUCT.es.md)); report vulnerabilities privately per [`SECURITY.md`](./SECURITY.md) ([español](./SECURITY.es.md)).

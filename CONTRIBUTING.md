@@ -1,5 +1,7 @@
 # Contributing to GallaDev Workspace
 
+> **Español:** [Guía de contribución en español](./CONTRIBUTING.es.md)
+
 Thank you for contributing. This document is the single source of truth for how to work in this repository.
 
 > Canonical repo: [`GallaGit/GallaDev_workspace`](https://github.com/GallaGit/GallaDev_workspace) (formerly `Leads_CRM`; that name still redirects).
