@@ -6,12 +6,47 @@
  *   Edge/middleware y en Node/routes con la misma implementación).
  * - Sin AUTH_SECRET → auth desactivada (dev). Sin AUTH_PASSWORD pero con
  *   AUTH_SECRET → login responde 503 (evita bloqueos silenciosos).
+ * - TTL configurable con SESSION_TTL_DAYS (default 1, rango 1–90).
  */
 
 export const SESSION_COOKIE = "lead_crm_session";
-export const SESSION_TTL_MS = 30 * 24 * 3600 * 1000;
+
+const DAY_MS = 24 * 3600 * 1000;
+const DEFAULT_TTL_DAYS = 1;
+const MIN_TTL_DAYS = 1;
+const MAX_TTL_DAYS = 90;
 
 const enc = new TextEncoder();
+
+/**
+ * Duración de sesión en ms según SESSION_TTL_DAYS.
+ * Missing / NaN / inválido → 1 día. Clamp [1, 90].
+ */
+export function sessionTtlMs(): number {
+  const raw = process.env.SESSION_TTL_DAYS;
+  const parsed = raw === undefined || raw === "" ? NaN : Number.parseInt(raw, 10);
+  const days =
+    Number.isFinite(parsed) && parsed >= MIN_TTL_DAYS
+      ? Math.min(Math.floor(parsed), MAX_TTL_DAYS)
+      : DEFAULT_TTL_DAYS;
+  return days * DAY_MS;
+}
+
+/** Opciones de cookie de sesión (login + sliding refresh). */
+export function sessionCookieOptions(maxAgeSeconds: number) {
+  return {
+    httpOnly: true as const,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/" as const,
+    maxAge: maxAgeSeconds,
+  };
+}
+
+/** True si queda menos de la mitad del TTL → conviene renovar. */
+export function sessionNeedsRefresh(exp: number, now = Date.now()): boolean {
+  return exp - now < sessionTtlMs() / 2;
+}
 
 function b64urlEncode(bytes: Uint8Array): string {
   let bin = "";
@@ -68,25 +103,32 @@ export async function passwordOk(provided: string): Promise<boolean> {
   return constantTimeEqual(ha, hb);
 }
 
-/** Emite token `exp_hex.payload_b64.sig_b64`. Null si no hay AUTH_SECRET. */
+/** Emite token `payload_b64.sig_b64`. Null si no hay AUTH_SECRET. */
 export async function issueSession(now = Date.now()): Promise<string | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
-  const exp = now + SESSION_TTL_MS;
+  const exp = now + sessionTtlMs();
   const payload = b64urlEncode(enc.encode(JSON.stringify({ exp })));
   const sig = b64urlEncode(await hmac(secret, payload));
   return `${payload}.${sig}`;
 }
 
-/** Verifica firma y caducidad. */
-export async function verifySession(
+export type SessionVerifyResult =
+  | { ok: true; exp: number }
+  | { ok: false };
+
+/**
+ * Verifica firma y caducidad; devuelve `exp` si es válida.
+ * Útil para sliding refresh en middleware.
+ */
+export async function verifySessionDetailed(
   token: string,
   now = Date.now(),
-): Promise<boolean> {
+): Promise<SessionVerifyResult> {
   const secret = process.env.AUTH_SECRET;
-  if (!secret || !token) return false;
+  if (!secret || !token) return { ok: false };
   const dot = token.lastIndexOf(".");
-  if (dot <= 0) return false;
+  if (dot <= 0) return { ok: false };
   const payload = token.slice(0, dot);
   let sig: Uint8Array;
   let payloadBytes: Uint8Array;
@@ -94,16 +136,56 @@ export async function verifySession(
     sig = b64urlDecode(token.slice(dot + 1));
     payloadBytes = b64urlDecode(payload);
   } catch {
-    return false;
+    return { ok: false };
   }
   const expected = await hmac(secret, payload);
-  if (!constantTimeEqual(sig, expected)) return false;
+  if (!constantTimeEqual(sig, expected)) return { ok: false };
   try {
     const { exp } = JSON.parse(
       new TextDecoder().decode(payloadBytes),
     ) as { exp: unknown };
-    return typeof exp === "number" && exp > now;
+    if (typeof exp !== "number" || !(exp > now)) return { ok: false };
+    return { ok: true, exp };
   } catch {
-    return false;
+    return { ok: false };
   }
+}
+
+/**
+ * Lee `exp` de un token con firma válida (sin exigir no caducado).
+ * Null si firma inválida o payload ilegible.
+ */
+export async function readSessionExp(token: string): Promise<number | null> {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret || !token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const payload = token.slice(0, dot);
+  let sig: Uint8Array;
+  let payloadBytes: Uint8Array;
+  try {
+    sig = b64urlDecode(token.slice(dot + 1));
+    payloadBytes = b64urlDecode(payload);
+  } catch {
+    return null;
+  }
+  const expected = await hmac(secret, payload);
+  if (!constantTimeEqual(sig, expected)) return null;
+  try {
+    const { exp } = JSON.parse(
+      new TextDecoder().decode(payloadBytes),
+    ) as { exp: unknown };
+    return typeof exp === "number" ? exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Verifica firma y caducidad (compatibilidad). */
+export async function verifySession(
+  token: string,
+  now = Date.now(),
+): Promise<boolean> {
+  const result = await verifySessionDetailed(token, now);
+  return result.ok;
 }
