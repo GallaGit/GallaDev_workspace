@@ -5,7 +5,8 @@ import {
   issueSession,
   passwordOk,
   SESSION_COOKIE,
-  SESSION_TTL_MS,
+  sessionCookieOptions,
+  sessionTtlMs,
 } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
@@ -68,12 +69,10 @@ export async function POST(request: Request) {
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: Math.floor(SESSION_TTL_MS / 1000),
-  });
+  res.cookies.set(
+    SESSION_COOKIE,
+    token,
+    sessionCookieOptions(Math.floor(sessionTtlMs() / 1000)),
+  );
   return res;
 }
