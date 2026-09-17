@@ -7,6 +7,7 @@ import {
   mapIngestToLeadCreate,
   validateIngest,
 } from "@/lib/ingest/validate-ingest";
+import { sendIngestEmails } from "@/lib/email/send-ingest-emails";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
  * Auth: `Authorization: Bearer <INGEST_SECRET>` (no la cookie de sesión;
  * la ruta está exenta del middleware, ver src/middleware.ts).
  * NO dispara automatizaciones n8n por decisión de producto: solo guarda.
+ * Tras create/dedupe envía emails canal clientes (fail-open).
  *
  * Rate-limit en memoria best-effort (por instancia; en serverless no es
  * global — aceptado para v1, herramienta interna + secreto bearer).
@@ -55,6 +57,22 @@ function bearerOk(provided: string, expected: string): boolean {
   const b = Buffer.from(expected, "utf8");
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
+}
+
+
+async function safeSendEmails(args: {
+  name: string;
+  email: string;
+  company: string;
+  message: string;
+  leadId: string;
+  deduped: boolean;
+}): Promise<void> {
+  try {
+    await sendIngestEmails(args);
+  } catch (e) {
+    console.error("[ingest] email fail-open", e);
+  }
 }
 
 export async function POST(request: Request) {
@@ -132,6 +150,14 @@ export async function POST(request: Request) {
       const merged = await repo.update(emailDupe.id, {
         notes: appendIngestNote(current?.notes ?? null, result.value.message),
       });
+      await safeSendEmails({
+        name: result.value.name,
+        email: result.value.email,
+        company: result.value.company,
+        message: result.value.message,
+        leadId: merged.id,
+        deduped: true,
+      });
       return NextResponse.json(
         { ok: true, id: merged.id, deduped: true },
         { status: 200 },
@@ -140,6 +166,14 @@ export async function POST(request: Request) {
 
     const lead = await repo.create(mapIngestToLeadCreate(result.value));
     // Sin dispatch*: no disparamos n8n desde la landing (decisión producto).
+    await safeSendEmails({
+      name: result.value.name,
+      email: result.value.email,
+      company: result.value.company,
+      message: result.value.message,
+      leadId: lead.id,
+      deduped: false,
+    });
     return NextResponse.json(
       { ok: true, id: lead.id, deduped: false },
       { status: 201 },
