@@ -124,15 +124,18 @@ export function Topbar({
             void syncLeadsFromApi({ force: true, notifySuccess: true })
           }
           disabled={syncState === "syncing"}
-          className="gap-1.5"
+          className="gap-1.5 px-2 sm:px-3"
+          aria-label="Sincronizar"
+          title="Sincronizar"
         >
           <RefreshCw
             className={cn(
               "h-3.5 w-3.5 transition-transform",
               syncState === "syncing" && "animate-spin",
             )}
+            aria-hidden="true"
           />
-          Sincronizar
+          <span className="hidden sm:inline">Sincronizar</span>
         </Button>
         <Button
           variant="ghost"
