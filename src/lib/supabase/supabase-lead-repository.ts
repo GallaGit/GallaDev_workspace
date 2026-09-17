@@ -73,23 +73,25 @@ export class SupabaseLeadRepository implements LeadRepository {
   async create(input: LeadCreateInput): Promise<Lead> {
     const notesValue = input.notes ?? "";
     const { observaciones, overflow } = splitNotes(notesValue);
+    const notesOverflow = overflow || input.notesOverflow || null;
     const { data, error } = await this.sb
       .from("leads")
       .insert({
         ...leadCreateToRow({ ...input, notes: observaciones }),
-        notes_overflow: overflow,
+        notes_overflow: notesOverflow,
       })
       .select("*")
       .single();
     if (error) throw new Error(`Supabase create: ${error.message}`);
     const lead = mapRowToLead(data as LeadRow);
-    await this.appendActivity(
-      lead.id,
-      input.source?.trim() === "web-galladev"
+    const src = input.source?.trim() ?? "";
+    const createMsg =
+      src === "web-galladev"
         ? "Lead recibido desde galladev.com"
-        : "Lead creado manualmente",
-      "create",
-    );
+        : src === "n8n"
+          ? "Lead recibido desde n8n"
+          : "Lead creado manualmente";
+    await this.appendActivity(lead.id, createMsg, "create");
     return lead;
   }
 

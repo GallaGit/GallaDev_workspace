@@ -344,8 +344,11 @@ export function leadCreateToNotionProperties(
     employees: input.employees ?? null,
     linkedin: input.linkedin ?? null,
     services: input.services ?? [],
-    status: "Nuevo",
+    status: input.status ? normalizeStatus(input.status) : "Nuevo",
     notes: observaciones,
+    emailSubject: input.emailSubject ?? null,
+    emailBody: input.emailBody ?? null,
+    score: input.score ?? null,
     manager: input.manager ?? null,
     role: input.role ?? null,
     confidence: input.confidence ?? null,
@@ -354,10 +357,16 @@ export function leadCreateToNotionProperties(
     favorite: Boolean(input.favorite),
   });
 
-  properties["Fecha de descubrimiento"] = { date: { start: today } };
+  const discoveredDay = input.discoveredAt?.trim()
+    ? input.discoveredAt.trim().slice(0, 10)
+    : today;
+  properties["Fecha de descubrimiento"] = { date: { start: discoveredDay } };
   properties["Última actualización"] = { date: { start: today } };
 
-  return { properties, notesOverflow: overflow };
+  return {
+    properties,
+    notesOverflow: overflow || input.notesOverflow || null,
+  };
 }
 
 export function mapResultsToLeads(results: unknown[]): Lead[] {

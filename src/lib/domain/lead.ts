@@ -131,8 +131,16 @@ export interface LeadCreateInput {
   /**
    * Origen del lead. Por defecto los mappers usan "Manual".
    * La ingesta pública (form galladev.com) pasa "web-galladev".
+   * POST /api/ingest/n8n usa "n8n" si no viene source.
    */
   source?: string | null;
+  /** Campos ricos opcionales (p.ej. prospectos n8n). No los usa el diálogo manual. */
+  status?: LeadStatus | string | null;
+  emailSubject?: string | null;
+  emailBody?: string | null;
+  score?: number | null;
+  notesOverflow?: string | null;
+  discoveredAt?: string | null;
 }
 
 export interface ActivityEvent {

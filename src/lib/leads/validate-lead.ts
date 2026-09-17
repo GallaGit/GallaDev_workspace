@@ -1,7 +1,9 @@
 import {
   CONFIDENCE_LEVELS,
+  LEAD_STATUSES,
   PROVINCES,
   SERVICES,
+  isLeadStatus,
   type LeadCreateInput,
 } from "@/lib/domain/lead";
 import {
@@ -163,6 +165,55 @@ export function validateLeadCreate(
     }
   }
 
+  const source = emptyToNull(
+    typeof raw.source === "string" ? raw.source : null,
+  );
+
+  const emailSubject = emptyToNull(
+    typeof raw.emailSubject === "string" ? raw.emailSubject : null,
+  );
+  const emailBody = emptyToNull(
+    typeof raw.emailBody === "string" ? raw.emailBody : null,
+  );
+  const notesOverflow = emptyToNull(
+    typeof raw.notesOverflow === "string" ? raw.notesOverflow : null,
+  );
+
+  let status: string | null = null;
+  if (raw.status !== undefined && raw.status !== null && raw.status !== "") {
+    const statusRaw =
+      typeof raw.status === "string" ? raw.status.trim() : String(raw.status);
+    if (!isLeadStatus(statusRaw)) {
+      errors.status = `Estado no válido. Usa: ${(LEAD_STATUSES as readonly string[]).join(", ")}`;
+    } else {
+      status = statusRaw;
+    }
+  }
+
+  let score: number | null = null;
+  if (
+    raw.score !== undefined &&
+    raw.score !== null &&
+    !(typeof raw.score === "string" && String(raw.score).trim() === "")
+  ) {
+    const n = typeof raw.score === "number" ? raw.score : Number(raw.score);
+    if (!Number.isFinite(n) || n < 0 || n > 100) {
+      errors.score = "Score debe ser un número entre 0 y 100";
+    } else {
+      score = Math.round(n);
+    }
+  }
+
+  let discoveredAt: string | null = null;
+  if (typeof raw.discoveredAt === "string" && raw.discoveredAt.trim()) {
+    const d = new Date(raw.discoveredAt.trim());
+    if (Number.isNaN(d.getTime())) {
+      errors.discoveredAt = "discoveredAt no es una fecha válida (ISO)";
+    } else {
+      discoveredAt = d.toISOString();
+    }
+  }
+
   const value: LeadCreateInput = {
     companyName,
     website,
@@ -191,6 +242,13 @@ export function validateLeadCreate(
     ),
     notes: emptyToNull(typeof raw.notes === "string" ? raw.notes : null),
     favorite: Boolean(raw.favorite),
+    source,
+    status,
+    emailSubject,
+    emailBody,
+    score,
+    notesOverflow,
+    discoveredAt,
   };
 
   const ok = Object.keys(errors).length === 0;
