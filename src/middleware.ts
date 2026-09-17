@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isAuthDisabled } from "@/lib/auth";
-import { verifySession } from "@/lib/auth-session";
+import {
+  SESSION_COOKIE,
+  issueSession,
+  sessionCookieOptions,
+  sessionNeedsRefresh,
+  sessionTtlMs,
+  verifySessionDetailed,
+} from "@/lib/auth-session";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,9 +26,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("lead_crm_session")?.value;
-  if (token && (await verifySession(token))) {
-    return NextResponse.next();
+  const now = Date.now();
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (token) {
+    const verified = await verifySessionDetailed(token, now);
+    if (verified.ok) {
+      const res = NextResponse.next();
+      if (sessionNeedsRefresh(verified.exp, now)) {
+        const refreshed = await issueSession(now);
+        if (refreshed) {
+          const ttl = sessionTtlMs();
+          res.cookies.set(
+            SESSION_COOKIE,
+            refreshed,
+            sessionCookieOptions(Math.floor(ttl / 1000)),
+          );
+        }
+      }
+      return res;
+    }
   }
 
   const login = new URL("/login", request.url);
