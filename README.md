@@ -47,3 +47,16 @@ npm run build
 ```
 
 Consulta [Estado de implementación](./docs/ESTADO_IMPLEMENTACION.md) antes de asumir que las secciones previstas en el roadmap ya están completas.
+
+## Emails de ingest (formulario web)
+
+Tras un `POST /api/ingest/lead` exitoso (alta o dedupe), GDW envía con Resend:
+
+- Acuse al visitante (`email` del payload)
+- Aviso interno a `EMAIL_NOTIFY_TO`
+
+Fail-open: si falta clave o Resend falla, el lead **igual** se guarda y la API responde 201/200.
+
+Variables (nombres; valores en Vercel, nunca en git): `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, opcional `EMAIL_REPLY_TO`.
+
+No se usa para marketing ni listas de nurturing.
