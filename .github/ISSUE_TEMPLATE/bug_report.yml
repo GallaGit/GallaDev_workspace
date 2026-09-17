@@ -1,0 +1,51 @@
+name: Bug report
+description: Report something broken in GallaDev Workspace
+labels: [bug]
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: What happens today?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, route, and filters/state if relevant
+      placeholder: |
+        1. Go to /leads
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Data provider
+      options:
+        - supabase (default)
+        - notion (legacy)
+        - unknown
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit / branch tested
+    validations:
+      required: false
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Error text, screenshots. NEVER paste secrets, tokens, or personal data.
+    validations:
+      required: false

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report (private)
+    url: https://github.com/GallaGit/GallaDev_workspace/security/advisories/new
+    about: Do not open public issues for vulnerabilities or leaked secrets.
+  - name: Documentation index
+    url: https://github.com/GallaGit/GallaDev_workspace/blob/master/docs/README.md
+    about: Product context, architecture, and usage guides.
