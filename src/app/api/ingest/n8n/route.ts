@@ -1,0 +1,128 @@
+import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { getLeadRepository } from "@/lib/repository/get-repository";
+import { validateLeadCreate } from "@/lib/leads/validate-lead";
+import { dispatchLeadCreated } from "@/lib/automations/dispatch";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * POST /api/ingest/n8n — ingesta rica de prospectos desde n8n → GDW CRM.
+ *
+ * Auth: `Authorization: Bearer <INGEST_SECRET>` (misma exención middleware
+ * que /api/ingest/lead). SÍ dispara dispatchLeadCreated (Telegram / n8n).
+ * El ingest de landing (/api/ingest/lead) sigue sin dispatch.
+ */
+const MAX_BODY_BYTES = 64 * 1024;
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_MAX = 60;
+const rateHits = new Map<string, number[]>();
+const DEFAULT_SOURCE = "n8n";
+
+function clientIp(request: Request): string {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
+  return "unknown";
+}
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const hits = (rateHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (hits.length >= RATE_MAX) {
+    rateHits.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  rateHits.set(ip, hits);
+  return false;
+}
+
+function readBearer(request: Request): string {
+  const header = request.headers.get("authorization") ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  return (match?.[1] ?? "").trim();
+}
+
+function bearerOk(provided: string, expected: string): boolean {
+  if (!provided || !expected) return false;
+  const a = Buffer.from(provided, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+export async function POST(request: Request) {
+  const secret = process.env.INGEST_SECRET ?? "";
+  if (!secret) {
+    console.error("[ingest/n8n] INGEST_SECRET no configurado");
+    return NextResponse.json(
+      { ok: false, error: "Ingesta no configurada" },
+      { status: 503 },
+    );
+  }
+  if (!bearerOk(readBearer(request), secret)) {
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 401 },
+    );
+  }
+
+  if (rateLimited(clientIp(request))) {
+    return NextResponse.json(
+      { ok: false, error: "Demasiadas solicitudes. Inténtalo más tarde." },
+      { status: 429 },
+    );
+  }
+
+  let raw: unknown;
+  try {
+    const text = await request.text();
+    if (text.length > MAX_BODY_BYTES) {
+      return NextResponse.json(
+        { ok: false, error: "Payload demasiado grande" },
+        { status: 413 },
+      );
+    }
+    raw = JSON.parse(text || "{}") as unknown;
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "JSON inválido" },
+      { status: 400 },
+    );
+  }
+  if (!raw || typeof raw !== "object") {
+    return NextResponse.json(
+      { ok: false, error: "Payload inválido" },
+      { status: 400 },
+    );
+  }
+
+  const body = raw as Record<string, unknown>;
+  if (body.source === undefined || body.source === null || body.source === "") {
+    body.source = DEFAULT_SOURCE;
+  }
+
+  const result = validateLeadCreate(body);
+  if (!result.ok || !result.value) {
+    return NextResponse.json(
+      { ok: false, error: "Datos no válidos", fieldErrors: result.errors },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const repo = getLeadRepository();
+    const lead = await repo.create(result.value);
+    const automation = dispatchLeadCreated(lead);
+    return NextResponse.json(
+      { ok: true, id: lead.id, automation },
+      { status: 201 },
+    );
+  } catch (e) {
+    console.error("[ingest/n8n] error al guardar lead", e);
+    return NextResponse.json(
+      { ok: false, error: "No se pudo guardar el lead" },
+      { status: 500 },
+    );
+  }
+}

@@ -176,12 +176,21 @@ export class NotionLeadRepository implements LeadRepository {
       lead.notesOverflow = notesOverflow;
     }
 
-    await this.appendActivity(lead.id, "Lead creado manualmente", "create");
+    const src = input.source?.trim() ?? "";
+    const createMsg =
+      src === "web-galladev"
+        ? "Lead recibido desde galladev.com"
+        : src === "n8n"
+          ? "Lead recibido desde n8n"
+          : "Lead creado manualmente";
+    await this.appendActivity(lead.id, createMsg, "create");
     await this.addComment(
       lead.id,
-      input.source?.trim() === "web-galladev"
+      src === "web-galladev"
         ? "Lead recibido desde el formulario de galladev.com"
-        : "Lead creado manualmente desde Leads_CRM",
+        : src === "n8n"
+          ? "Lead recibido desde n8n (ingest)"
+          : "Lead creado manualmente desde Leads_CRM",
     );
 
     return lead;
