@@ -10,6 +10,7 @@ docs/
 │   ├── CONTEXTO_NEGOCIO.md
 │   ├── DECISIONES.md
 │   ├── ROADMAP.md
+│   ├── GEM_ROADMAP.md       # Plan de ejecución: de herramienta individual a joya SaaS
 │   └── CONTRACT-pain-analysis.md
 ├── architecture/     # Arquitectura, integraciones, estado técnico
 │   ├── ARQUITECTURA.md
@@ -32,7 +33,7 @@ docs/
 
 ## Lectura recomendada (orden)
 
-1. **Producto**: [`product/CONTEXTO_NEGOCIO.md`](product/CONTEXTO_NEGOCIO.md) → [`product/DECISIONES.md`](product/DECISIONES.md) → [`product/ROADMAP.md`](product/ROADMAP.md)
+1. **Producto**: [`product/CONTEXTO_NEGOCIO.md`](product/CONTEXTO_NEGOCIO.md) → [`product/DECISIONES.md`](product/DECISIONES.md) → [`product/ROADMAP.md`](product/ROADMAP.md) → [`product/GEM_ROADMAP.md`](product/GEM_ROADMAP.md) (plan de ejecución v2)
 2. **Arquitectura**: [`architecture/ARQUITECTURA.md`](architecture/ARQUITECTURA.md) → [`architecture/INTEGRACIONES.md`](architecture/INTEGRACIONES.md)
 3. **Guías**: [`guides/GUIA_USO.md`](guides/GUIA_USO.md) (instalación, operación diaria)
 4. **Sesiones**: [`sessions/`](sessions/) para historial de cambios recientes

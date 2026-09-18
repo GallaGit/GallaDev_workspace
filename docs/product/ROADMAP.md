@@ -8,6 +8,8 @@ Producto v1.0: 8 fases completadas (ver REPORTE_VERIFICACION_ROADMAP.md).
 Decision DB v2.0: Sustituir Notion por Supabase (PostgreSQL) — planificado en v2.0 Core Features.
 No reabrir decisiones v1 salvo que sean los items explicitly planificados en v2.0.
 
+**Ejecución:** el plan operativo (seguridad → tests → acabado → SaaS) vive en [`GEM_ROADMAP.md`](./GEM_ROADMAP.md).
+
 **Alineación n8n (2026-09-10):** el workflow de captación escribe estado `Nuevo`, `Origen=n8n`, email plano y cuerpo vacío; filtro operativo 3–10 empleados. Detalle en [`INTEGRACIONES.md`](./INTEGRACIONES.md). Webhooks CRM → n8n siguen fuera de v1 (decisión #12).
 
 ---
