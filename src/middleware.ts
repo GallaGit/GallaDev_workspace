@@ -17,6 +17,10 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api/ingest/")) {
     return NextResponse.next();
   }
+  // Estado de captación para la landing (CORS + sin cookie).
+  if (pathname.startsWith("/api/public/")) {
+    return NextResponse.next();
+  }
   // Login/logout gestionan su propia lógica.
   if (pathname.startsWith("/api/auth/") || pathname.startsWith("/login")) {
     return NextResponse.next();
