@@ -94,7 +94,7 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       ) : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2.5">
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-gris-100 shadow-md dark:bg-gris-800">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-panel shadow-md">
           {children}
         </div>
       </div>
