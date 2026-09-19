@@ -89,7 +89,7 @@ export function Topbar({
                   : "animate-pulse bg-zinc-400",
               )}
             />
-            DB: {dbProvider === "supabase" ? "Supabase" : "Notion"}
+            DB: Supabase
           </span>
         )}
         <div className="hidden text-sm text-gris-500 dark:text-gris-400 sm:block">

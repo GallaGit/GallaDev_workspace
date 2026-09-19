@@ -4,6 +4,7 @@ import {
   passwordOk,
   readSessionExp,
   sessionNeedsRefresh,
+  sessionNeedsWarning,
   sessionTtlMs,
   verifySession,
   verifySessionDetailed,
@@ -126,4 +127,41 @@ describe("auth-session", () => {
     vi.stubEnv("AUTH_PASSWORD", "");
     expect(await passwordOk(PASSWORD)).toBe(false);
   });
+
+  it("incluye sv en el payload y rechaza epoch distinto", async () => {
+    vi.stubEnv("AUTH_SECRET", SECRET);
+    vi.stubEnv("SESSION_EPOCH", "1");
+    const now = Date.now();
+    const token = (await issueSession(now)) ?? "";
+    expect(await verifySession(token, now)).toBe(true);
+    const detailed = await verifySessionDetailed(token, now);
+    expect(detailed.ok).toBe(true);
+    if (detailed.ok) expect(detailed.sv).toBe(1);
+
+    vi.stubEnv("SESSION_EPOCH", "2");
+    expect(await verifySession(token, now)).toBe(false);
+  });
+
+  it("sessionNeedsWarning usa umbral TTL/4", () => {
+    vi.stubEnv("SESSION_TTL_DAYS", "2");
+    const ttl = sessionTtlMs();
+    const now = 1_000_000;
+    const exp = now + ttl;
+    expect(sessionNeedsWarning(exp, now)).toBe(false);
+    expect(sessionNeedsWarning(exp, now + (ttl * 3) / 4 + 1)).toBe(true);
+    expect(sessionNeedsWarning(exp, now + (ttl * 3) / 4 - 1)).toBe(false);
+  });
+
+  it("sliding refresh (issueSession) mantiene el sv actual", async () => {
+    vi.stubEnv("AUTH_SECRET", SECRET);
+    vi.stubEnv("SESSION_EPOCH", "7");
+    const now = Date.now();
+    const a = (await issueSession(now)) ?? "";
+    const b = (await issueSession(now + 1000)) ?? "";
+    const da = await verifySessionDetailed(a, now);
+    const db = await verifySessionDetailed(b, now + 1000);
+    expect(da.ok && da.sv === 7).toBe(true);
+    expect(db.ok && db.sv === 7).toBe(true);
+  });
+
 });

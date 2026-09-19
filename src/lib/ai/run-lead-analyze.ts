@@ -1,6 +1,5 @@
 import "server-only";
 
-import { APIErrorCode, isNotionClientError } from "@notionhq/client";
 import {
   PainAnalysisError,
   analyzeBusinessPains,
@@ -50,13 +49,6 @@ function emptySuccess(lead: Lead): AnalyzeSuccessBody {
   };
 }
 
-function isNotionNotFound(error: unknown): boolean {
-  return (
-    isNotionClientError(error) &&
-    "code" in error &&
-    error.code === APIErrorCode.ObjectNotFound
-  );
-}
 
 export async function runLeadAnalyze(
   id: string,
@@ -70,9 +62,6 @@ export async function runLeadAnalyze(
   try {
     lead = await repo.get(id);
   } catch (e) {
-    if (isNotionNotFound(e)) {
-      return { ok: false, status: 404, body: { error: "Lead no encontrado" } };
-    }
     const message = e instanceof Error ? e.message : "Error al obtener lead";
     return { ok: false, status: 500, body: { error: message } };
   }

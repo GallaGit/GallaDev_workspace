@@ -6,18 +6,18 @@ afterEach(() => {
 });
 
 describe("leadsDbProvider", () => {
-  it("default supabase sin env (fuente de verdad actual)", () => {
+  it("siempre supabase (Notion runtime eliminado)", () => {
     expect(leadsDbProvider()).toBe("supabase");
     expect(getActiveProvider()).toBe("supabase");
   });
 
-  it("notion solo con LEADS_DB_PROVIDER=notion explícito (legado)", () => {
-    process.env.LEADS_DB_PROVIDER = "Notion";
-    expect(leadsDbProvider()).toBe("notion");
-    expect(getActiveProvider()).toBe("notion");
+  it("ignora LEADS_DB_PROVIDER=notion (ya no hay runtime Notion)", () => {
+    process.env.LEADS_DB_PROVIDER = "notion";
+    expect(leadsDbProvider()).toBe("supabase");
+    expect(getActiveProvider()).toBe("supabase");
   });
 
-  it("cualquier otro valor cae a supabase", () => {
+  it("cualquier otro valor sigue siendo supabase", () => {
     process.env.LEADS_DB_PROVIDER = "postgres";
     expect(leadsDbProvider()).toBe("supabase");
   });

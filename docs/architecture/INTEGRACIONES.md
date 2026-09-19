@@ -5,17 +5,27 @@
 ```mermaid
 flowchart LR
   SerpAPI[SerpAPI_Google_Maps] --> N8n[n8n_Prospeccion]
-  N8n --> Notion[Notion_CRM]
-  Notion --> Dashboard[Lead_CRM_Dashboard]
-  Dashboard --> Notion
+  N8n --> Supabase[(Supabase_PostgreSQL)]
+  Supabase --> Dashboard[Lead_CRM_Dashboard]
+  Dashboard --> Supabase
   Dashboard -.-> Webhooks[n8n_Webhooks_Futuros]
 ```
 
-## Notion
+## Supabase (fuente de verdad)
 
-### Responsabilidad
+PostgreSQL en Supabase es la **única** fuente de verdad de leads. El runtime Notion se eliminó del código; el script histórico de migración vive en `docs/archive/`.
 
-Notion es la fuente de verdad. Leads_CRM:
+Leads_CRM:
+
+- lee/escribe filas en `public.leads` y actividades;
+- usa `SupabaseLeadRepository` vía `getLeadRepository()`;
+- no depende de `@notionhq/client`.
+
+## Notion (archivo / histórico)
+
+### Responsabilidad (histórico)
+
+Notion **fue** la fuente de verdad hasta el cutover a Supabase. Ya no hay runtime Notion en la app. Referencia histórica — Leads_CRM antes:
 
 - lee páginas de la base;
 - actualiza propiedades;
@@ -139,7 +149,7 @@ Características:
 - extracción desde la web;
 - estimación de empleados;
 - email en **texto plano** (sin HTML/`<br>`);
-- creación del lead en Notion **solo con propiedades** (cuerpo vacío: `Notas`/`Actividad` los escribe Leads_CRM);
+- creación del lead (histórico Notion) **solo con propiedades** (cuerpo vacío: `Notas`/`Actividad` los escribe Leads_CRM);
 - `Origen` = `n8n`; no rellena `Favorito` ni `Análisis IA`.
 
 ### Estado de entrada
@@ -171,7 +181,7 @@ N8N_WEBHOOK_GENERAR_EMAIL=
 N8N_WEBHOOK_EJECUTAR=
 ```
 
-La capa está preparada (`N8nClient.triggerWebhook` + métodos `notifyLeadCreated/Updated/Analyzed`), pero **no** se añadieron triggers al workflow (decisión #12 / v1). No rellenes URLs en Automations ni en `.env` hasta que existan endpoints n8n protegidos. La captación se lanza con Manual o Cron dentro de n8n; Leads_CRM solo sincroniza Notion. Settings puede guardar overrides en `data/settings.local.json` (gitignored); el navegador solo ve previews enmascarados.
+La capa está preparada (`N8nClient.triggerWebhook` + métodos `notifyLeadCreated/Updated/Analyzed`), pero **no** se añadieron triggers al workflow (decisión #12 / v1). No rellenes URLs en Automations ni en `.env` hasta que existan endpoints n8n protegidos. La captación se lanza con Manual o Cron dentro de n8n; Leads_CRM persiste en Supabase (el workflow n8n puede seguir escribiendo donde esté configurado). Settings puede guardar overrides en `data/settings.local.json` (gitignored); el navegador solo ve previews enmascarados.
 
 ## SerpAPI
 
