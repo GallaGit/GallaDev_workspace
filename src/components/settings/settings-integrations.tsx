@@ -16,9 +16,6 @@ import type {
 import { AUTOMATION_ACTION_IDS } from "@/lib/settings/types";
 
 type Draft = {
-  notionToken: string;
-  notionDatabaseId: string;
-  notionDataSourceId: string;
   n8nBaseUrl: string;
   n8nApiKey: string;
   n8nWebhooks: Record<AutomationAction, string>;
@@ -30,9 +27,6 @@ type Draft = {
 
 function seedDraft(settings: PublicSettings): Draft {
   return {
-    notionToken: "",
-    notionDatabaseId: settings.notion.databaseId,
-    notionDataSourceId: settings.notion.dataSourceId,
     n8nBaseUrl: settings.n8n.baseUrl,
     n8nApiKey: "",
     n8nWebhooks: {
@@ -176,73 +170,6 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           </span>
         </div>
       </div>
-
-      <section className="space-y-3 rounded-lg border border-(--border) bg-(--panel) p-4">
-        <Header
-          title="Notion"
-          configured={settings.notion.configured}
-          connection={settings.notion.connection}
-          pending={testing === "notion"}
-        />
-        <SecretField
-          id="notion-token"
-          label="Token"
-          field={settings.notion.token}
-          value={draft.notionToken}
-          onChange={(v) => setDraft((d) => ({ ...d, notionToken: v }))}
-        />
-        {settings.notion.token.source === "file" ? (
-          <ClearLink
-            onClick={() => markClear("notion.token")}
-            active={Boolean(clearing["notion.token"])}
-          />
-        ) : null}
-        <TextField
-          id="notion-db"
-          label="Database ID"
-          value={draft.notionDatabaseId}
-          onChange={(v) => setDraft((d) => ({ ...d, notionDatabaseId: v }))}
-        />
-        <TextField
-          id="notion-ds"
-          label="Data source ID"
-          value={draft.notionDataSourceId}
-          onChange={(v) => setDraft((d) => ({ ...d, notionDataSourceId: v }))}
-        />
-        <Actions
-          saving={saving === "notion"}
-          testing={testing === "notion"}
-          onSave={() =>
-            void save(
-              {
-                notion: {
-                  token: clearing["notion.token"]
-                    ? ""
-                    : optionalSecret(draft.notionToken),
-                  databaseId:
-                    draft.notionDatabaseId !== settings.notion.databaseId
-                      ? draft.notionDatabaseId
-                      : undefined,
-                  dataSourceId:
-                    draft.notionDataSourceId !== settings.notion.dataSourceId
-                      ? draft.notionDataSourceId
-                      : undefined,
-                },
-              },
-              "notion",
-            )
-          }
-          onTest={() =>
-            void test("notion", {
-              notion: {
-                token: optionalSecret(draft.notionToken),
-                databaseId: draft.notionDatabaseId,
-                dataSourceId: draft.notionDataSourceId,
-              },
-            })
-          }
-        />
-      </section>
 
       <section className="space-y-3 rounded-lg border border-(--border) bg-(--panel) p-4">
         <Header
@@ -457,7 +384,7 @@ function Header({
 }: {
   title: string;
   configured: boolean;
-  connection: PublicSettings["notion"]["connection"];
+  connection: PublicSettings["n8n"]["connection"];
   pending?: boolean;
 }) {
   return (

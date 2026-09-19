@@ -53,7 +53,8 @@ venv/
 *.pyc
 
 # Overrides de Settings (secretos y estado de conexión)
-data/
+data/*
+!data/session-epoch.json
 
 # Solo locales en esta máquina — no van al remoto de la app
 .agents/

@@ -14,7 +14,7 @@ export type SyncLeadsOptions = {
 };
 
 /**
- * Shared Notion sync used by Topbar and page hooks.
+ * Shared leads sync used by Topbar and page hooks.
  */
 export async function syncLeadsFromApi(
   options: SyncLeadsOptions = {},
@@ -42,7 +42,7 @@ export async function syncLeadsFromApi(
     }
     setLeads(data.leads as Lead[]);
     setSync({ state: "idle", at: data.syncedAt, error: null });
-    if (data.provider === "supabase" || data.provider === "notion") {
+    if (data.provider === "supabase") {
       useUiStore.getState().setDbProvider(data.provider);
     }
     // Semáforo de conexión (no bloquea el sync si falla).
@@ -68,7 +68,7 @@ export async function refreshDbStatus(): Promise<void> {
     const res = await fetch("/api/db-status");
     const data = (await res.json()) as Partial<DbHealth>;
     if (
-      (data.provider === "supabase" || data.provider === "notion") &&
+      (data.provider === "supabase") &&
       (data.status === "ok" ||
         data.status === "auth" ||
         data.status === "config" ||

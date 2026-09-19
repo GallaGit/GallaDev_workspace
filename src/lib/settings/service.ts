@@ -13,8 +13,6 @@ import {
   AUTOMATION_CATALOG,
   DEFAULT_AI_MODEL,
   DEFAULT_AI_PROVIDER,
-  DEFAULT_NOTION_DATA_SOURCE_ID,
-  DEFAULT_NOTION_DATABASE_ID,
 } from "./catalog";
 import {
   AUTOMATION_ACTION_IDS,
@@ -106,19 +104,6 @@ function parseFile(raw: unknown): SettingsFile {
   if (!isRecord(raw)) return {};
   const file: SettingsFile = {};
 
-  if (isRecord(raw.notion)) {
-    file.notion = {
-      token: typeof raw.notion.token === "string" ? raw.notion.token : undefined,
-      databaseId:
-        typeof raw.notion.databaseId === "string"
-          ? raw.notion.databaseId
-          : undefined,
-      dataSourceId:
-        typeof raw.notion.dataSourceId === "string"
-          ? raw.notion.dataSourceId
-          : undefined,
-    };
-  }
 
   if (isRecord(raw.n8n)) {
     const webhooks: Partial<Record<AutomationAction, string>> = {};
@@ -235,19 +220,6 @@ export class SettingsService {
     }
 
     return {
-      notion: {
-        token: sourced(file.notion?.token, envValue("NOTION_TOKEN")),
-        databaseId: sourced(
-          file.notion?.databaseId,
-          envValue("NOTION_DATABASE_ID"),
-          DEFAULT_NOTION_DATABASE_ID,
-        ),
-        dataSourceId: sourced(
-          file.notion?.dataSourceId,
-          envValue("NOTION_DATA_SOURCE_ID"),
-          DEFAULT_NOTION_DATA_SOURCE_ID,
-        ),
-      },
       n8n: {
         baseUrl: sourced(file.n8n?.baseUrl, envValue("N8N_BASE_URL", "N8N_URL")),
         apiKey: sourced(file.n8n?.apiKey, envValue("N8N_API_KEY")),
@@ -281,19 +253,6 @@ export class SettingsService {
   }
 
   private applyPatch(file: SettingsFile, patch: SettingsPatch): SettingsFile {
-    const notion = { ...file.notion };
-    if (patch.notion) {
-      notion.token = applyOverride(notion.token, patch.notion.token);
-      notion.databaseId = applyOverride(
-        notion.databaseId,
-        patch.notion.databaseId,
-      );
-      notion.dataSourceId = applyOverride(
-        notion.dataSourceId,
-        patch.notion.dataSourceId,
-      );
-    }
-
     const n8nWebhooks = { ...file.n8n?.webhooks };
     if (patch.n8n?.webhooks) {
       for (const action of AUTOMATION_ACTION_IDS) {
@@ -350,7 +309,6 @@ export class SettingsService {
     }
 
     return pruneEmpty({
-      notion: pruneEmpty(notion),
       n8n: pruneEmpty({ ...n8n, webhooks: pruneEmpty(n8nWebhooks) }),
       ai: pruneEmpty(ai),
       serpapi: pruneEmpty(serpapi),

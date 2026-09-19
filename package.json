@@ -18,11 +18,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:ci": "npm run test:unit && npm run test:component && npm run test:e2e",
-    "db:migrate-notion": "tsx scripts/migrate-notion-to-supabase.mts"
+    "test:ci": "npm run test:unit && npm run test:component && npm run test:e2e"
   },
   "dependencies": {
-    "@notionhq/client": "^5.26.0",
     "@radix-ui/react-checkbox": "^1.3.11",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",

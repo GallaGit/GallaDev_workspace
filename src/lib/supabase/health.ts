@@ -52,21 +52,6 @@ export function classifySupabaseError(error: unknown): DbStatus {
   return "down";
 }
 
-/** Clasifica el mensaje de testIntegration("notion") en semáforo. */
-export function classifyNotionMessage(ok: boolean, message: string): DbStatus {
-  if (ok) return "ok";
-  const m = message.toLowerCase();
-  if (m.includes("falta el token") || m.includes("no configurado")) return "config";
-  if (
-    m.includes("401") ||
-    m.includes("unauthorized") ||
-    m.includes("invalid") ||
-    m.includes("restricted")
-  ) {
-    return "auth";
-  }
-  return "down";
-}
 
 export function isDbStatus(value: unknown): value is DbStatus {
   return value === "ok" || value === "auth" || value === "config" || value === "down";

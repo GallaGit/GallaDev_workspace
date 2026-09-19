@@ -1,6 +1,5 @@
 import "server-only";
 
-import { Client } from "@notionhq/client";
 import { createN8nClient } from "@/lib/n8n/client";
 import { N8nClientError } from "@/lib/n8n/errors";
 import { getSettingsService } from "./service";
@@ -22,15 +21,6 @@ function timeoutSignal(ms = 12_000): AbortSignal {
 function overlay(raw: ResolvedSettings, patch?: SettingsPatch): ResolvedSettings {
   if (!patch) return raw;
   const next = structuredClone(raw);
-  if (patch.notion?.token?.trim()) {
-    next.notion.token.value = patch.notion.token.trim();
-  }
-  if (patch.notion?.databaseId?.trim()) {
-    next.notion.databaseId.value = patch.notion.databaseId.trim();
-  }
-  if (patch.notion?.dataSourceId?.trim()) {
-    next.notion.dataSourceId.value = patch.notion.dataSourceId.trim();
-  }
   if (patch.n8n?.baseUrl?.trim()) {
     next.n8n.baseUrl.value = patch.n8n.baseUrl.trim();
   }
@@ -53,19 +43,6 @@ async function resolveSettings(patch?: SettingsPatch): Promise<ResolvedSettings>
   return overlay(raw, patch);
 }
 
-async function testNotion(patch?: SettingsPatch): Promise<ConnectionTestResult> {
-  const settings = await resolveSettings(patch);
-  const token = settings.notion.token.value;
-  if (!token) return { ok: false, message: "Falta el token de Notion" };
-
-  const client = new Client({ auth: token });
-  await client.users.me({});
-  const dataSourceId = settings.notion.dataSourceId.value.replace(/-/g, "");
-  if (dataSourceId) {
-    await client.dataSources.retrieve({ data_source_id: dataSourceId });
-  }
-  return { ok: true, message: "Notion: token y data source válidos" };
-}
 
 async function testAi(patch?: SettingsPatch): Promise<ConnectionTestResult> {
   const settings = await resolveSettings(patch);
@@ -124,8 +101,6 @@ export async function testIntegration(
 ): Promise<ConnectionTestResult> {
   try {
     switch (id) {
-      case "notion":
-        return await testNotion(patch);
       case "ai":
         return await testAi(patch);
       case "serpapi":
@@ -145,7 +120,6 @@ export async function testIntegration(
 
 export function isIntegrationId(value: string): value is IntegrationId {
   return (
-    value === "notion" ||
     value === "n8n" ||
     value === "ai" ||
     value === "serpapi"

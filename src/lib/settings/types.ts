@@ -6,7 +6,7 @@ export const AUTOMATION_ACTION_IDS = [
 
 export type AutomationAction = (typeof AUTOMATION_ACTION_IDS)[number];
 
-export const INTEGRATION_IDS = ["notion", "n8n", "ai", "serpapi"] as const;
+export const INTEGRATION_IDS = ["n8n", "ai", "serpapi"] as const;
 
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
@@ -35,11 +35,6 @@ export interface SourcedBoolean {
 }
 
 export interface ResolvedSettings {
-  notion: {
-    token: SourcedString;
-    databaseId: SourcedString;
-    dataSourceId: SourcedString;
-  };
   n8n: {
     baseUrl: SourcedString;
     apiKey: SourcedString;
@@ -58,11 +53,6 @@ export interface ResolvedSettings {
 }
 
 export interface SettingsFile {
-  notion?: {
-    token?: string;
-    databaseId?: string;
-    dataSourceId?: string;
-  };
   n8n?: {
     baseUrl?: string;
     apiKey?: string;
@@ -83,11 +73,6 @@ export interface SettingsFile {
 }
 
 export interface SettingsPatch {
-  notion?: {
-    token?: string;
-    databaseId?: string;
-    dataSourceId?: string;
-  };
   n8n?: {
     baseUrl?: string;
     apiKey?: string;
@@ -122,13 +107,6 @@ export interface PublicAutomation {
 
 export interface PublicSettings {
   authDisabled: boolean;
-  notion: {
-    configured: boolean;
-    token: MaskedField;
-    databaseId: string;
-    dataSourceId: string;
-    connection: IntegrationConnectionState;
-  };
   n8n: {
     configured: boolean;
     baseUrl: string;

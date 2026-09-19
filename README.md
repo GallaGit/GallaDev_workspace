@@ -1,6 +1,6 @@
 # GallaDev Workspace
 
-CRM for reviewing, qualifying, and managing leads for asesorías y gestorías. **Supabase (PostgreSQL) is the source of truth** (Notion is legacy, only when `LEADS_DB_PROVIDER=notion`); n8n handles prospecting.
+CRM for reviewing, qualifying, and managing leads for asesorías y gestorías. **Supabase (PostgreSQL) is the sole source of truth**; n8n handles prospecting. The Notion runtime has been removed.
 
 > Formerly `Leads_CRM`. Production: [https://workspace.galladev.com](https://workspace.galladev.com).
 
@@ -24,9 +24,8 @@ SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 SUPABASE_SECRET_KEY=<secret-key-never-commit>
 AUTH_DISABLED=true
 # Production: AUTH_SECRET + AUTH_PASSWORD. Session: SESSION_TTL_DAYS=1 (1–90).
+# Multi-instance logout-all: set SESSION_EPOCH (see SECURITY.md).
 ```
-
-> Legacy Notion deployments only: `LEADS_DB_PROVIDER=notion` plus `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_DATA_SOURCE_ID`.
 
 ## Documentation
 
@@ -41,7 +40,7 @@ AUTH_DISABLED=true
 
 ## Stack
 
-Next.js App Router, React, TypeScript, Tailwind CSS, Lucide, TanStack Query, Zustand, Supabase (`@supabase/ssr`, `@supabase/supabase-js`), `@notionhq/client` (legacy), Resend, Groq.
+Next.js App Router, React, TypeScript, Tailwind CSS, Lucide, TanStack Query, Zustand, Supabase (`@supabase/ssr`, `@supabase/supabase-js`), Resend, Groq.
 
 ## Verification
 

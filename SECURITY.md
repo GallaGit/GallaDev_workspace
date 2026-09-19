@@ -33,5 +33,6 @@ We aim to acknowledge within 72 hours, share a remediation plan, and credit repo
 ## Scope notes
 
 - Auth: production requires `AUTH_SECRET` + `AUTH_PASSWORD` with `SESSION_TTL_DAYS` 1–90. `AUTH_DISABLED=true` is local-dev only.
+- Session epoch: cookies carry `sv`. Bump via `POST /api/auth/logout-all` (writes `data/session-epoch.json` + `process.env`) or set `SESSION_EPOCH` in Vercel so every Edge/Node isolate agrees. Sliding refresh keeps the current `sv`.
 - Public ingest (`POST /api/ingest/lead`, `POST /api/ingest/n8n`) is bearer-token protected (`INGEST_SECRET`); report auth bypasses as high severity.
 - Transactional email (Resend) is fail-open by design — the lead is saved even if email fails. Do not report that as a bug.

@@ -33,7 +33,7 @@ Key env facts (see `.env.example` for the full list):
 
 | Variable | Meaning |
 |---|---|
-| `LEADS_DB_PROVIDER` | Source of truth. Default `supabase`. Only set `notion` for legacy deployments. |
+| `LEADS_DB_PROVIDER` | Ignored (always Supabase). Kept in `.env.example` for clarity. |
 | `AUTH_DISABLED=true` | Local dev without login. Production requires `AUTH_SECRET` + `AUTH_PASSWORD`. |
 | `INGEST_SECRET` | Shared secret for `POST /api/ingest/lead`. Generate with `openssl rand -hex 32`. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Transactional email after web ingest (fail-open: the lead is still saved if email fails). |
@@ -113,7 +113,7 @@ Testing conventions (details in [`TESTING.md`](./TESTING.md)):
 
 ## 8. Project-specific notes
 
-- **Source of truth is Supabase (PostgreSQL).** `getLeadRepository()` in `src/lib/repository/get-repository.ts` returns `SupabaseLeadRepository` by default; `NotionLeadRepository` is legacy and only used when `LEADS_DB_PROVIDER=notion` is set explicitly. New persistence code must implement the `LeadRepository` interface, not import provider types in UI or route handlers.
+- **Source of truth is Supabase (PostgreSQL).** `getLeadRepository()` in `src/lib/repository/get-repository.ts` always returns `SupabaseLeadRepository` (Notion runtime removed). New persistence code must implement the `LeadRepository` interface, not import provider types in UI or route handlers.
 - **Lead pipeline:** exactly 9 statuses (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Legacy Notion names are normalized on read, never written.
 - **n8n prospecting** writes new leads (`Origen=n8n`, state `Nuevo`); the CRM never edits the capture workflow. Webhook dispatches are best-effort and must never fail persistence.
 - **UI language is Spanish.** Code, commits, issues, and PRs are in English; user-facing strings in Spanish.

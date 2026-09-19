@@ -10,13 +10,6 @@ import {
 export function toPublicSettings(raw: ResolvedSettings): PublicSettings {
   return {
     authDisabled: isAuthDisabled(),
-    notion: {
-      configured: Boolean(raw.notion.token.value),
-      token: maskSourcedSecret(raw.notion.token),
-      databaseId: raw.notion.databaseId.value,
-      dataSourceId: raw.notion.dataSourceId.value,
-      connection: raw.connections.notion,
-    },
     n8n: {
       configured: Boolean(
         raw.n8n.baseUrl.value ||
