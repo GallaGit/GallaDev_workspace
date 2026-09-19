@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (ThemeProvider toggles .dark on <html>).
+ * Without this, Tailwind v4 keeps dark: on prefers-color-scheme only,
+ * so light theme leaves dark:bg-* panes stuck dark while CSS-var chrome switches. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* GallaDev Brand Colors */
   --color-rojo: #C62828;
