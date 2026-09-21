@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  classifyNotionMessage,
   classifySupabaseError,
   isDbStatus,
 } from "./health";
@@ -34,20 +33,6 @@ describe("classifySupabaseError", () => {
   });
 });
 
-describe("classifyNotionMessage", () => {
-  it("ok → ok", () => {
-    expect(classifyNotionMessage(true, "cualquier")).toBe("ok");
-  });
-
-  it("sin token → config", () => {
-    expect(classifyNotionMessage(false, "Falta el token de Notion")).toBe("config");
-  });
-
-  it("401 → auth, resto → down", () => {
-    expect(classifyNotionMessage(false, "API responded with 401")).toBe("auth");
-    expect(classifyNotionMessage(false, "timeout de red")).toBe("down");
-  });
-});
 
 describe("isDbStatus", () => {
   it("valida los 4 estados", () => {

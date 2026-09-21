@@ -13,10 +13,6 @@ export function sourceLabel(source: ValueSource): string {
   }
 }
 
-export const DEFAULT_NOTION_DATABASE_ID =
-  "ed07cdd4c5424f9a8b8ebd73e358c6cd";
-export const DEFAULT_NOTION_DATA_SOURCE_ID =
-  "27fefc60-8dfd-4356-9465-582d3c49d99f";
 export const DEFAULT_AI_PROVIDER = "groq";
 export const DEFAULT_AI_MODEL = "openai/gpt-oss-120b";
 

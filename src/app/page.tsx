@@ -102,7 +102,7 @@ export default function HomePage() {
       <Topbar title="Dashboard" />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <p className="mb-4 text-sm text-(--muted-fg)">
-          Cualificación de leads · Notion como fuente de verdad. Las tarjetas
+          Cualificación de leads · Supabase como fuente de verdad. Las tarjetas
           con cola abren Daily Work filtrado.
         </p>
         {syncState === "syncing" && leads.length === 0 ? (

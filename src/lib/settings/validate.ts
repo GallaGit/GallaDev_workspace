@@ -1,7 +1,6 @@
 import { AUTOMATION_ACTION_IDS, type FieldErrors, type SettingsPatch } from "./types";
 
 const HTTP_URL = /^https?:\/\/.+/i;
-const NOTION_ID = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
 const AI_PROVIDERS = new Set(["groq"]);
 
 function optionalUrl(path: string, value: string | undefined, errors: FieldErrors) {
@@ -13,24 +12,10 @@ function optionalUrl(path: string, value: string | undefined, errors: FieldError
   }
 }
 
-function optionalNotionId(
-  path: string,
-  value: string | undefined,
-  errors: FieldErrors,
-) {
-  if (value === undefined) return;
-  const trimmed = value.trim();
-  if (!trimmed) return;
-  if (!NOTION_ID.test(trimmed)) {
-    errors[path] = "El ID de Notion no tiene un formato válido";
-  }
-}
 
 export function validateSettingsPatch(patch: SettingsPatch): FieldErrors {
   const errors: FieldErrors = {};
 
-  optionalNotionId("notion.databaseId", patch.notion?.databaseId, errors);
-  optionalNotionId("notion.dataSourceId", patch.notion?.dataSourceId, errors);
   optionalUrl("n8n.baseUrl", patch.n8n?.baseUrl, errors);
 
   if (patch.n8n?.webhooks) {

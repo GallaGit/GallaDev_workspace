@@ -32,7 +32,7 @@ Variables clave (ver `.env.example` para la lista completa):
 
 | Variable | Significado |
 |---|---|
-| `LEADS_DB_PROVIDER` | Fuente de verdad. Por defecto `supabase`. Solo usa `notion` para despliegues legacy. |
+| `LEADS_DB_PROVIDER` | Ignorado (siempre Supabase). Se mantiene en `.env.example` por claridad. |
 | `AUTH_DISABLED=true` | Desarrollo local sin login. Producción requiere `AUTH_SECRET` + `AUTH_PASSWORD`. |
 | `INGEST_SECRET` | Secreto compartido para `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Email transaccional tras ingesta web (fail-open: el lead se guarda aunque falle el email). |
@@ -112,7 +112,7 @@ Convenciones de testing (detalle en [`TESTING.md`](./TESTING.md)):
 
 ## 8. Notas específicas del proyecto
 
-- **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository()` en `src/lib/repository/get-repository.ts` devuelve `SupabaseLeadRepository` por defecto; `NotionLeadRepository` es legacy y solo se usa cuando `LEADS_DB_PROVIDER=notion` se configura explícitamente. El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
+- **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository()` en `src/lib/repository/get-repository.ts` siempre devuelve `SupabaseLeadRepository` (runtime Notion eliminado). El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
 - **Pipeline de leads:** exactamente 9 estados (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Los nombres legacy de Notion se normalizan al leer, nunca se escriben.
 - **La prospección con n8n** escribe leads nuevos (`Origen=n8n`, estado `Nuevo`); el CRM nunca edita el workflow de captación. Los dispatches de webhooks son best-effort y nunca deben impedir la persistencia.
 - **La UI está en español.** Código, commits, issues y PRs van en inglés; las cadenas visibles al usuario, en español.

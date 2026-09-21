@@ -9,8 +9,8 @@ export async function GET() {
     const settings = toPublicSettings(getSettingsService().getRaw());
     return NextResponse.json({
       ...settings,
-      // Compat with the previous status payload.
-      notionConfigured: settings.notion.configured,
+      // Compat: Notion runtime removed; always false.
+      notionConfigured: false,
       serpapiConfigured: settings.serpapi.configured,
       groqConfigured: settings.ai.configured,
       n8nActions: settings.automations.map((a) => ({
