@@ -1,11 +1,12 @@
-# Roadmap — Leads_CRM
+# Roadmap — GallaDev Workspace (antes Leads_CRM)
 
 **Fuente de producto:** [`DECISIONES.md`](./DECISIONES.md)  
 **App:** raíz de este repositorio  
-**Stack:** Next.js App Router, React, TypeScript, Tailwind, shadcn/ui, Lucide
+**Stack:** Next.js App Router, React, TypeScript, Tailwind, shadcn/ui, Lucide, Supabase (PostgreSQL)
 
 Producto v1.0: 8 fases completadas (ver REPORTE_VERIFICACION_ROADMAP.md).
-Decision DB v2.0: Sustituir Notion por Supabase (PostgreSQL) — planificado en v2.0 Core Features.
+DB: Supabase es la única fuente de verdad desde el PR #30 (runtime Notion eliminado).
+Auth: login mínimo + TTL + logout + cierre global de emergencia desde el PR #31 (detalle en GEM_ROADMAP 1.5).
 No reabrir decisiones v1 salvo que sean los items explicitly planificados en v2.0.
 
 **Ejecución:** el plan operativo (seguridad → tests → acabado → SaaS) vive en [`GEM_ROADMAP.md`](./GEM_ROADMAP.md).
@@ -27,14 +28,14 @@ No reabrir decisiones v1 salvo que sean los items explicitly planificados en v2.
 
 ## Fase 1 — Foundation (Prompt 2)
 
-Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente Notion.
+Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente de persistencia (Notion en v1, Supabase desde el PR #30).
 
 - [x] Scaffold Next.js App Router en la raíz del repo
 - [x] Tailwind + shadcn/ui + Lucide + dark/light
 - [x] Sidebar + rutas vacías (español): Dashboard, Daily Work, Leads, Kanban, Statistics, Email, Automations, Settings
-- [x] `.env.example`: `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `AUTH_DISABLED=true`, placeholders SerpAPI/Groq/n8n
-- [x] Dominio: `Lead`, `LeadStatus` (9 estados), mappers Notion ↔ dominio
-- [x] `LeadRepository` + stub/`NotionLeadRepository`
+- [x] `.env.example`: Supabase URL/keys, `AUTH_DISABLED=true`, placeholders SerpAPI/Groq/n8n (vars Notion eliminadas en #30)
+- [x] Dominio: `Lead`, `LeadStatus` (9 estados), mappers proveedor ↔ dominio
+- [x] `LeadRepository` + `SupabaseLeadRepository` (el `NotionLeadRepository` de v1 se eliminó en #30)
 - [x] Auth esqueleto: `auth` + middleware; sin login si `AUTH_DISABLED=true`
 - [x] Compatibilidad estado: leer `Pendiente` → mapear a `Pendiente revisar`; escribir siempre el nombre nuevo
 
@@ -71,7 +72,7 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 
 ## Fase 5 — Kanban + Email (Prompt 3)
 
-- [x] Tablero 9 columnas; drag → persistir Estado en Notion
+- [x] Tablero 9 columnas; drag → persistir Estado (Notion en v1, Supabase desde #30)
 - [x] Panel email: ver/editar texto plano, copiar, marcar **Email preparado**
 - [x] Abstracción de plantilla (`templates/outreach-v1`) para multi-template futuro
 
@@ -91,7 +92,7 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 
 - [x] Acción **Detectar dolores del negocio** → propiedad `Análisis IA` (evidencia / inferencia / especulación); drawer según `docs/ux/SPEC-detectar-dolores-drawer.md` (CTA fija, «Detectando…»)
 - [x] `N8nClient` + Automations UI (cliente listo; en v1 sin trigger en el workflow n8n — no pegar URL ni activar toggles; la app dispara en alta/edición/análisis si el toggle está activo y hay URL)
-- [x] Settings: Notion, SerpAPI (referencia), AI, n8n URLs; tests de conexión sin exponer secretos
+- [x] Settings: SerpAPI (referencia), AI, n8n URLs; tests de conexión sin exponer secretos (sección Notion eliminada en #30; sección Seguridad añadida en #31)
 - [x] Sync indicador completo (por integración: never / syncing / ok / error + lastSyncedAt)
 
 ---
@@ -127,19 +128,20 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 
 ### Fases v2.0
 
-#### Fase 1 — Supabase Setup & Migration (Semana 1-2)
+#### Fase 1 — Supabase Setup & Migration (hecha, PR #30)
 - [x] Proyecto Supabase creado y configurado
-- [x] Migración Notion → Supabase: CSV import leads, tags, users
+- [x] Migración Notion → Supabase: leads, tags, users
 - [x] Schema definition: leads table con status enum, tags text[], responsable UUID
-- [ ] Row-level security policies implementadas
+- [x] Runtime Notion eliminado: Supabase es la única fuente de verdad
+- [x] Migración validada: la app opera en Supabase
+- [ ] Row-level security por rol (solo existe la permisiva de dev)
 - [ ] Stripe integration preparada (webhooks endpoints)
 - [ ] n8n nodes actualizados: Replace Notion nodes con Supabase/PostgreSQL/HTTP nodes
-- [ ] Test migration: Validar leads migrados correctamente
 
 #### Fase 2 — Multi-usuario & Roles (Semana 2-3)
 - [ ] Roles definidos: Admin, Vendedor, Viewer
 - [ ] Permisos RLS por rol (solo sus leads, ver todos, solo lectura)
-- [ ] Autenticación: NextAuth.js + Supabase JWT
+- [ ] Autenticación multiusuario (hoy: sesión propia HMAC de un solo usuario + cierre global de emergencia, PR #31; NextAuth/Supabase JWT queda como opción a decidir)
 - [ ] Routing protegido: Routes `/leads`, `/kanban`, `/settings` por rol
 - [ ] n8n workflows: Actualizados triggers con contexto usuario
 
@@ -187,26 +189,22 @@ npm install @supabase/ssr @supabase/js-sdk stripe @sendgrid/mail
 - n8n workflows rotos: Parallel run Notion + Supabase 2 semanas mínimo
 - Precios Stripe inesperados: Monitoring webhooks y alertas
 
-#### Fase 8 — Statistics (Prompt 3)
-
-- [x] Breakdowns: estado, provincia, ciudad, tamaño
-- [x] Tasas: validación, email preparado, respuesta, reunión, cliente, funnel
-- [x] Sin gráficos decorativos
-
 ---
 
 ## v2.0 Plan — Items "Fuera de roadmap v1"
 
 - [ ] **Multi-usuario, roles, billing** — Supabase RLS + Stripe integration
 - [ ] **Tags / Responsable** — UI chips + DB assignment + filtering
-- [ ] **Sustituir Notion por otra DB** — Supabase migration from CSV, schema mapping
+- [x] **Sustituir Notion por otra DB** — hecho en PR #30 (Supabase única fuente, runtime Notion eliminado)
 - [ ] **Envío automático de email / marketing automation** — SendGrid triggers por status/tag changes
 - [ ] **Añadir webhooks al workflow n8n (solo preparar el cliente)** — TypeScript interfaces, webhook schemas preparados, sin activar toggles v1
 - [ ] **Optimización mobile exhaustiva** — Responsive audit, touch gestures, device testing, WCAG 2.2 AA mobile
 
-### Estado actual
-- v1.0: 8 phases completadas y verificadas
-- v1.2: Visual/UX/UI Refresh en planificación (diseño tokens, dark mode, motion)
-- v2.0: Planificación iniciada, DB decision Supabase tomada, migración pending
+### Estado actual (2026-09-21)
+- v1.0: 8 fases completadas y verificadas
+- v1.2: dark mode arreglado (#28), filtros compactos; resto del refresh visual pendiente
+- v2.0 Fase 1: hecha — Supabase única fuente (#30), migración validada
+- Auth: login mínimo + TTL + logout + cierre global de emergencia (#31); fix fail-closed y scroll de Settings en curso
+- PR #32 abierto: scroll en Settings/Automations
 
-Siguiente paso: Fase 1 v2.0 — Supabase setup y migración datos desde Notion.
+Siguiente paso: resto de Fase 1 del GEM_ROADMAP (RLS por rol, headers, rate-limit, `AUTH_SECRET` obligatorio) hacia el hito M1.
