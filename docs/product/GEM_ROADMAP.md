@@ -28,7 +28,7 @@ Sin esto, multi-usuario y billing son inseguros por diseño.
 | 1.2 | RLS por rol (Admin/Vendedor/Viewer) + migración; reducir `service_role` a operaciones de servidor justificadas | `authenticated` sin rol no lee/escribe leads ajenos; proveedor (`leadsDbProvider`) intacto |
 | 1.3 | Security headers (HSTS, CSP, X-Frame-Options, Content-Type, Referrer) en `next.config.ts` | Verificado con `curl -I` en preview |
 | 1.4 | Rate-limit global + body caps + validación con `zod` (sustituir `as LeadPatch`) | 429 ante abuso; payloads gigantes rechazados; PATCH valida |
-| 1.5 | Invalidación de sesión al logout + exigir `AUTH_SECRET` en prod (eliminar fallback `"auth-session-fallback"`) | Token post-logout → 401 |
+| 1.5 | Invalidación global de sesión (PR #31: `POST /api/auth/logout-all` exige sesión, bump de `app_session_epoch` en Supabase, fail-closed si el epoch no se lee; UI en Settings → Seguridad) + exigir `AUTH_SECRET` en prod (eliminar fallback `"auth-session-fallback"`) | Token pre-bump → 401 tras logout-all; logout normal no afecta a otras sesiones. Pendiente: expiración por usuario (hoy el epoch es global) |
 | 1.6 | Higiene: `LICENSE`, secret scanning + push protection, Dependabot, CodeQL, branch protection en `master` (checks + up-to-date + squash, sin reviews en solo-dev) | Alertas activas; protección aplicada |
 
 ## 4. Fase 2 — Tests con gates reales (~2 sem)

@@ -28,7 +28,10 @@ export async function POST(request: Request) {
       .map((part) => part.trim())
       .find((part) => part.startsWith(`${SESSION_COOKIE}=`))
       ?.slice(SESSION_COOKIE.length + 1);
-    if (!token || !(await verifySessionDetailed(decodeURIComponent(token)))) {
+    const verified = token
+      ? await verifySessionDetailed(decodeURIComponent(token))
+      : { ok: false as const };
+    if (!verified.ok) {
       return NextResponse.json(
         { ok: false, error: "No autorizado" },
         { status: 401 },

@@ -63,8 +63,8 @@ export async function POST(request: Request) {
   const token = await issueSession(now);
   if (!token) {
     return NextResponse.json(
-      { ok: false, error: "No se pudo crear la sesión" },
-      { status: 500 },
+      { ok: false, error: "Servicio de sesión no disponible" },
+      { status: 503 },
     );
   }
 

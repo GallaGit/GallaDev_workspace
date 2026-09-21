@@ -64,6 +64,21 @@ npm run build
 npm start
 ```
 
+## Seguridad y sesiones
+
+- Login mínimo en `/login` (`AUTH_SECRET` + `AUTH_PASSWORD` en producción; `AUTH_DISABLED=true` solo en local).
+- **Cerrar sesión** (sidebar): borra la cookie del dispositivo actual.
+- **Cerrar todas las sesiones** (Settings → Seguridad): botón de emergencia que invalida todas las sesiones en todos los dispositivos. Requiere aplicar antes la migración `supabase/migrations/20260919120000_add_session_epoch.sql` en el proyecto Supabase (SQL Editor); sin ella el endpoint devuelve 503.
+- Fail-closed: si el epoch no se puede leer, los tokens se rechazan y hay que volver a entrar cuando Supabase responda.
+
+## Problemas frecuentes
+
+- **Login devuelve 503 o todas las sesiones van a `/login` en local:** el servidor no alcanza Supabase (p. ej. proxy MITM como Avast). Arranca con el CA del repo:
+  ```bash
+  NODE_EXTRA_CA_CERTS=certs/avast-web-mail-shield-root.pem npm run dev
+  ```
+- **`logout-all` devuelve 503 `bump_session_epoch`:** falta aplicar la migración del epoch en Supabase (ver sección anterior).
+
 ## Primer uso
 
 1. Abre `/leads`.

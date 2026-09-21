@@ -1,6 +1,6 @@
 # Estado de implementación
 
-Fecha de revisión: 2026-09-10 (Fase 7: Detectar dolores IA + persistencia `Análisis IA`; alineación n8n: estado `Nuevo`, email plano, dedupe email/archivados; filtro 3–10 operativo; Daily Work incluye borrador en `Nuevo`). Revisión previa 2026-09-07: SettingsService + N8nClient + UI Integraciones/Automations. El repositorio está en GitHub (`GallaGit/Leads_CRM`); el merge de duplicados ya está en código (ver Disponible).
+Fecha de revisión: 2026-09-21 (PR #30: Supabase fuente única, runtime Notion eliminado; PR #31: login mínimo, TTL, logout y logout-all de emergencia con `app_session_epoch`). Revisión previa 2026-09-10: Fase 7 Detectar dolores IA, alineación n8n y resto de v1 (ver Disponible).
 
 Este documento describe el comportamiento del código actual. No sustituye a [`DECISIONES.md`](./DECISIONES.md) ni al [`ROADMAP.md`](./ROADMAP.md).
 
@@ -91,6 +91,14 @@ Sesión de referencia de la pasada Development: [`SESION-2026-09-04-dev-pass.md`
 - auth preparada y deshabilitada en local;
 - `N8nClient` con timeout, errores HTTP/JSON y métodos lead created/updated/analyzed.
 
+### Sesiones y cierre de emergencia (2026-09-21, PR #31)
+
+- login mínimo en `/login` (`AUTH_SECRET` + `AUTH_PASSWORD`); `SESSION_TTL_DAYS` 1–90 con refresh deslizante; `POST /api/auth/logout` borra la cookie actual;
+- cookie firmada con `{ exp, sv }`; `sv` = `app_session_epoch` compartido en Supabase (`SESSION_EPOCH` solo como override operativo);
+- `POST /api/auth/logout-all` (protegido, exige sesión) incrementa el epoch y limpia la cookie; tokens anteriores → 401; UI en Settings → Seguridad con confirmación;
+- fail-closed: epoch ilegible → tokens rechazados y login 503 (nunca se acepta a ciegas);
+- migración `supabase/migrations/20260919120000_add_session_epoch.sql` (debe estar aplicada en el proyecto).
+
 ### Detectar dolores (Fase 7)
 
 - botón **Detectar dolores** en la barra de acciones del drawer (después de Favorito, antes de Archivar); CTA fija en el header (sin scroll); al analizar: spinner + «Detectando…»;
@@ -175,7 +183,7 @@ Detalle de la sesión: [`SESION-2026-09-04-dev-pass.md`](./SESION-2026-09-04-dev
 
 ## Pendiente
 
-- autenticación real y pantalla de login;
+- autenticación multiusuario y expiración por usuario (hoy: login de un solo usuario + epoch global de emergencia);
 - tests automatizados;
 - virtualización o paginación visual para miles de filas;
 - optimización específica para móvil;
