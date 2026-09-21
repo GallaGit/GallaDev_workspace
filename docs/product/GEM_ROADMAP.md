@@ -5,7 +5,7 @@
 
 ## 1. Visión
 
-GallaDev Workspace pasa de herramienta individual a **SaaS multi-usuario** para prospección de asesorías y gestorías: Supabase (PostgreSQL) como fuente de verdad, roles, billing con Stripe y automatización n8n → email. "Joya" = seguro por defecto, testeado con gates reales, documentado al día y operable (salud, errores, changelog).
+GallaDev Workspace pasa de herramienta individual a **SaaS multi-usuario** para prospección de asesorías y gestorías: Supabase (PostgreSQL) como fuente de verdad, roles, billing con Stripe y automatización propia → email (n8n queda como proveedor opcional, decisión #18). "Joya" = seguro por defecto, testeado con gates reales, documentado al día y operable (salud, errores, changelog).
 
 ## 2. Punto de partida (evidencia, 2026-09-17)
 
@@ -56,7 +56,7 @@ Sin esto, multi-usuario y billing son inseguros por diseño.
 1. NextAuth + Supabase JWT, routing protegido por rol (completa Fase 2 del `ROADMAP.md`).
 2. Tags (chips + autocomplete) y Responsable (dropdown de usuarios) — Fase 3 del roadmap.
 3. Stripe: planes Free/Pro/Enterprise + webhooks + UI de suscripción — Fase 3.
-4. Migración de nodos n8n Notion → Supabase; webhooks `lead_created` / `status` / `tag`; realtime channels — Fase 4.
+4. Cola interna de automatización (`work_queue`); webhooks `lead_created` / `status` / `tag` con proveedor intercambiable; realtime channels — Fase 4. n8n no es dependencia.
 5. Auditoría mobile + WCAG 2.2 AA + virtualización/paginación de miles de filas — Fase 5.
 6. Backup/restore de Supabase + runbook de operación + SLAs internos.
 
@@ -69,5 +69,5 @@ Sin esto, multi-usuario y billing son inseguros por diseño.
 ## 8. Riesgos
 
 - RLS mal modelada bloquea accesos legítimos → mitigación: suite de tests por rol antes de activar enforcement.
-- Migración n8n rompe captación → mitigación: run paralelo Notion + Supabase 2 semanas (ya previsto en roadmap).
+- Dependencia de n8n → mitigación aplicada: contrato de ingesta propio, vías sin n8n y dispatches best-effort (decisión #18); la Fase 4 construye cola interna en vez de más nodos n8n.
 - Alcance: estimaciones en semanas solo-dev a ritmo parcial; recortar por hitos M1 → M3, nunca por calidad.

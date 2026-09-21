@@ -8,7 +8,7 @@ La aplicación Next.js vive en la raíz de este repositorio. Este documento es l
 
 ---
 
-## 1. Decisiones cerradas (17)
+## 1. Decisiones cerradas (18)
 
 | # | Tema | Decisión |
 |---|------|----------|
@@ -29,6 +29,7 @@ La aplicación Next.js vive en la raíz de este repositorio. Este documento es l
 | 15 | Ciudad | Normalizar (ver §4). Filtros y stats usan el nombre canónico. |
 | 16 | Notas | `Observaciones` = campo principal. Aviso cerca del límite Notion (~2000). Excedente → sección **Notas** en el cuerpo de la página. No truncar en silencio. |
 | 17 | Ubicación app | Raíz de este repositorio. |
+| 18 | n8n opcional | **n8n es un proveedor de captación intercambiable, no una dependencia.** Contrato de entrada: cualquier fuente que cree leads con estado `Nuevo` + `Origen=<fuente>` (`n8n`, `web-galladev`, `Manual`). El CRM cualifica igual venga de donde venga y funciona al 100% sin n8n (alta manual + `POST /api/ingest/lead` + `POST /api/ingest/n8n`). Los dispatches CRM → automatización son best-effort, desactivados por defecto y nunca bloquean la persistencia. Objetivo: poder apagar n8n mañana sin perder captación ni automatización. |
 
 ---
 
@@ -198,6 +199,7 @@ Al leer `Email generado` / `Asunto email`:
 - Workflow `Leads Asesorias Valencia` alineado (2026-09-10): estado `Nuevo`, `Origen=n8n`, email plano, cuerpo vacío, dedupe con email/archivados.  
 - Filtro operativo de empleados: **3–10** (ICP estratégico 5–30 sin cambiar en n8n).  
 - **No** añadir triggers webhook al workflow en v1 (decisión #12).
+- Postura vigente (decisión #18): n8n es **un proveedor más**. El workflow `Leads Asesorias Valencia` sigue operativo, pero el producto no depende de él: la entrada es el contrato `Nuevo` + `Origen`, no el workflow.
 
 ### Archivo y duplicados
 

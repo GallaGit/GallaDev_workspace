@@ -119,7 +119,19 @@ No renombrar esos encabezados manualmente: el parser los usa como delimitadores.
 
 ## n8n
 
-### Workflow actual
+### Postura: proveedor opcional (decisión #18)
+
+n8n es **un proveedor de captación intercambiable, no una dependencia del producto**. El CRM funciona al 100% sin n8n.
+
+**Contrato de entrada** (vale para n8n, `web-galladev`, `Manual` o cualquier fuente futura):
+
+- el lead entra con estado `Nuevo`;
+- `Origen` identifica la fuente (`n8n`, `web-galladev`, `Manual`);
+- a partir de ahí el CRM cualifica igual venga de donde venga (Daily Work, filtros, score, email).
+
+Vías sin n8n: alta manual (**Nuevo lead**), `POST /api/ingest/lead` (formulario galladev.com, bearer `INGEST_SECRET`) y `POST /api/ingest/n8n` (cualquier emisor con bearer). Los dispatches CRM → automatización (`lead_created` / `lead_updated` / `lead_analyzed`) son best-effort, desactivados por defecto y nunca bloquean la persistencia; el futuro es cola interna, no más nodos n8n.
+
+### Workflow actual (proveedor n8n)
 
 El workflow se llama `Leads Asesorias Valencia` (alineado con Leads_CRM el 2026-09-10).
 
@@ -154,7 +166,7 @@ Características:
 
 ### Estado de entrada
 
-El workflow escribe exactamente `Nuevo`. Todos los leads que llegan de n8n entran en ese estado. No usa `Pendiente` legacy ni pasa a `Email preparado` aunque haya borrador.
+El workflow escribe exactamente `Nuevo`. Todos los leads que llegan de n8n entran en ese estado. No usa `Pendiente` legacy ni pasa a `Email preparado` aunque haya borrador. Otras fuentes cumplen el mismo contrato (`Nuevo` + su `Origen`).
 
 El mapper de Leads_CRM sigue aceptando `Pendiente` por compatibilidad con filas antiguas.
 
@@ -181,7 +193,7 @@ N8N_WEBHOOK_GENERAR_EMAIL=
 N8N_WEBHOOK_EJECUTAR=
 ```
 
-La capa está preparada (`N8nClient.triggerWebhook` + métodos `notifyLeadCreated/Updated/Analyzed`), pero **no** se añadieron triggers al workflow (decisión #12 / v1). No rellenes URLs en Automations ni en `.env` hasta que existan endpoints n8n protegidos. La captación se lanza con Manual o Cron dentro de n8n; Leads_CRM persiste en Supabase (el workflow n8n puede seguir escribiendo donde esté configurado). Settings puede guardar overrides en `data/settings.local.json` (gitignored); el navegador solo ve previews enmascarados.
+La capa está preparada (`N8nClient.triggerWebhook` + métodos `notifyLeadCreated/Updated/Analyzed`), pero **no** se añadieron triggers al workflow (decisión #12 / v1). No rellenes URLs en Automations ni en `.env` hasta que existan endpoints protegidos. La captación puede lanzarse con Manual o Cron dentro de n8n **o** por las vías propias (`Nuevo lead`, `/api/ingest/*`); Leads_CRM persiste en Supabase venga de donde venga. Settings puede guardar overrides en `data/settings.local.json` (gitignored); el navegador solo ve previews enmascarados.
 
 ## SerpAPI
 

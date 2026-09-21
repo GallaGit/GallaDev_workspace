@@ -53,6 +53,6 @@ Las notas de `Nicho` son una fuente de investigación, no una especificación t�
 
 ## Alcance actual (resumen)
 
-La aplicación es local y de un solo usuario. Permite sincronizar leads desde Notion (entrada n8n = estado `Nuevo`), buscarlos, filtrarlos, abrir un panel de detalle, editar estado/notas/email, marcar favoritos y archivar registros.
+La aplicación es local y de un solo usuario. Permite captar leads por n8n, formulario web o alta manual (toda fuente entra en estado `Nuevo`), buscarlos, filtrarlos, abrir un panel de detalle, editar estado/notas/email, marcar favoritos y archivar registros. n8n es opcional: nada depende de él.
 
 Daily Work (incluye `Nuevo` + borradores), Kanban, Email, Statistics y Duplicados (merge seguro de campos vacíos) están operativos. Settings e Integraciones permiten configurar y probar conexiones; webhooks CRM → n8n quedan fuera de v1. **Detectar dolores** analiza un lead con Groq y persiste `Análisis IA`.

@@ -86,7 +86,7 @@ Sesión de referencia de la pasada Development: [`SESION-2026-09-04-dev-pass.md`
 - `.env.example`;
 - `SettingsService` (`src/lib/settings/`): mezcla env + `data/settings.local.json`;
 - secretos solo en servidor (flags + preview de 4 caracteres en la UI);
-- tests de conexión Notion / n8n / Groq / SerpAPI;
+- tests de conexión n8n / Groq / SerpAPI (Notion eliminado en #30);
 - estado de conexión por integración (`never` | `syncing` | `ok` | `error`, `lastSyncedAt`);
 - auth preparada y deshabilitada en local;
 - `N8nClient` con timeout, errores HTTP/JSON y métodos lead created/updated/analyzed.
@@ -127,11 +127,11 @@ Workbench en `/email` para revisar borradores. El mismo editor vive en el drawer
 
 ### Automations
 
-Página de configuración (no edita workflows n8n): toggles Nuevo Lead / Lead actualizado / Lead analizado, URL de webhook enmascarada, activa/inactiva y botón **Probar**. Tras persistir en Notion, el alta (`POST /api/leads`), las actualizaciones (`PATCH` individual y masiva; fusión si rellena campos) y **Detectar dolores** (`POST /api/leads/:id/analyze` → `notifyLeadAnalyzed`) disparan el webhook correspondiente en segundo plano si el toggle está activo y hay URL. En v1 no hay triggers en el workflow ni URLs configuradas (decisión #12). Un fallo de n8n se registra y no revierte el lead. Un fallo de Groq no escribe `Análisis IA`.
+Página de configuración (no edita workflows externos): toggles Nuevo Lead / Lead actualizado / Lead analizado, URL de webhook enmascarada, activa/inactiva y botón **Probar**. Tras persistir en Supabase, el alta (`POST /api/leads`), las actualizaciones (`PATCH` individual y masiva; fusión si rellena campos) y **Detectar dolores** (`POST /api/leads/:id/analyze` → `notifyLeadAnalyzed`) disparan el webhook correspondiente en segundo plano si el toggle está activo y hay URL (best-effort, desactivado por defecto; el CRM no depende del proveedor). En v1 no hay triggers en el workflow ni URLs configuradas (decisión #12). Un fallo de n8n se registra y no revierte el lead. Un fallo de Groq no escribe `Análisis IA`.
 
 ### Settings
 
-Integraciones editables (Notion, n8n, IA/Groq, SerpAPI) con secretos enmascarados, Guardar y Probar conexión. Persistencia en archivo local gitignored; `.env.local` sigue siendo el arranque.
+Integraciones editables (n8n, IA/Groq, SerpAPI) con secretos enmascarados, Guardar y Probar conexión. Persistencia en archivo local gitignored; `.env.local` sigue siendo el arranque.
 
 ### Actividad
 
@@ -197,9 +197,9 @@ Detalle de la sesión: [`SESION-2026-09-04-dev-pass.md`](./SESION-2026-09-04-dev
 
 Las notas estratégicas definen 5–30 empleados; n8n opera en **3–10** (decisión operativa 2026-09-10). Leads_CRM permite filtrar cualquier rango; el scorer de la app favorece 5–30.
 
-### n8n y estado
+### n8n y estado (proveedor opcional, decisión #18)
 
-El workflow `Leads Asesorias Valencia` escribe `Nuevo`, `Origen=n8n`, email plano y cuerpo vacío. La app mantiene compatibilidad de lectura con `Pendiente` legacy. Daily Work incluye esos leads en “Nuevos y pendientes” y, si tienen borrador, en “Emails listos”. Webhooks `lead.*` siguen fuera de v1 (solo cliente en Leads_CRM; no pegar URL).
+El workflow `Leads Asesorias Valencia` escribe `Nuevo`, `Origen=n8n`, email plano y cuerpo vacío, pero es una fuente más: también entran leads por `web-galladev` y `Manual` con el mismo contrato (`Nuevo` + `Origen`). La app mantiene compatibilidad de lectura con `Pendiente` legacy. Daily Work incluye esos leads en “Nuevos y pendientes” y, si tienen borrador, en “Emails listos”. Webhooks `lead.*` siguen fuera de v1 (solo cliente en Leads_CRM; no pegar URL). Apagar n8n no rompe captación ni cualificación.
 
 ### Comentarios Notion
 

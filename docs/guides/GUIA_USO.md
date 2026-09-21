@@ -96,14 +96,14 @@ Si aparece `NOTION_TOKEN no configurado`, revisa `.env.local` y reinicia `npm ru
 
 En `/inbox` verás las colas del día:
 
-- **Nuevos y pendientes** — estado `Nuevo` o `Pendiente revisar` (los leads de n8n entran en `Nuevo`);
+- **Nuevos y pendientes** — estado `Nuevo` o `Pendiente revisar` (toda fuente entra en `Nuevo`: n8n, formulario web o alta manual);
 - faltan datos, emails listos (incluye borrador en `Nuevo`), follow-ups vencidos, posibles duplicados.
 
 Al abrir una cola se aplica el filtro en Leads y se abre el primer lead.
 
 ### Kanban
 
-En `/kanban` arrastra tarjetas entre las 9 columnas de estado. El cambio se guarda en Notion.
+En `/kanban` arrastra tarjetas entre las 9 columnas de estado. El cambio se guarda en Supabase.
 
 ### Email
 
@@ -157,7 +157,7 @@ Y Estado = Nuevo
 Y Con email
 ```
 
-(El filtro operativo de n8n es 3–10; el ICP estratégico de negocio sigue siendo 5–30.)
+(El proveedor n8n filtra 3–10 empleados; el ICP estratégico de negocio sigue siendo 5–30. n8n es opcional: la captación funciona sin él.)
 
 Pulsa **Limpiar** para quitar todos los filtros.
 
@@ -210,12 +210,12 @@ La estrella de la tabla o del drawer actualiza la propiedad `Favorito` de Notion
 
 ### Detectar dolores
 
-En el panel del lead, **Detectar dolores** (después de Favorito) llama a Groq con los datos del registro y guarda el resultado en la propiedad Notion `Análisis IA`.
+En el panel del lead, **Detectar dolores** (después de Favorito) llama a Groq con los datos del registro y guarda el resultado en `Análisis IA`.
 
 - El texto se separa en **Evidencia**, **Inferencia** y **Especulación**. La evidencia solo usa hechos del lead; no inventa webs, cifras ni software.
 - Puedes repetir la acción; sobrescribe el análisis anterior (sin confirmación en v1).
 - Requiere API key de Groq en Settings. Un error de Groq no modifica el lead.
-- Si la automatización *Lead analizado* está activa y tiene webhook, se notifica a n8n en segundo plano.
+- Si la automatización *Lead analizado* está activa y tiene webhook, se notifica al proveedor en segundo plano (best-effort; n8n es opcional).
 
 La sección **Dolores** está debajo de CRM y encima de Notas.
 
@@ -256,11 +256,11 @@ Al fusionar o archivar, la lista de grupos se actualiza.
    - marcar favorito;
    - archivar.
 
-Las actualizaciones se procesan secuencialmente contra Notion para reducir errores por límites de API.
+Las actualizaciones se procesan secuencialmente contra Supabase para reducir errores.
 
 ## Settings e integraciones
 
-En `/settings` puedes revisar y completar Notion, n8n, IA (Groq) y SerpAPI.
+En `/settings` puedes revisar y completar n8n (opcional), IA (Groq) y SerpAPI, además de la sección Seguridad.
 
 - Los secretos se muestran enmascarados (últimos 4 caracteres).
 - **Guardar** escribe un override en `data/settings.local.json` (fuera de Git). No hace falta reiniciar el servidor.
@@ -270,11 +270,11 @@ En `/settings` puedes revisar y completar Notion, n8n, IA (Groq) y SerpAPI.
 
 ## Automations
 
-En `/automations` hay tres eventos reservados: Nuevo Lead, Lead actualizado y Lead analizado. La capa HTTP está lista, pero **en v1 el workflow de captación no tiene esos triggers**.
+En `/automations` hay tres eventos reservados: Nuevo Lead, Lead actualizado y Lead analizado. La capa HTTP está lista, pero **en v1 el proveedor no tiene esos triggers**.
 
-- La captación se lanza en n8n (Manual o semanal), no desde Leads_CRM.
+- La captación llega por n8n (Manual o semanal, opcional) o por las vías propias (`Nuevo lead`, formulario web); apagar n8n no rompe nada.
 - No actives los toggles ni pegues URLs en v1.
-- Si en una fase posterior hubiera endpoint, **Probar** enviaría un payload de ejemplo; con toggle activo el alta/edición también dispararía (best-effort; un error de n8n no impide guardar en Notion).
+- Si en una fase posterior hubiera endpoint, **Probar** enviaría un payload de ejemplo; con toggle activo el alta/edición también dispararía (best-effort; un error del proveedor no impide guardar en Supabase).
 
 ## Tema
 
@@ -282,33 +282,29 @@ El botón de la esquina superior cambia entre tema claro y oscuro. El diseño es
 
 ## Estado de las demás secciones
 
-Statistics (`/stats`) y Duplicados (`/duplicates`, merge incluido) están operativos. Settings permite guardar y probar integraciones (secretos enmascarados). Automations muestra la capa de webhooks n8n (sin trigger en el workflow en v1). Si hay toggle activo y URL, la app dispara en alta, edición y análisis de dolores (best-effort). Consulta [`ESTADO_IMPLEMENTACION.md`](./ESTADO_IMPLEMENTACION.md).
+Statistics (`/stats`) y Duplicados (`/duplicates`, merge incluido) están operativos. Settings permite guardar y probar integraciones (secretos enmascarados). Automations muestra la capa de webhooks (sin trigger en el proveedor en v1). Si hay toggle activo y URL, la app dispara en alta, edición y análisis de dolores (best-effort). Consulta [`ESTADO_IMPLEMENTACION.md`](./ESTADO_IMPLEMENTACION.md).
 
 ## Diagnóstico rápido
 
 ### No aparecen leads
 
-- verifica `NOTION_TOKEN`;
-- verifica `NOTION_DATA_SOURCE_ID`;
-- comparte la base con la integración;
+- verifica `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` (badge DB en el Topbar);
 - reinicia el servidor después de cambiar `.env.local`;
 - pulsa **Sincronizar** y lee el error mostrado.
 
 ### Error al editar
 
-- comprueba que la integración tenga capacidad de actualización;
-- comprueba que los nombres y tipos de propiedades coincidan con [`INTEGRACIONES.md`](./INTEGRACIONES.md);
-- confirma que `Estado` conserve exactamente los 9 valores vigentes.
+- confirma que `Estado` conserve exactamente los 9 valores vigentes;
+- revisa el mensaje de error del toast o la consola del servidor.
 
 ### La actividad no aparece
 
 - abre un lead y realiza una acción significativa;
-- comprueba que la integración pueda insertar bloques;
-- revisa que el cuerpo de la página no haya cambiado manualmente los encabezados `Actividad` o `Notas`.
+- revisa el log del servidor para ver si el evento se registró.
 
 ### n8n muestra “Sin webhook”
 
-Es el comportamiento esperado en v1: no hay endpoints de webhook en el workflow de captación. No configures `N8N_WEBHOOK_LEAD_*` hasta una fase posterior. Para probar la conexión del servicio usa Settings → n8n → **Probar conexión** (`N8N_BASE_URL`).
+Es el comportamiento esperado en v1: no hay endpoints de webhook en el proveedor. No configures `N8N_WEBHOOK_LEAD_*` hasta una fase posterior (y recuerda que n8n es opcional: nada del CRM depende de él). Para probar la conexión del servicio usa Settings → n8n → **Probar conexión** (`N8N_BASE_URL`).
 
 ## Calidad
 
