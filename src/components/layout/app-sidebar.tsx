@@ -14,7 +14,6 @@ import {
   Settings,
   Copy,
   LogOut,
-  ShieldOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavChrome } from "@/components/layout/nav-chrome";
@@ -98,16 +97,6 @@ export function AppSidebar() {
     window.location.href = "/login";
   }
 
-  async function handleLogoutAll() {
-    close();
-    try {
-      await fetch("/api/auth/logout-all", { method: "POST" });
-    } catch {
-      /* force exit anyway */
-    }
-    window.location.href = "/login";
-  }
-
   return (
     <aside
       ref={asideRef}
@@ -163,16 +152,6 @@ export function AppSidebar() {
         >
           <LogOut className="h-4 w-4 opacity-70" />
           Cerrar sesión
-        </button>
-        <button
-          type="button"
-          onClick={handleLogoutAll}
-          tabIndex={isMobile && !open ? -1 : undefined}
-          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-muted-fg transition-colors hover:bg-muted hover:text-fg"
-          title="Invalida la sesión en todos los dispositivos"
-        >
-          <ShieldOff className="h-4 w-4 opacity-70" />
-          Cerrar todas las sesiones
         </button>
         <div className="text-[11px] text-muted-fg">developed by GallaDev</div>
       </div>

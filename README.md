@@ -24,7 +24,6 @@ SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 SUPABASE_SECRET_KEY=<secret-key-never-commit>
 AUTH_DISABLED=true
 # Production: AUTH_SECRET + AUTH_PASSWORD. Session: SESSION_TTL_DAYS=1 (1–90).
-# Multi-instance logout-all: set SESSION_EPOCH (see SECURITY.md).
 ```
 
 ## Documentation

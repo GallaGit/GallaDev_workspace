@@ -7,10 +7,7 @@
  * - Sin AUTH_SECRET → auth desactivada (dev). Sin AUTH_PASSWORD pero con
  *   AUTH_SECRET → login responde 503 (evita bloqueos silenciosos).
  * - TTL configurable con SESSION_TTL_DAYS (default 1, rango 1–90).
- * - Payload `{ exp, sv }`: `sv` es el session epoch (ver session-epoch.ts).
  */
-
-import { getSessionEpoch } from "@/lib/session-epoch";
 
 export const SESSION_COOKIE = "lead_crm_session";
 
@@ -49,11 +46,6 @@ export function sessionCookieOptions(maxAgeSeconds: number) {
 /** True si queda menos de la mitad del TTL → conviene renovar. */
 export function sessionNeedsRefresh(exp: number, now = Date.now()): boolean {
   return exp - now < sessionTtlMs() / 2;
-}
-
-/** True si queda menos de TTL/4 → aviso de caducidad en UI. */
-export function sessionNeedsWarning(exp: number, now = Date.now()): boolean {
-  return exp - now < sessionTtlMs() / 4;
 }
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -116,13 +108,13 @@ export async function issueSession(now = Date.now()): Promise<string | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
   const exp = now + sessionTtlMs();
-  const payload = b64urlEncode(enc.encode(JSON.stringify({ exp, sv: getSessionEpoch() })));
+  const payload = b64urlEncode(enc.encode(JSON.stringify({ exp })));
   const sig = b64urlEncode(await hmac(secret, payload));
   return `${payload}.${sig}`;
 }
 
 export type SessionVerifyResult =
-  | { ok: true; exp: number; sv: number }
+  | { ok: true; exp: number }
   | { ok: false };
 
 /**
@@ -149,15 +141,11 @@ export async function verifySessionDetailed(
   const expected = await hmac(secret, payload);
   if (!constantTimeEqual(sig, expected)) return { ok: false };
   try {
-    const parsed = JSON.parse(
+    const { exp } = JSON.parse(
       new TextDecoder().decode(payloadBytes),
-    ) as { exp?: unknown; sv?: unknown };
-    const exp = parsed.exp;
-    const sv = parsed.sv;
+    ) as { exp: unknown };
     if (typeof exp !== "number" || !(exp > now)) return { ok: false };
-    if (typeof sv !== "number" || !Number.isFinite(sv)) return { ok: false };
-    if (sv !== getSessionEpoch()) return { ok: false };
-    return { ok: true, exp, sv };
+    return { ok: true, exp };
   } catch {
     return { ok: false };
   }
