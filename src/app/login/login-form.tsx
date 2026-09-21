@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { setAuthFlash } from "@/components/auth-flash-banner";
 
 export function LoginForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function LoginForm() {
         setError(data.error || "No se pudo entrar");
         return;
       }
+      setAuthFlash("welcome");
       router.push(from.startsWith("/") ? from : "/");
       router.refresh();
     } catch {

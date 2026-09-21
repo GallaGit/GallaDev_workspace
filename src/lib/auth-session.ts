@@ -9,6 +9,8 @@
  * - TTL configurable con SESSION_TTL_DAYS (default 1, rango 1–90).
  */
 
+import { getSessionEpoch } from "@/lib/session-epoch-edge";
+
 export const SESSION_COOKIE = "lead_crm_session";
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -108,13 +110,15 @@ export async function issueSession(now = Date.now()): Promise<string | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
   const exp = now + sessionTtlMs();
-  const payload = b64urlEncode(enc.encode(JSON.stringify({ exp })));
+  const payload = b64urlEncode(
+    enc.encode(JSON.stringify({ exp, sv: await getSessionEpoch() })),
+  );
   const sig = b64urlEncode(await hmac(secret, payload));
   return `${payload}.${sig}`;
 }
 
 export type SessionVerifyResult =
-  | { ok: true; exp: number }
+  | { ok: true; exp: number; sv: number }
   | { ok: false };
 
 /**
@@ -141,11 +145,19 @@ export async function verifySessionDetailed(
   const expected = await hmac(secret, payload);
   if (!constantTimeEqual(sig, expected)) return { ok: false };
   try {
-    const { exp } = JSON.parse(
+    const { exp, sv } = JSON.parse(
       new TextDecoder().decode(payloadBytes),
-    ) as { exp: unknown };
-    if (typeof exp !== "number" || !(exp > now)) return { ok: false };
-    return { ok: true, exp };
+    ) as { exp: unknown; sv: unknown };
+    if (
+      typeof exp !== "number" ||
+      !(exp > now) ||
+      typeof sv !== "number" ||
+      !Number.isSafeInteger(sv) ||
+      sv !== (await getSessionEpoch())
+    ) {
+      return { ok: false };
+    }
+    return { ok: true, exp, sv };
   } catch {
     return { ok: false };
   }

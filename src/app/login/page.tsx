@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
+import { AuthFlashBanner } from "@/components/auth-flash-banner";
 
 export const metadata = {
   title: "Entrar · GallaDev Workspace",
@@ -21,6 +22,7 @@ export default function LoginPage() {
           </a>
           .
         </p>
+        <AuthFlashBanner kind="goodbye" />
         <Suspense>
           <LoginForm />
         </Suspense>

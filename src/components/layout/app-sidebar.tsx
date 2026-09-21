@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Inbox,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavChrome } from "@/components/layout/nav-chrome";
+import { setAuthFlash } from "@/components/auth-flash-banner";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -32,6 +33,7 @@ const NAV = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { open, close, navId } = useNavChrome();
   const asideRef = useRef<HTMLElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -89,12 +91,13 @@ export function AppSidebar() {
 
   async function handleLogout() {
     close();
+    setAuthFlash("goodbye");
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {
       // Aun si falla la red, forzar salida al login.
     }
-    window.location.href = "/login";
+    router.push("/login");
   }
 
   return (

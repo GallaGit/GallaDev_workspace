@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { AuthFlashBanner } from "@/components/auth-flash-banner";
 import {
   NavChromeProvider,
   useNavChrome,
@@ -95,6 +96,9 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
       ) : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2.5">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-panel shadow-md">
+          <div className="px-4 pt-4">
+            <AuthFlashBanner kind="welcome" />
+          </div>
           {children}
         </div>
       </div>
