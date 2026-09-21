@@ -33,6 +33,6 @@ Objetivo: confirmar recepción en 72 horas, compartir un plan de remediación y 
 ## Notas de alcance
 
 - Auth: producción requiere `AUTH_SECRET` + `AUTH_PASSWORD` con `SESSION_TTL_DAYS` entre 1 y 90. `AUTH_DISABLED=true` es solo para desarrollo local.
-- Cierre de emergencia (`POST /api/auth/logout-all`, Settings → Seguridad) exige sesión válida e incrementa el `app_session_epoch` compartido en Supabase; todos los tokens anteriores pasan a 401. El logout normal solo borra la cookie del dispositivo actual.
+- Cierre de emergencia (`POST /api/auth/logout-all`, Settings → Seguridad) exige sesión válida e incrementa el `app_session_epoch` compartido en Supabase; todos los tokens anteriores pasan a 401. El logout normal solo borra la cookie del dispositivo actual. Fail-closed: si el epoch no se puede leer, los tokens se rechazan y el login devuelve 503. Aplica `supabase/migrations/20260919120000_add_session_epoch.sql` o el endpoint devuelve 503.
 - La ingesta pública (`POST /api/ingest/lead`, `POST /api/ingest/n8n`) está protegida con bearer token (`INGEST_SECRET`); reporta un bypass de auth como severidad alta.
 - El email transaccional (Resend) es fail-open por diseño — el lead se guarda aunque falle el email. No lo reportes como bug.

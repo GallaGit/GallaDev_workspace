@@ -54,6 +54,8 @@ Ejemplos: `feat/filtros-kanban`, `fix/dedupe-telefono`, `docs/politica-contribuc
 
 Mantén las ramas cortas y enfocadas: un issue, un PR.
 
+**Nunca se trabaja directo en `master` — sin excepciones** (ni siquiera arreglos pequeños). `master` solo avanza por PRs con squash-merge y CI verde; pushes directos prohibidos. Los agentes deben verificar la rama con `git status --branch` antes de editar.
+
 ## 4. Mensajes de commit
 
 Usamos [Conventional Commits](https://www.conventionalcommits.org/) (en inglés):

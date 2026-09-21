@@ -4,6 +4,16 @@
 > Objetivo: que si algo se rompe, **grite en CI**, no "al tiempo".
 > Complementa [`CONTRIBUTING.md`](../../CONTRIBUTING.md) (proceso de PR) y [`docs/product/GEM_ROADMAP.md`](../../docs/product/GEM_ROADMAP.md) (fases).
 
+## Regla 0 — Fuera de `main`, SIEMPRE
+
+Nadie trabaja directo en `main`/`master`: ni humano, ni agente, ni "un cambio chiquito".
+
+1. Todo trabajo empieza creando rama desde `master` actualizado: `git checkout -b feat|fix|chore|docs/<slug>`.
+2. Antes de editar, verificar `git status --branch`: si estás en `master`, PARA y crea la rama primero.
+3. Cambios sin commitear en `master` se mueven a rama (`git checkout -b <rama>` los arrastra y `master` queda limpio); jamás se commitean en `master`.
+4. `master` solo avanza por squash-merge de PRs con CI verde. Push directo a `master`: prohibido.
+5. Tras el merge, borrar la rama (local + remota).
+
 ## Regla 1 — Test-tripwire primero
 
 Antes de modificar un área sin cobertura (rutas `src/app/api/**`, repositorios, `src/lib/auth*`, `src/lib/automations/**`):
@@ -53,6 +63,7 @@ Si algo existente cumple la misma función que una alternativa externa, **se que
 
 ## Checklist de sesión (copiar al empezar trabajo con agente)
 
+- [ ] ¿Estoy fuera de `main`? Rama creada desde `master` actualizado (Regla 0).
 - [ ] ¿El área tiene tests? Si no → Regla 1 primero.
 - [ ] ¿El PR toca un solo área? Si no → dividir (Regla 2).
 - [ ] ¿Blast radius declarado con comandos? (Regla 3).

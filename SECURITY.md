@@ -33,6 +33,6 @@ We aim to acknowledge within 72 hours, share a remediation plan, and credit repo
 ## Scope notes
 
 - Auth: production requires `AUTH_SECRET` + `AUTH_PASSWORD` with `SESSION_TTL_DAYS` 1–90. `AUTH_DISABLED=true` is local-dev only.
-- Emergency logout (`POST /api/auth/logout-all`, Settings → Seguridad) requires a valid session and bumps the shared `app_session_epoch` in Supabase; all prior tokens become 401. Normal logout only clears the current device cookie.
+- Emergency logout (`POST /api/auth/logout-all`, Settings → Seguridad) requires a valid session and bumps the shared `app_session_epoch` in Supabase; all prior tokens become 401. Normal logout only clears the current device cookie. Fail-closed: if the epoch cannot be read, tokens are rejected and login returns 503. Apply `supabase/migrations/20260919120000_add_session_epoch.sql` or the endpoint returns 503.
 - Public ingest (`POST /api/ingest/lead`, `POST /api/ingest/n8n`) is bearer-token protected (`INGEST_SECRET`); report auth bypasses as high severity.
 - Transactional email (Resend) is fail-open by design — the lead is saved even if email fails. Do not report that as a bug.

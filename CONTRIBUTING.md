@@ -55,6 +55,8 @@ Examples: `feat/kanban-filters`, `fix/dedupe-phone-match`, `docs/contribution-po
 
 Keep branches short-lived and focused: one issue, one PR.
 
+**Never work directly on `master` — no exceptions** (not even small fixes). `master` only advances via squash-merged PRs with green CI; direct pushes are forbidden. Agents must verify the branch with `git status --branch` before editing.
+
 ## 4. Commit messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
