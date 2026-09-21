@@ -17,8 +17,13 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api/ingest/")) {
     return NextResponse.next();
   }
-  // Login/logout gestionan su propia lógica.
-  if (pathname.startsWith("/api/auth/") || pathname.startsWith("/login")) {
+  // Login/logout de un solo dispositivo gestionan su propia lógica.
+  // logout-all queda protegido: exige sesión válida (botón de emergencia).
+  if (
+    pathname === "/api/auth/login" ||
+    pathname === "/api/auth/logout" ||
+    pathname.startsWith("/login")
+  ) {
     return NextResponse.next();
   }
 
@@ -47,6 +52,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // APIs: 401 JSON. Páginas: redirect a /login.
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 401 },
+    );
+  }
   const login = new URL("/login", request.url);
   login.searchParams.set("from", pathname);
   return NextResponse.redirect(login);

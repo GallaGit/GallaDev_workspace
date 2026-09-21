@@ -126,4 +126,35 @@ describe("auth-session", () => {
     vi.stubEnv("AUTH_PASSWORD", "");
     expect(await passwordOk(PASSWORD)).toBe(false);
   });
+
+  it("sv coincide con SESSION_EPOCH y el bump invalida el token anterior", async () => {
+    vi.stubEnv("AUTH_SECRET", SECRET);
+    vi.stubEnv("SESSION_EPOCH", "1");
+    const now = Date.now();
+    const oldToken = (await issueSession(now)) ?? "";
+    expect(await verifySession(oldToken, now)).toBe(true);
+
+    // Simula POST /api/auth/logout-all: el epoch compartido sube a 2.
+    vi.stubEnv("SESSION_EPOCH", "2");
+    expect(await verifySession(oldToken, now)).toBe(false);
+    expect(await verifySessionDetailed(oldToken, now)).toEqual({ ok: false });
+
+    // Token emitido tras el bump usa sv=2 y vuelve a ser válido.
+    const newToken = (await issueSession(now)) ?? "";
+    const detailed = await verifySessionDetailed(newToken, now);
+    expect(detailed.ok).toBe(true);
+    if (detailed.ok) {
+      expect(detailed.sv).toBe(2);
+    }
+  });
+
+  it("SESSION_EPOCH inválido no rompe la verificación", async () => {
+    vi.stubEnv("AUTH_SECRET", SECRET);
+    vi.stubEnv("SESSION_EPOCH", "no-numerico");
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    const token = (await issueSession()) ?? "";
+    // Sin override válido cae al epoch por defecto (1) en ambas puntas.
+    expect(await verifySession(token)).toBe(true);
+  });
 });
