@@ -95,6 +95,7 @@ export function mapRowToLead(row: LeadRow): Lead {
     aiAnalysis: row.ai_analysis,
     lastEditedTime: row.notion_last_edited_time ?? row.updated_at,
     archived: Boolean(row.archived),
+    responsibleId: row.responsable,
   };
 }
 
@@ -189,6 +190,8 @@ export function leadPatchToRow(patch: LeadPatch): Partial<LeadRow> {
   if (patch.favorite !== undefined) row.favorite = patch.favorite;
   if (patch.aiAnalysis !== undefined)
     row.ai_analysis = patch.aiAnalysis || null;
+  if (patch.responsibleId !== undefined)
+    row.responsable = patch.responsibleId || null;
   // Espejo de Notion: cada escritura refresca "Última actualización".
   row.last_activity = today();
   return row;

@@ -42,6 +42,7 @@ const createMockLead = (overrides: Partial<Lead> = {}): Lead => {
     lastContact: null,
     nextFollowUp: null,
     lastEditedTime: null,
+    responsibleId: null,
     ...overrides,
   }
 }

@@ -90,6 +90,11 @@ export function filterLeads(
     if (filters.hasLinkedin === false && lead.linkedin) return false;
     if (filters.favorite === true && !lead.favorite) return false;
     if (filters.favorite === false && lead.favorite) return false;
+    if (
+      filters.responsibleId != null &&
+      lead.responsibleId !== filters.responsibleId
+    )
+      return false;
 
     return true;
   });

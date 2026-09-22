@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Calculator, Search, X } from "lucide-react";
+import { Calculator, Search, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CreateLeadDialog } from "@/components/leads/create-lead-dialog";
 import {
@@ -89,9 +90,33 @@ export function LeadFiltersBar() {
 
   const activeDims = FILTER_DIMENSIONS.filter((d) => d.isActive(filters));
   const inactiveDims = FILTER_DIMENSIONS.filter((d) => !d.isActive(filters));
+  const myOnly = filters.responsibleId != null;
 
   const hasActive =
-    Boolean(filters.search) || activeDims.length > 0 || Boolean(activeQueue);
+    Boolean(filters.search) ||
+    activeDims.length > 0 ||
+    Boolean(activeQueue) ||
+    myOnly;
+
+  async function toggleMine() {
+    if (myOnly) {
+      setFilters({ responsibleId: null });
+      return;
+    }
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("No se pudo identificar tu usuario");
+        return;
+      }
+      setFilters({ responsibleId: user.id });
+    } catch {
+      toast.error("No se pudo activar el filtro Mis leads");
+    }
+  }
 
   function clearQueue() {
     setActiveQueue(null);
@@ -118,6 +143,32 @@ export function LeadFiltersBar() {
           }
         />
       </div>
+
+      {/* Mis leads */}
+      {myOnly ? (
+        <span className="inline-flex items-center gap-1 rounded-md border border-(--accent) bg-(--accent)/15 px-2 py-1 text-xs text-(--fg)">
+          <User className="h-3 w-3" aria-hidden="true" />
+          Mis leads
+          <button
+            type="button"
+            className="rounded p-0.5 hover:bg-(--muted)"
+            onClick={() => setFilters({ responsibleId: null })}
+            aria-label="Quitar filtro Mis leads"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void toggleMine()}
+          title="Mostrar solo los leads asignados a ti"
+        >
+          <User className="h-3.5 w-3.5" />
+          Mis leads
+        </Button>
+      )}
 
       {/* Active queue chip */}
       {activeQueue && (

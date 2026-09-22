@@ -87,6 +87,7 @@ describe('domain/lead - Lead type structure', () => {
       lastContact: null,
       lastEditedTime: null,
       nextFollowUp: null,
+      responsibleId: null,
     }
 
     expect(lead.id).toBe('test-id')
@@ -135,6 +136,7 @@ describe('domain/lead - Lead type structure', () => {
       lastContact: null,
       lastEditedTime: null,
       nextFollowUp: null,
+      responsibleId: null,
     }
 
     expect(minimalLead.website).toBeNull()
