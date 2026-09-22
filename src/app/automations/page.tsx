@@ -7,8 +7,10 @@ export default function AutomationsPage() {
   return (
     <>
       <Topbar title="Automations" />
-      <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
-        <AutomationsPanel />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
+          <AutomationsPanel />
+        </div>
       </div>
     </>
   );

@@ -8,10 +8,12 @@ export default function SettingsPage() {
   return (
     <>
       <Topbar title="Settings" />
-      <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
-        <h2 className="text-sm font-semibold">Integraciones</h2>
-        <SettingsIntegrations />
-        <SettingsSecurity />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
+          <h2 className="text-sm font-semibold">Integraciones</h2>
+          <SettingsIntegrations />
+          <SettingsSecurity />
+        </div>
       </div>
     </>
   );
