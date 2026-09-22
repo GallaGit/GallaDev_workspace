@@ -157,4 +157,17 @@ describe("auth-session", () => {
     // Sin override válido cae al epoch por defecto (1) en ambas puntas.
     expect(await verifySession(token)).toBe(true);
   });
+
+  it("fail-closed: Supabase configurado pero inalcanzable rechaza todo", async () => {
+    vi.stubEnv("AUTH_SECRET", SECRET);
+    vi.stubEnv("SESSION_EPOCH", "");
+    vi.stubEnv("SUPABASE_URL", "https://invalid.local");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "test-key");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    // Sin epoch legible no se emite ni se acepta ningún token.
+    expect(await issueSession()).toBeNull();
+    expect(await verifySession("cualquiera")).toBe(false);
+  });
 });
