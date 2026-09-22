@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import {
   getSettingsService,
   toPublicSettings,
@@ -9,11 +10,15 @@ import type { SettingsPatch } from "@/lib/settings/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   return NextResponse.json(toPublicSettings(getSettingsService().getRaw()));
 }
 
 export async function PATCH(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const patch = (await request.json()) as SettingsPatch;
     const errors = validateSettingsPatch(patch);

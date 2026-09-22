@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import { runLeadAnalyze } from "@/lib/ai/run-lead-analyze";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,8 @@ export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   const { id } = await ctx.params;
   let force = false;
   try {

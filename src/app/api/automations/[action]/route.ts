@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import { getAutomationClient } from "@/lib/automations/get-client";
 import { N8nClientError } from "@/lib/n8n/errors";
 import { sampleAutomationPayload } from "@/lib/n8n/payloads";
@@ -15,7 +16,9 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ action: string }> };
 
-export async function GET(_request: Request, ctx: Ctx) {
+export async function GET(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   const { action: rawAction } = await ctx.params;
   const action = resolveAutomationAction(rawAction);
   if (!action) {
@@ -27,6 +30,8 @@ export async function GET(_request: Request, ctx: Ctx) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { action: rawAction } = await ctx.params;
     const action = resolveAutomationAction(rawAction);
@@ -66,6 +71,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function POST(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { action: rawAction } = await ctx.params;
     const action = resolveAutomationAction(rawAction);

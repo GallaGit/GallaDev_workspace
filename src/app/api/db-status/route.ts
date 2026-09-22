@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import { getActiveProvider } from "@/lib/repository/get-repository";
 import {
   supabasePublishableKey,
@@ -16,7 +17,9 @@ export const dynamic = "force-dynamic";
 const TIMEOUT_MS = 8000;
 
 /** Health check barato de Supabase. No expone secretos ni datos. */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   const provider = getActiveProvider();
   const started = Date.now();
   const latencyMs = () => Date.now() - started;

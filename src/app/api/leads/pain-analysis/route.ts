@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import {
   PainAnalysisError,
   analyzeBusinessPains,
@@ -24,6 +25,8 @@ export const maxDuration = 60;
  * Front drawer uses POST /api/leads/:id/analyze (same Groq + Notion path).
  */
 export async function POST(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   let body: { id?: unknown; lead?: unknown; persist?: unknown; force?: unknown } =
     {};
   try {

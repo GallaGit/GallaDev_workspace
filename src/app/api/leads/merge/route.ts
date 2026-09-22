@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import {
   buildEmptyFieldMerge,
   MERGEABLE_FIELD_LABELS,
@@ -17,6 +18,8 @@ type MergeBody = {
 };
 
 export async function POST(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as MergeBody;
     const keepId =

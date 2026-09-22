@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import { detectDuplicateGroups } from "@/lib/leads/detect-duplicates";
 import { getLeadRepository } from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const repo = getLeadRepository();
     const leads = await repo.list({ includeArchived: true });
