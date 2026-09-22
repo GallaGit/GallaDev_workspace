@@ -1,9 +1,13 @@
 /**
- * Auth skeleton for future PIN/credentials.
- * Local v1: AUTH_DISABLED=true skips session checks.
+ * Auth del workspace (M1 — GEM_ROADMAP 1.5).
+ *
+ * Local (dev): AUTH_DISABLED=true omite los checks de sesión.
+ * Producción: el auth está SIEMPRE activo (fail-closed). Sin AUTH_SECRET
+ * el login responde 503 en vez de abrir la app sin protección.
  */
 
 export function isAuthDisabled(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   return (
     process.env.AUTH_DISABLED === "true" ||
     process.env.AUTH_DISABLED === "1" ||

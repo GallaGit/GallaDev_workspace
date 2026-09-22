@@ -25,7 +25,11 @@ export default defineConfig({
     timeout: 120000,
     env: {
       ...process.env,
-      AUTH_DISABLED: 'true',
+      // M1: en producción el auth nunca se desactiva; el E2E usa
+      // credenciales de prueba y entra por /login (ver critical-paths).
+      AUTH_DISABLED: 'false',
+      AUTH_SECRET: process.env.E2E_AUTH_SECRET ?? 'e2e-test-secret-local-only',
+      AUTH_PASSWORD: process.env.E2E_AUTH_PASSWORD ?? 'e2e-test-password',
       PORT: '3000',
     },
   },

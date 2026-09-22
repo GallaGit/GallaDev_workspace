@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
+import { readCappedJson } from "@/lib/rate-limit";
 import {
   getActiveProvider,
   getLeadRepository,
@@ -22,6 +24,8 @@ function parseBool(v: string | null): boolean | null {
 }
 
 export async function GET(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const repo = getLeadRepository();
@@ -63,6 +67,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const result = validateLeadCreate(body);
@@ -86,10 +92,20 @@ export async function POST(request: Request) {
   }
 }
 
+const MAX_BULK_BODY_BYTES = 256 * 1024;
+
 export async function PATCH(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
-    const body = await request.json();
-    const { ids, patch } = body as {
+    const parsed = await readCappedJson(request, MAX_BULK_BODY_BYTES);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { error: "Payload no válido o demasiado grande" },
+        { status: parsed.status },
+      );
+    }
+    const { ids, patch } = parsed.value as {
       ids: string[];
       patch: Record<string, unknown>;
     };

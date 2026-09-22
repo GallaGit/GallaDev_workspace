@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import { getLeadRepository } from "@/lib/repository/get-repository";
 import type { LeadPatch } from "@/lib/domain/lead";
 import {
@@ -10,7 +11,9 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, ctx: Ctx) {
+export async function GET(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { id } = await ctx.params;
     const repo = getLeadRepository();
@@ -27,6 +30,8 @@ export async function GET(_req: Request, ctx: Ctx) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { id } = await ctx.params;
     const patch = (await request.json()) as LeadPatch;
@@ -40,7 +45,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 }
 
-export async function DELETE(_req: Request, ctx: Ctx) {
+export async function DELETE(request: Request, ctx: Ctx) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { id } = await ctx.params;
     const repo = getLeadRepository();

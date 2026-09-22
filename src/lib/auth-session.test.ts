@@ -127,6 +127,12 @@ describe("auth-session", () => {
     expect(await passwordOk(PASSWORD)).toBe(false);
   });
 
+  it("passwordOk es falso sin AUTH_SECRET (sin secreto de fallback)", async () => {
+    vi.stubEnv("AUTH_SECRET", "");
+    vi.stubEnv("AUTH_PASSWORD", PASSWORD);
+    expect(await passwordOk(PASSWORD)).toBe(false);
+  });
+
   it("sv coincide con SESSION_EPOCH y el bump invalida el token anterior", async () => {
     vi.stubEnv("AUTH_SECRET", SECRET);
     vi.stubEnv("SESSION_EPOCH", "1");

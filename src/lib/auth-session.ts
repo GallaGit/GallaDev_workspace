@@ -92,12 +92,15 @@ export function authSecretConfigured(): boolean {
   return Boolean(process.env.AUTH_SECRET);
 }
 
-/** Contraseña del login. Falso si falta a cualquier lado (nunca dejar pasar). */
+/**
+ * Contraseña del login. Falso si falta a cualquier lado (nunca dejar pasar).
+ * Sin AUTH_SECRET siempre es falso: en prod no existe secreto de fallback.
+ */
 export async function passwordOk(provided: string): Promise<boolean> {
+  const secret = process.env.AUTH_SECRET;
   const expected = process.env.AUTH_PASSWORD ?? "";
-  if (!provided || !expected) return false;
+  if (!secret || !provided || !expected) return false;
   // HMAC antes de comparar para no filtrar por longitud/timing.
-  const secret = process.env.AUTH_SECRET || "auth-session-fallback";
   const [ha, hb] = await Promise.all([
     hmac(secret, `pw:${provided}`),
     hmac(secret, `pw:${expected}`),

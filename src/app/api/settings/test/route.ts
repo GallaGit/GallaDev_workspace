@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/api-auth";
 import { getSettingsService, toPublicSettings } from "@/lib/settings";
 import {
   isIntegrationId,
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as {
       integration?: string;

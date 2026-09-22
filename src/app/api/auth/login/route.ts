@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  clientIp,
+  isRateLimited,
+  readCappedJson,
+} from "@/lib/rate-limit";
+import {
   authPasswordConfigured,
   authSecretConfigured,
   issueSession,
@@ -14,13 +19,7 @@ export const dynamic = "force-dynamic";
 // Anti-fuerza bruta best-effort (por instancia).
 const WINDOW_MS = 60 * 1000;
 const MAX = 10;
-const hits = new Map<string, number[]>();
-
-function clientIp(request: Request): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
-  return "unknown";
-}
+const MAX_BODY_BYTES = 32 * 1024;
 
 export async function POST(request: Request) {
   if (!authSecretConfigured() || !authPasswordConfigured()) {
@@ -30,28 +29,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const ip = clientIp(request);
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX) {
+  if (
+    isRateLimited("auth:login", clientIp(request), {
+      windowMs: WINDOW_MS,
+      max: MAX,
+    })
+  ) {
     return NextResponse.json(
       { ok: false, error: "Demasiados intentos. Espera un minuto." },
       { status: 429 },
     );
   }
-  recent.push(now);
-  hits.set(ip, recent);
 
-  let password = "";
-  try {
-    const body = (await request.json()) as { password?: unknown };
-    password = typeof body.password === "string" ? body.password : "";
-  } catch {
+  const parsed = await readCappedJson(request, MAX_BODY_BYTES);
+  if (!parsed.ok) {
     return NextResponse.json(
       { ok: false, error: "Solicitud no válida" },
       { status: 400 },
     );
   }
+  const body = parsed.value as { password?: unknown };
+  const password = typeof body.password === "string" ? body.password : "";
 
   if (!(await passwordOk(password))) {
     return NextResponse.json(
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const token = await issueSession(now);
+  const token = await issueSession();
   if (!token) {
     return NextResponse.json(
       { ok: false, error: "Servicio de sesión no disponible" },

@@ -1,6 +1,18 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Leads_CRM smoke", () => {
+  // M1: el servidor E2E corre en producción (npm run start) con auth
+  // activo; cada test entra por /login con las credenciales de prueba
+  // del webServer (E2E_AUTH_PASSWORD o el default local).
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/login");
+    await page
+      .getByTestId("login-password")
+      .fill(process.env.E2E_AUTH_PASSWORD ?? "e2e-test-password");
+    await page.getByTestId("login-submit").click();
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
+  });
+
   test("home shell loads", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText("Leads_CRM").first()).toBeVisible({
