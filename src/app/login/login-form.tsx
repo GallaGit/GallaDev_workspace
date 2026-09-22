@@ -51,6 +51,7 @@ export function LoginForm() {
         <div className="relative">
           <input
             id="password"
+            data-testid="login-password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             autoFocus
@@ -81,6 +82,7 @@ export function LoginForm() {
       ) : null}
       <button
         type="submit"
+        data-testid="login-submit"
         disabled={busy || !password}
         className="w-full rounded-md bg-gray-900 px-4 py-2 font-semibold text-white disabled:opacity-50"
       >

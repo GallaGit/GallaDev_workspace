@@ -6,10 +6,10 @@ test.describe("Leads_CRM smoke", () => {
   // del webServer (E2E_AUTH_PASSWORD o el default local).
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("Contraseña").fill(
-      process.env.E2E_AUTH_PASSWORD ?? "e2e-test-password",
-    );
-    await page.getByRole("button", { name: "Entrar" }).click();
+    await page
+      .getByTestId("login-password")
+      .fill(process.env.E2E_AUTH_PASSWORD ?? "e2e-test-password");
+    await page.getByTestId("login-submit").click();
     await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
   });
 
