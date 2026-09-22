@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
+import {
+  clientIp,
+  isRateLimited,
+  readCappedJson,
+} from "@/lib/rate-limit";
 import { getLeadRepository } from "@/lib/repository/get-repository";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import { dispatchLeadCreated } from "@/lib/automations/dispatch";
@@ -16,26 +21,7 @@ export const dynamic = "force-dynamic";
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 60;
-const rateHits = new Map<string, number[]>();
 const DEFAULT_SOURCE = "n8n";
-
-function clientIp(request: Request): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
-  return "unknown";
-}
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const hits = (rateHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-  if (hits.length >= RATE_MAX) {
-    rateHits.set(ip, hits);
-    return true;
-  }
-  hits.push(now);
-  rateHits.set(ip, hits);
-  return false;
-}
 
 function readBearer(request: Request): string {
   const header = request.headers.get("authorization") ?? "";
@@ -67,29 +53,30 @@ export async function POST(request: Request) {
     );
   }
 
-  if (rateLimited(clientIp(request))) {
+  if (
+    isRateLimited("ingest:n8n", clientIp(request), {
+      windowMs: RATE_WINDOW_MS,
+      max: RATE_MAX,
+    })
+  ) {
     return NextResponse.json(
       { ok: false, error: "Demasiadas solicitudes. Inténtalo más tarde." },
       { status: 429 },
     );
   }
 
-  let raw: unknown;
-  try {
-    const text = await request.text();
-    if (text.length > MAX_BODY_BYTES) {
-      return NextResponse.json(
-        { ok: false, error: "Payload demasiado grande" },
-        { status: 413 },
-      );
-    }
-    raw = JSON.parse(text || "{}") as unknown;
-  } catch {
+  const parsed = await readCappedJson(request, MAX_BODY_BYTES);
+  if (!parsed.ok) {
     return NextResponse.json(
-      { ok: false, error: "JSON inválido" },
-      { status: 400 },
+      {
+        ok: false,
+        error:
+          parsed.status === 413 ? "Payload demasiado grande" : "JSON inválido",
+      },
+      { status: parsed.status },
     );
   }
+  const raw: unknown = parsed.value;
   if (!raw || typeof raw !== "object") {
     return NextResponse.json(
       { ok: false, error: "Payload inválido" },
