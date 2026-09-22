@@ -52,7 +52,11 @@ describe("requireApiSession", () => {
     const denied = await requireApiSession();
     expect(denied).not.toBeNull();
     expect(denied!.status).toBe(401);
-    expect(await denied!.json()).toMatchObject({ ok: false });
+    expect(await denied!.json()).toMatchObject({
+      ok: false,
+      code: "unauthenticated",
+      error: "No autorizado",
+    });
   });
 
   it("401 con usuario pero sin perfil (fail-closed)", async () => {
@@ -63,6 +67,12 @@ describe("requireApiSession", () => {
     const denied = await requireApiSession();
     expect(denied).not.toBeNull();
     expect(denied!.status).toBe(401);
+    expect(await denied!.json()).toMatchObject({
+      ok: false,
+      code: "no_profile",
+      error:
+        "Tu usuario está autenticado pero no tiene un perfil asignado. Contacta al administrador.",
+    });
   });
 
   it("permite con usuario y rol Seller", async () => {

@@ -11,7 +11,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
-    pool: "threads",
+    // vmThreads evita "failed to find the current suite" en Vitest 4.1.11
+    // con Node 22 + Git Bash/Windows. Mantiene aislamiento sin fork de proceso.
+    pool: "vmThreads",
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],

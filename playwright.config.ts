@@ -15,7 +15,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
   webServer: {
@@ -34,6 +34,12 @@ export default defineConfig({
       SUPABASE_PUBLISHABLE_KEY:
         process.env.SUPABASE_PUBLISHABLE_KEY ??
         'sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9',
+      // Crear usuarios E2E en Supabase Dashboard → Authentication → Users.
+      // Ejemplo: E2E_ADMIN_EMAIL=admin@example.com E2E_ADMIN_PASSWORD=...
+      E2E_ADMIN_EMAIL: process.env.E2E_ADMIN_EMAIL ?? '',
+      E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? '',
+      E2E_SELLER_EMAIL: process.env.E2E_SELLER_EMAIL ?? '',
+      E2E_SELLER_PASSWORD: process.env.E2E_SELLER_PASSWORD ?? '',
       PORT: '3000',
     },
   },
