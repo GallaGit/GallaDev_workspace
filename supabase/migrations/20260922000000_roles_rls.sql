@@ -1,9 +1,9 @@
--- M1 recortado (GEM_ROADMAP 1.2): roles por usuario + RLS restrictiva.
+  -- M1 recortado (GEM_ROADMAP 1.2): roles por usuario + RLS restrictiva.
 --
 -- La app accede vía service_role (bypass RLS) y NO se ve afectada.
 -- El acceso directo a PostgREST con clave authenticated queda restringido:
 --   - Admin: lectura/escritura total.
---   - Vendedor: solo leads propios (responsable = auth.uid()) o sin asignar.
+--   - Seller: solo leads propios (responsable = auth.uid()) o sin asignar.
 --   - Viewer: solo lectura.
 --   - authenticated sin perfil: denegado por defecto.
 --
@@ -15,7 +15,7 @@
 
 -- 1. Roles de la app
 DO $$ BEGIN
-  CREATE TYPE public.app_role AS ENUM ('Admin', 'Vendedor', 'Viewer');
+  CREATE TYPE public.app_role AS ENUM ('Admin', 'Seller', 'Viewer');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -65,12 +65,12 @@ CREATE POLICY "role_leads_select"
     public.current_app_role() = 'Admin'
     OR public.current_app_role() = 'Viewer'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND (responsable IS NULL OR responsable = auth.uid())
     )
   );
 
--- 4b. leads: creación (Admin o Vendedor asignándose a sí mismo / sin asignar)
+-- 4b. leads: creación (Admin o Seller asignándose a sí mismo / sin asignar)
 DROP POLICY IF EXISTS "role_leads_insert" ON public.leads;
 CREATE POLICY "role_leads_insert"
   ON public.leads
@@ -79,7 +79,7 @@ CREATE POLICY "role_leads_insert"
   WITH CHECK (
     public.current_app_role() = 'Admin'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND (responsable IS NULL OR responsable = auth.uid())
     )
   );
@@ -94,14 +94,14 @@ CREATE POLICY "role_leads_update"
   USING (
     public.current_app_role() = 'Admin'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND (responsable IS NULL OR responsable = auth.uid())
     )
   )
   WITH CHECK (
     public.current_app_role() = 'Admin'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND (responsable IS NULL OR responsable = auth.uid())
     )
   );
@@ -124,7 +124,7 @@ CREATE POLICY "role_activities_select"
     public.current_app_role() = 'Admin'
     OR public.current_app_role() = 'Viewer'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND EXISTS (
         SELECT 1 FROM public.leads l
         WHERE l.id = lead_activities.lead_id
@@ -141,7 +141,7 @@ CREATE POLICY "role_activities_insert"
   WITH CHECK (
     public.current_app_role() = 'Admin'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND EXISTS (
         SELECT 1 FROM public.leads l
         WHERE l.id = lead_activities.lead_id
@@ -158,7 +158,7 @@ CREATE POLICY "role_activities_update"
   USING (
     public.current_app_role() = 'Admin'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND EXISTS (
         SELECT 1 FROM public.leads l
         WHERE l.id = lead_activities.lead_id
@@ -169,7 +169,7 @@ CREATE POLICY "role_activities_update"
   WITH CHECK (
     public.current_app_role() = 'Admin'
     OR (
-      public.current_app_role() = 'Vendedor'
+      public.current_app_role() = 'Seller'
       AND EXISTS (
         SELECT 1 FROM public.leads l
         WHERE l.id = lead_activities.lead_id

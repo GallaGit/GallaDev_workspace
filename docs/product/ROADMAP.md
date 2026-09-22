@@ -139,7 +139,7 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 - [ ] Proveedores externos (n8n y futuros) solo vía contrato de ingesta (`Nuevo` + `Origen`); sin lógica de negocio fuera del CRM
 
 #### Fase 2 — Multi-usuario & Roles (Semana 2-3)
-- [ ] Roles definidos: Admin, Vendedor, Viewer
+- [ ] Roles definidos: Admin, Seller, Viewer
 - [ ] Permisos RLS por rol (solo sus leads, ver todos, solo lectura)
 - [ ] Autenticación multiusuario (hoy: sesión propia HMAC de un solo usuario + cierre global de emergencia, PR #31; NextAuth/Supabase JWT queda como opción a decidir)
 - [ ] Routing protegido: Routes `/leads`, `/kanban`, `/settings` por rol

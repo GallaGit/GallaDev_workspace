@@ -105,7 +105,7 @@ Sin esto, multi-usuario y billing son inseguros por diseño.
 
 - **M1 Seguro:** Fase 1 completa + `npm audit` limpio + sin secretos en historial.
 - **M2 Sólido:** Fases 2–3; CI falla ante regresiones de cobertura/tests/a11y; docs sin contradicciones.
-- **M3 SaaS:** Fase 4; un segundo usuario (rol Vendedor) opera end-to-end — signup → leads → kanban → email → billing — con trazas y sin acceso a datos ajenos.
+- **M3 SaaS:** Fase 4; un segundo usuario (rol Seller) opera end-to-end — signup → leads → kanban → email → billing — con trazas y sin acceso a datos ajenos.
 
 ## 8. Riesgos
 
