@@ -1,11 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const isCI = !!process.env.CI
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 1 : undefined,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
@@ -15,27 +17,38 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+      // En CI usamos Chromium de Playwright. En local se puede reutilizar
+      // Google Chrome del sistema si está instalado.
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(isCI ? {} : { channel: 'chrome' as const }),
+      },
     },
   ],
   webServer: {
     command: 'npm run start',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !isCI,
     timeout: 120000,
     env: {
       ...process.env,
-      // Paso 2: en producción el auth nunca se desactiva; el E2E entra
-      // por /login con el usuario de prueba de Supabase (ver critical-paths).
-      // SUPABASE_* son claves públicas (ver .env.example).
+      // Paso 2: el auth nunca se desactiva en CI; el E2E entra por /login.
       AUTH_DISABLED: 'false',
       SUPABASE_URL:
         process.env.SUPABASE_URL ?? 'https://rafgpbiiwofrqmfpqrij.supabase.co',
       SUPABASE_PUBLISHABLE_KEY:
         process.env.SUPABASE_PUBLISHABLE_KEY ??
         'sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9',
-      // Crear usuarios E2E en Supabase Dashboard → Authentication → Users.
-      // Ejemplo: E2E_ADMIN_EMAIL=admin@example.com E2E_ADMIN_PASSWORD=...
+      NEXT_PUBLIC_SUPABASE_URL:
+        process.env.NEXT_PUBLIC_SUPABASE_URL ??
+        process.env.SUPABASE_URL ??
+        'https://rafgpbiiwofrqmfpqrij.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+        process.env.SUPABASE_PUBLISHABLE_KEY ??
+        'sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9',
+      E2E_TEST_EMAIL: process.env.E2E_TEST_EMAIL ?? '',
+      E2E_TEST_PASSWORD: process.env.E2E_TEST_PASSWORD ?? '',
       E2E_ADMIN_EMAIL: process.env.E2E_ADMIN_EMAIL ?? '',
       E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? '',
       E2E_SELLER_EMAIL: process.env.E2E_SELLER_EMAIL ?? '',
