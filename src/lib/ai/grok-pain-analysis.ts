@@ -97,5 +97,6 @@ export function leadFromGrokBody(raw: unknown): Lead | null {
     aiAnalysis: asTrimmed(r.aiAnalysis),
     lastEditedTime: asTrimmed(r.lastEditedTime),
     archived: r.archived === true,
+    responsibleId: asTrimmed(r.responsibleId),
   };
 }

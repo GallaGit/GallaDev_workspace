@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const body = (await request.json()) as {

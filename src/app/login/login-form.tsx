@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -19,14 +21,13 @@ export function LoginForm() {
     setError("");
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+      const supabase = createSupabaseBrowserClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !data.ok) {
-        setError(data.error || "No se pudo entrar");
+      if (signInError) {
+        setError("Credenciales incorrectas");
         return;
       }
       setAuthFlash("welcome");
@@ -39,8 +40,28 @@ export function LoginForm() {
     }
   }
 
+  const canSubmit = !busy && email.trim().length > 0 && password.length > 0;
+
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <div>
+        <label
+          htmlFor="email"
+          className="mb-1 block text-sm font-medium"
+        >
+          Email
+        </label>
+        <input
+          id="email"
+          data-testid="login-email"
+          type="email"
+          autoComplete="email"
+          autoFocus
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-base outline-none focus:border-gray-500"
+        />
+      </div>
       <div>
         <label
           htmlFor="password"
@@ -54,7 +75,6 @@ export function LoginForm() {
             data-testid="login-password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
-            autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-base outline-none focus:border-gray-500"
@@ -83,7 +103,7 @@ export function LoginForm() {
       <button
         type="submit"
         data-testid="login-submit"
-        disabled={busy || !password}
+        disabled={!canSubmit}
         className="w-full rounded-md bg-gray-900 px-4 py-2 font-semibold text-white disabled:opacity-50"
       >
         {busy ? "Entrando…" : "Entrar"}

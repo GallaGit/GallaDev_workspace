@@ -42,6 +42,7 @@ const createMockLead = (overrides: Partial<Lead> = {}): Lead => {
     lastContact: null,
     nextFollowUp: null,
     lastEditedTime: null,
+    responsibleId: null,
     ...overrides,
   }
 }
@@ -468,6 +469,30 @@ describe('filter-leads - filterLeads', () => {
       const result = filterLeads(leads, createFilters({ status: [] }))
 
       expect(result).toHaveLength(1)
+    })
+
+    it('responsibleId filtra solo los leads asignados al usuario', () => {
+      const leads = [
+        createMockLead({ id: '1', responsibleId: 'user-1' }),
+        createMockLead({ id: '2', responsibleId: 'user-2' }),
+        createMockLead({ id: '3', responsibleId: null }),
+      ]
+
+      const result = filterLeads(leads, createFilters({ responsibleId: 'user-1' }))
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe('1')
+    })
+
+    it('responsibleId null no filtra', () => {
+      const leads = [
+        createMockLead({ id: '1', responsibleId: 'user-1' }),
+        createMockLead({ id: '2', responsibleId: null }),
+      ]
+
+      const result = filterLeads(leads, createFilters({ responsibleId: null }))
+
+      expect(result).toHaveLength(2)
     })
   })
 })

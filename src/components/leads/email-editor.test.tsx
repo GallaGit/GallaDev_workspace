@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { cleanup, render, screen, fireEvent } from "@testing-library/react";
 import { EmailEditor } from "@/components/leads/email-editor";
 
 vi.mock("@/lib/utils/gmail-compose", () => ({
@@ -7,6 +7,8 @@ vi.mock("@/lib/utils/gmail-compose", () => ({
 }));
 
 describe("EmailEditor", () => {
+  beforeEach(() => cleanup());
+
   const defaultProps = {
     subject: "Test Subject",
     body: "Test body content",

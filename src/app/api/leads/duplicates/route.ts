@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
 import { detectDuplicateGroups } from "@/lib/leads/detect-duplicates";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const denied = await requireApiSession(request);
+export async function GET() {
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const leads = await repo.list({ includeArchived: true });
     const groups = detectDuplicateGroups(leads);
     return NextResponse.json({

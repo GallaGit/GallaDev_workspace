@@ -3,7 +3,7 @@ import { requireApiSession } from "@/lib/api-auth";
 import { readCappedJson } from "@/lib/rate-limit";
 import {
   getActiveProvider,
-  getLeadRepository,
+  getSessionLeadRepository,
 } from "@/lib/repository/get-repository";
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
@@ -24,11 +24,11 @@ function parseBool(v: string | null): boolean | null {
 }
 
 export async function GET(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const leads = await repo.list();
 
     const filters: LeadFilters = {
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const body = (await request.json()) as Record<string, unknown>;
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const lead = await repo.create(result.value);
     const automation = dispatchLeadCreated(lead);
     return NextResponse.json({ lead, automation }, { status: 201 });
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 const MAX_BULK_BODY_BYTES = 256 * 1024;
 
 export async function PATCH(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const parsed = await readCappedJson(request, MAX_BULK_BODY_BYTES);
@@ -112,7 +112,7 @@ export async function PATCH(request: Request) {
     if (!ids?.length || !patch) {
       return NextResponse.json({ error: "ids y patch requeridos" }, { status: 400 });
     }
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const updated = [];
     const automations = [];
     const changed = changedKeys(patch);

@@ -14,6 +14,7 @@ import {
   toApiPainAnalysis,
 } from "@/lib/ai/pain-analysis-api";
 import { runLeadAnalyze } from "@/lib/ai/run-lead-analyze";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import { getSettingsService } from "@/lib/settings/service";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export const maxDuration = 60;
  * Front drawer uses POST /api/leads/:id/analyze (same Groq + Notion path).
  */
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   let body: { id?: unknown; lead?: unknown; persist?: unknown; force?: unknown } =
     {};
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
     const result = await runLeadAnalyze(id, {
       force: body.force === true,
       persist,
+      repository: await getSessionLeadRepository(),
     });
     if (!result.ok) {
       return NextResponse.json(result.body, { status: result.status });

@@ -1,10 +1,9 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { vi } from "vitest";
 
-afterEach(() => {
-  cleanup();
-});
+// @testing-library/jest-dom/vitest registra cleanup automáticamente.
+// El afterEach manual con cleanup() provocaba "failed to find the current suite"
+// en Vitest 4.1.11 + @testing-library/react 16.3.3 con pool threads.
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

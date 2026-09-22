@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import type { LeadPatch } from "@/lib/domain/lead";
 import {
   changedKeys,
@@ -12,11 +12,11 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { id } = await ctx.params;
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const lead = await repo.get(id);
     if (!lead) {
       return NextResponse.json({ error: "Lead no encontrado" }, { status: 404 });
@@ -30,12 +30,12 @@ export async function GET(request: Request, ctx: Ctx) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { id } = await ctx.params;
     const patch = (await request.json()) as LeadPatch;
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const lead = await repo.update(id, patch);
     const automation = dispatchLeadUpdated(lead, changedKeys(patch));
     return NextResponse.json({ lead, automation });
@@ -46,11 +46,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function DELETE(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { id } = await ctx.params;
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     await repo.archive(id);
     return NextResponse.json({ ok: true });
   } catch (e) {

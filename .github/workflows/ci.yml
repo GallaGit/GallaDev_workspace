@@ -67,8 +67,10 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           AUTH_DISABLED: "false"
-          E2E_AUTH_SECRET: "e2e-ci-secret-not-a-real-secret"
-          E2E_AUTH_PASSWORD: "e2e-ci-password"
+          SUPABASE_URL: "https://rafgpbiiwofrqmfpqrij.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY: "sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9"
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           PORT: "3000"
       - uses: actions/upload-artifact@v4
         if: always()

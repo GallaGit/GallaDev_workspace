@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
 import { scoreLead } from "@/lib/leads/lead-scorer";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ type ScoreBody = {
 };
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     let body: ScoreBody = {};
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       body = {};
     }
 
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     let targets;
 
     if (Array.isArray(body.ids) && body.ids.length > 0) {

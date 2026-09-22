@@ -280,6 +280,7 @@ function KanbanColumn({
               aiAnalysis: null,
               lastEditedTime: null,
               archived: false,
+              responsibleId: null,
             };
             onMoveLead(newLead.id, status);
           }}

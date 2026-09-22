@@ -15,7 +15,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
   webServer: {
@@ -25,11 +25,21 @@ export default defineConfig({
     timeout: 120000,
     env: {
       ...process.env,
-      // M1: en producción el auth nunca se desactiva; el E2E usa
-      // credenciales de prueba y entra por /login (ver critical-paths).
+      // Paso 2: en producción el auth nunca se desactiva; el E2E entra
+      // por /login con el usuario de prueba de Supabase (ver critical-paths).
+      // SUPABASE_* son claves públicas (ver .env.example).
       AUTH_DISABLED: 'false',
-      AUTH_SECRET: process.env.E2E_AUTH_SECRET ?? 'e2e-test-secret-local-only',
-      AUTH_PASSWORD: process.env.E2E_AUTH_PASSWORD ?? 'e2e-test-password',
+      SUPABASE_URL:
+        process.env.SUPABASE_URL ?? 'https://rafgpbiiwofrqmfpqrij.supabase.co',
+      SUPABASE_PUBLISHABLE_KEY:
+        process.env.SUPABASE_PUBLISHABLE_KEY ??
+        'sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9',
+      // Crear usuarios E2E en Supabase Dashboard → Authentication → Users.
+      // Ejemplo: E2E_ADMIN_EMAIL=admin@example.com E2E_ADMIN_PASSWORD=...
+      E2E_ADMIN_EMAIL: process.env.E2E_ADMIN_EMAIL ?? '',
+      E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? '',
+      E2E_SELLER_EMAIL: process.env.E2E_SELLER_EMAIL ?? '',
+      E2E_SELLER_PASSWORD: process.env.E2E_SELLER_PASSWORD ?? '',
       PORT: '3000',
     },
   },

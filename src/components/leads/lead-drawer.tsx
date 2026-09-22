@@ -34,6 +34,7 @@ import {
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
+import type { TeamMember } from "@/app/api/team/route";
 
 function isGenericNetworkError(message: string): boolean {
   return /failed to fetch|network|timeout|aborterror/i.test(message);
@@ -118,6 +119,7 @@ function LeadDrawerBody({
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
   const [analyzeEmpty, setAnalyzeEmpty] = useState(false);
   const [apiAnalysis, setApiAnalysis] = useState<unknown>(null);
   const doloresRef = useRef<HTMLElement | null>(null);
@@ -144,6 +146,15 @@ function LeadDrawerBody({
       .catch((e) => toast.error(e.message))
       .finally(() => {
         if (!cancelled) setLoading(false);
+      });
+    fetch("/api/team")
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as { members?: TeamMember[] };
+        if (!cancelled && Array.isArray(data.members)) setTeam(data.members);
+      })
+      .catch(() => {
+        // Sin equipo visible el selector queda en "Sin asignar".
       });
     return () => {
       cancelled = true;
@@ -401,6 +412,25 @@ function LeadDrawerBody({
                 {LEAD_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {s}
+                  </option>
+                ))}
+              </select>
+              <label className="block text-[11px] text-(--muted-fg)">
+                Responsable
+              </label>
+              <select
+                data-testid="lead-responsible"
+                className="mt-1 w-full rounded-md border border-(--border) bg-(--bg) px-2 py-1.5 text-sm"
+                value={lead.responsibleId ?? ""}
+                disabled={saving}
+                onChange={(e) =>
+                  savePatch({ responsibleId: e.target.value || null })
+                }
+              >
+                <option value="">Sin asignar</option>
+                {team.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.email ?? m.id} ({m.role})
                   </option>
                 ))}
               </select>

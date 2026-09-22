@@ -4,7 +4,7 @@ import {
   buildEmptyFieldMerge,
   MERGEABLE_FIELD_LABELS,
 } from "@/lib/leads/merge-leads";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import {
   changedKeys,
   dispatchLeadUpdated,
@@ -18,7 +18,7 @@ type MergeBody = {
 };
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const body = (await request.json()) as MergeBody;
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const [keep, archive] = await Promise.all([
       repo.get(keepId),
       repo.get(archiveId),

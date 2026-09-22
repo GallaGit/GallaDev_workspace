@@ -19,6 +19,7 @@ import { dispatchLeadAnalyzed } from "@/lib/automations/dispatch";
 import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
 import { getLeadRepository } from "@/lib/repository/get-repository";
+import type { LeadRepository } from "@/lib/repository/lead-repository";
 import { getSettingsService } from "@/lib/settings/service";
 
 export type AnalyzeLeadResult =
@@ -52,9 +53,13 @@ function emptySuccess(lead: Lead): AnalyzeSuccessBody {
 
 export async function runLeadAnalyze(
   id: string,
-  options: { force?: boolean; persist?: boolean } = {},
+  options: {
+    force?: boolean;
+    persist?: boolean;
+    repository?: LeadRepository;
+  } = {},
 ): Promise<AnalyzeLeadResult> {
-  const repo = getLeadRepository();
+  const repo = options.repository ?? getLeadRepository();
   const force = options.force === true;
   const persist = options.persist !== false;
 

@@ -71,6 +71,8 @@ export interface Lead {
   aiAnalysis: string | null;
   lastEditedTime: string | null;
   archived: boolean;
+  /** Usuario asignado (auth.users.id). Null = sin asignar (visible a Seller). */
+  responsibleId: string | null;
 }
 
 export type LeadPatch = Partial<
@@ -104,6 +106,7 @@ export type LeadPatch = Partial<
     | "nextFollowUp"
     | "favorite"
     | "aiAnalysis"
+    | "responsibleId"
   >
 >;
 
@@ -169,6 +172,8 @@ export interface LeadFilters {
   hasWebsite?: boolean | null;
   hasLinkedin?: boolean | null;
   favorite?: boolean | null;
+  /** Solo leads asignados a este usuario (auth.users.id). Null = sin filtro. */
+  responsibleId?: string | null;
 }
 
 export function isLeadStatus(value: unknown): value is LeadStatus {
