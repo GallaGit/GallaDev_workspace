@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
 import {
   getActiveProvider,
-  getLeadRepository,
+  getSessionLeadRepository,
 } from "@/lib/repository/get-repository";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function POST() {
   const denied = await requireApiSession();
   if (denied) return denied;
   try {
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const leads = await repo.list();
     return NextResponse.json({
       ok: true,

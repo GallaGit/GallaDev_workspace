@@ -4,7 +4,7 @@ import {
   buildEmptyFieldMerge,
   MERGEABLE_FIELD_LABELS,
 } from "@/lib/leads/merge-leads";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import {
   changedKeys,
   dispatchLeadUpdated,
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const [keep, archive] = await Promise.all([
       repo.get(keepId),
       repo.get(archiveId),

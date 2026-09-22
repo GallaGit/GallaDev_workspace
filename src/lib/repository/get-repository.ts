@@ -1,7 +1,9 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LeadRepository } from "./lead-repository";
 import { SupabaseLeadRepository } from "@/lib/supabase/supabase-lead-repository";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { type DbProvider } from "@/lib/supabase/env";
 
 export type { DbProvider };
@@ -12,8 +14,21 @@ let supabaseRepo: SupabaseLeadRepository | null = null;
 /**
  * Factory de repositorio. Supabase es la única fuente de verdad;
  * el runtime Notion se eliminó.
+ *
+ * Sin cliente: singleton con service_role (ingesta pública, health y
+ * contextos sin usuario — bypass RLS documentado).
+ * Con cliente de sesión: instancia por petición; RLS aplica por rol.
  */
-export function getLeadRepository(): LeadRepository {
+export function getLeadRepository(client?: SupabaseClient): LeadRepository {
+  if (client) return new SupabaseLeadRepository(client);
   if (!supabaseRepo) supabaseRepo = new SupabaseLeadRepository();
   return supabaseRepo;
+}
+
+/**
+ * Repositorio con la sesión Supabase de la petición (RLS por rol).
+ * Usar en todas las rutas con usuario; nunca en ingesta pública.
+ */
+export async function getSessionLeadRepository(): Promise<LeadRepository> {
+  return getLeadRepository(await createSupabaseServerClient());
 }

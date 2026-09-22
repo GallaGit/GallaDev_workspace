@@ -14,6 +14,7 @@ import {
   toApiPainAnalysis,
 } from "@/lib/ai/pain-analysis-api";
 import { runLeadAnalyze } from "@/lib/ai/run-lead-analyze";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import { getSettingsService } from "@/lib/settings/service";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
     const result = await runLeadAnalyze(id, {
       force: body.force === true,
       persist,
+      repository: await getSessionLeadRepository(),
     });
     if (!result.ok) {
       return NextResponse.json(result.body, { status: result.status });

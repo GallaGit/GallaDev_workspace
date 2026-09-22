@@ -3,7 +3,7 @@ import { requireApiSession } from "@/lib/api-auth";
 import { readCappedJson } from "@/lib/rate-limit";
 import {
   getActiveProvider,
-  getLeadRepository,
+  getSessionLeadRepository,
 } from "@/lib/repository/get-repository";
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const leads = await repo.list();
 
     const filters: LeadFilters = {
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const lead = await repo.create(result.value);
     const automation = dispatchLeadCreated(lead);
     return NextResponse.json({ lead, automation }, { status: 201 });
@@ -112,7 +112,7 @@ export async function PATCH(request: Request) {
     if (!ids?.length || !patch) {
       return NextResponse.json({ error: "ids y patch requeridos" }, { status: 400 });
     }
-    const repo = getLeadRepository();
+    const repo = await getSessionLeadRepository();
     const updated = [];
     const automations = [];
     const changed = changedKeys(patch);
