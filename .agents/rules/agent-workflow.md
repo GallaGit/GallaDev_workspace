@@ -2,7 +2,7 @@
 
 > Alcance: toda sesión con agente (humano + IA) que modifique código en este repo.
 > Objetivo: que si algo se rompe, **grite en CI**, no "al tiempo".
-> Complementa [`CONTRIBUTING.md`](../../CONTRIBUTING.md) (proceso de PR) y [`docs/product/GEM_ROADMAP.md`](../../docs/product/GEM_ROADMAP.md) (fases).
+> Complementa [`CONTRIBUTING.md`](../../CONTRIBUTING.md) (proceso de PR) y [`docs/02-roadmap-delivery/GDW_context.md`](../../docs/02-roadmap-delivery/GDW_context.md) (fases).
 
 ## Regla 0 — Fuera de `main`, SIEMPRE
 

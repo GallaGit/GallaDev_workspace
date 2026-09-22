@@ -28,14 +28,13 @@ AUTH_DISABLED=true
 
 ## Documentation
 
-- [Documentation index](./docs/README.md)
-- [Business context](./docs/product/CONTEXTO_NEGOCIO.md)
-- [Product decisions](./docs/product/DECISIONES.md)
-- [Setup & usage guide](./docs/guides/GUIA_USO.md)
-- [Architecture](./docs/architecture/ARQUITECTURA.md)
-- [Integrations](./docs/architecture/INTEGRACIONES.md)
-- [Implementation status](./docs/architecture/ESTADO_IMPLEMENTACION.md)
-- [Roadmap](./docs/product/ROADMAP.md)
+- [Documentation overview](./docs/00-overview/GDW_context.md) ([español](./docs/00-overview/GDW_context.es.md))
+- [Business and product context](./docs/01-business-product/GDW_context.md) ([español](./docs/01-business-product/GDW_context.es.md))
+- [Roadmap and delivery](./docs/02-roadmap-delivery/GDW_context.md) ([español](./docs/02-roadmap-delivery/GDW_context.es.md))
+- [Architecture and integrations](./docs/03-architecture-integrations/GDW_context.md) ([español](./docs/03-architecture-integrations/GDW_context.es.md))
+- [Operations and user guide](./docs/04-operations-user-guide/GDW_context.md) ([español](./docs/04-operations-user-guide/GDW_context.es.md))
+- [UX and AI contracts](./docs/05-ux-ai-contracts/GDW_context.md) ([español](./docs/05-ux-ai-contracts/GDW_context.es.md))
+- [History and maintenance](./docs/06-history-maintenance/GDW_context.md) ([español](./docs/06-history-maintenance/GDW_context.es.md))
 
 ## Stack
 
@@ -51,7 +50,7 @@ npm run test:component
 npm run build
 ```
 
-See [Testing](./TESTING.md) and [Implementation status](./docs/architecture/ESTADO_IMPLEMENTACION.md) before assuming roadmap sections are complete.
+See [Testing](./TESTING.md) and the [roadmap and delivery context](./docs/02-roadmap-delivery/GDW_context.md) before assuming roadmap sections are complete.
 
 ## Web ingest emails
 
