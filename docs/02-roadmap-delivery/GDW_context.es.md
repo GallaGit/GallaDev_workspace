@@ -20,6 +20,13 @@ Supabase es la capa de persistencia activa y la única fuente de verdad. La apli
 - Migración RLS por rol aplicada en Supabase (`app_role`: Admin/Seller/Viewer; tabla `profiles`; policies por rol en `leads`/`lead_activities`).
 - Pendiente de M1: validación con `zod` en cuerpos PATCH; higiene (LICENSE, secret scanning, Dependabot, CodeQL).
 
+### Planificado: historial de auditoría (especificado, no implementado)
+
+El quién-hizo-qué para trabajo en equipo está especificado en
+[`audit-trail.es.md`](./audit-trail.es.md) (EN: [`audit-trail.md`](./audit-trail.md)).
+Prerrequisito: identidad por usuario del Paso 2; la implementación llega
+después de la validación con el segundo usuario.
+
 ## Reglas de entrega
 
 El trabajo se aísla con ramas y entornos, no con copias del repositorio. Los cambios de producto deben actualizar el contexto canónico y mantenerse alineados con el código y el esquema de base de datos. Los informes históricos de verificación son evidencias de su fecha, no garantías sobre el build actual.

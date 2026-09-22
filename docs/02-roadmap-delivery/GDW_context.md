@@ -20,6 +20,13 @@ Supabase is the active persistence layer and sole source of truth. The current a
 - Role-based RLS migration applied in Supabase (`app_role`: Admin/Seller/Viewer; `profiles` table; per-role policies on `leads`/`lead_activities`).
 - Remaining M1 items: `zod` validation for PATCH bodies; hygiene (LICENSE, secret scanning, Dependabot, CodeQL).
 
+### Planned: audit trail (specified, not implemented)
+
+Who-did-what history for team work is specified in
+[`audit-trail.md`](./audit-trail.md) (ES: [`audit-trail.es.md`](./audit-trail.es.md)).
+Prerequisite is Paso 2 per-user identity; implementation comes after the
+second-user validation gate.
+
 ## Delivery rules
 
 Work is isolated with branches and environments, not repository copies. Product changes must update the canonical context and remain aligned with the code and database schema. Historical verification reports are evidence from their date, not guarantees about the current build.
