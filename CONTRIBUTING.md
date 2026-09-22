@@ -12,7 +12,7 @@ Please also read our [Code of Conduct](./CODE_OF_CONDUCT.md) and [Security Polic
 ## 1. Ways to contribute
 
 - **Report a bug** — open an issue with the bug template (steps, expected vs. actual, env).
-- **Request a feature** — open an issue with the feature template. Features that change product behavior should reference `docs/product/DECISIONES.md` or propose updating it.
+- **Request a feature** — open an issue with the feature template. Features that change product behavior should reference `docs/01-business-product/GDW_context.md` or propose updating it.
 - **Fix / build** — fork or branch, then open a pull request.
 - **Improve docs** — documentation fixes follow the same PR process, no issue required for typos.
 
@@ -119,7 +119,7 @@ Testing conventions (details in [`TESTING.md`](./TESTING.md)):
 - **Lead pipeline:** exactly 9 statuses (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Legacy Notion names are normalized on read, never written.
 - **n8n prospecting** writes new leads (`Origen=n8n`, state `Nuevo`); the CRM never edits the capture workflow. Webhook dispatches are best-effort and must never fail persistence.
 - **UI language is Spanish.** Code, commits, issues, and PRs are in English; user-facing strings in Spanish.
-- **Docs hierarchy** (see [`docs/README.md`](./docs/README.md)): `docs/product/DECISIONES.md` wins on product conflicts, then `src/` code, then `docs/product/ROADMAP.md`.
+- **Docs hierarchy** (see [`docs/00-overview/GDW_context.md`](./docs/00-overview/GDW_context.md)): current code and Supabase behavior take precedence, then `docs/01-business-product/GDW_context.md`, then `docs/02-roadmap-delivery/GDW_context.md`.
 
 ## 9. Admin checklist (maintainers)
 

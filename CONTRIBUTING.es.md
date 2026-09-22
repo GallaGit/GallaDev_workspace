@@ -11,7 +11,7 @@ Lee también nuestro [Código de conducta](./CODE_OF_CONDUCT.es.md) y la [Polít
 ## 1. Formas de contribuir
 
 - **Reportar un bug** — abre un issue con la plantilla de bug (pasos, esperado vs. real, entorno).
-- **Pedir una funcionalidad** — abre un issue con la plantilla de funcionalidad. Los cambios de comportamiento del producto deberían referenciar `docs/product/DECISIONES.md` o proponer actualizarlo.
+- **Pedir una funcionalidad** — abre un issue con la plantilla de funcionalidad. Los cambios de comportamiento del producto deberían referenciar `docs/01-business-product/GDW_context.es.md` o proponer actualizarlo.
 - **Corregir / construir** — haz fork o crea una rama, luego abre un pull request.
 - **Mejorar la documentación** — los arreglos de docs siguen el mismo proceso de PR; para erratas no hace falta issue.
 
@@ -118,7 +118,7 @@ Convenciones de testing (detalle en [`TESTING.md`](./TESTING.md)):
 - **Pipeline de leads:** exactamente 9 estados (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Los nombres legacy de Notion se normalizan al leer, nunca se escriben.
 - **La prospección con n8n** escribe leads nuevos (`Origen=n8n`, estado `Nuevo`); el CRM nunca edita el workflow de captación. Los dispatches de webhooks son best-effort y nunca deben impedir la persistencia.
 - **La UI está en español.** Código, commits, issues y PRs van en inglés; las cadenas visibles al usuario, en español.
-- **Jerarquía de docs** (ver [`docs/README.md`](./docs/README.md)): `docs/product/DECISIONES.md` gana en conflictos de producto, luego el código en `src/`, luego `docs/product/ROADMAP.md`.
+- **Jerarquía de docs** (ver [`docs/00-overview/GDW_context.es.md`](./docs/00-overview/GDW_context.es.md)): el código actual y el comportamiento de Supabase tienen prioridad, después `docs/01-business-product/GDW_context.es.md`, y luego `docs/02-roadmap-delivery/GDW_context.es.md`.
 
 ## 9. Checklist de administración (maintainers)
 
