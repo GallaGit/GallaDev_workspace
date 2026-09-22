@@ -1,71 +1,80 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getCookieValue, requireApiSession } from "./api-auth";
-import { issueSession } from "./auth-session";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getApiSession, requireApiSession } from "./api-auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const SECRET = "test-api-auth-secret-1234567890";
+// server.ts usa "server-only" (no resoluble en vitest): se intercepta el
+// módulo y cada test inyecta un cliente mock como cliente de servidor.
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: vi.fn(),
+}));
 
-function requestWithCookie(cookie: string | null): Request {
-  const headers = new Headers();
-  if (cookie !== null) headers.set("cookie", cookie);
-  return new Request("http://localhost/api/leads", { headers });
+const serverClient = vi.mocked(createSupabaseServerClient);
+
+type MockUser = { id: string; email?: string } | null;
+
+function mockClient(user: MockUser, role: string | null): SupabaseClient {
+  return {
+    auth: {
+      getUser: async () => ({ data: { user }, error: null }),
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: role ? { role } : null,
+            error: null,
+          }),
+        }),
+      }),
+    }),
+  } as unknown as SupabaseClient;
 }
 
 afterEach(() => {
   vi.unstubAllEnvs();
-});
-
-describe("getCookieValue", () => {
-  it("extrae la cookie de sesión entre otras", () => {
-    expect(
-      getCookieValue(
-        "other=1; lead_crm_session=abc.def; theme=dark",
-        "lead_crm_session",
-      ),
-    ).toBe("abc.def");
-  });
-
-  it("null sin cabecera o sin la cookie", () => {
-    expect(getCookieValue(null, "lead_crm_session")).toBeNull();
-    expect(getCookieValue("other=1", "lead_crm_session")).toBeNull();
-    expect(getCookieValue("", "lead_crm_session")).toBeNull();
-  });
+  vi.clearAllMocks();
 });
 
 describe("requireApiSession", () => {
-  it("permite todo con AUTH_DISABLED=true (dev local)", async () => {
+  it("permite todo con AUTH_DISABLED=true (dev local, rol Admin)", async () => {
     vi.stubEnv("AUTH_DISABLED", "true");
-    vi.stubEnv("AUTH_SECRET", "");
-    expect(await requireApiSession(requestWithCookie(null))).toBeNull();
+    expect(await requireApiSession()).toBeNull();
+    expect(await getApiSession()).toMatchObject({
+      id: "local",
+      role: "Admin",
+    });
   });
 
-  it("401 sin cookie cuando el auth está activo", async () => {
+  it("401 sin usuario Supabase", async () => {
     vi.stubEnv("AUTH_DISABLED", "false");
-    vi.stubEnv("AUTH_SECRET", SECRET);
-    const denied = await requireApiSession(requestWithCookie(null));
+    serverClient.mockResolvedValue(mockClient(null, null));
+    const denied = await requireApiSession();
     expect(denied).not.toBeNull();
     expect(denied!.status).toBe(401);
     expect(await denied!.json()).toMatchObject({ ok: false });
   });
 
-  it("401 con token inválido", async () => {
+  it("401 con usuario pero sin perfil (fail-closed)", async () => {
     vi.stubEnv("AUTH_DISABLED", "false");
-    vi.stubEnv("AUTH_SECRET", SECRET);
-    const denied = await requireApiSession(
-      requestWithCookie("lead_crm_session=forged.payload"),
+    serverClient.mockResolvedValue(
+      mockClient({ id: "u1", email: "a@b.c" }, null),
     );
+    const denied = await requireApiSession();
     expect(denied).not.toBeNull();
     expect(denied!.status).toBe(401);
   });
 
-  it("permite con token válido", async () => {
+  it("permite con usuario y rol Seller", async () => {
     vi.stubEnv("AUTH_DISABLED", "false");
-    vi.stubEnv("AUTH_SECRET", SECRET);
-    const token = await issueSession();
-    expect(token).not.toBeNull();
-    expect(
-      await requireApiSession(
-        requestWithCookie(`lead_crm_session=${token}`),
-      ),
-    ).toBeNull();
+    const client = mockClient({ id: "u1", email: "a@b.c" }, "Seller");
+    serverClient.mockResolvedValue(client);
+    expect(await requireApiSession()).toBeNull();
+    // getApiSession acepta cliente inyectado (sin pasar por next/headers).
+    expect(await getApiSession(client)).toMatchObject({
+      id: "u1",
+      email: "a@b.c",
+      role: "Seller",
+    });
   });
 });

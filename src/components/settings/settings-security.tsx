@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
 
 export function SettingsSecurity() {
@@ -10,19 +11,21 @@ export function SettingsSecurity() {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<number | null>(null);
+  const [done, setDone] = useState(false);
 
   async function handleLogoutAll() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/logout-all", { method: "POST" });
-      const data = (await res.json()) as { ok: boolean; epoch?: number; error?: string };
-      if (!res.ok || !data.ok) {
-        setError(data.error || "No se pudo cerrar las sesiones");
+      const supabase = createSupabaseBrowserClient();
+      const { error: signOutError } = await supabase.auth.signOut({
+        scope: "global",
+      });
+      if (signOutError) {
+        setError("No se pudo cerrar las sesiones");
         return;
       }
-      setDone(typeof data.epoch === "number" ? data.epoch : null);
+      setDone(true);
       setConfirming(false);
       setAuthFlash("goodbye");
       router.push("/login");
@@ -40,12 +43,12 @@ export function SettingsSecurity() {
         Seguridad
       </h3>
       <p className="mt-1 text-sm text-muted-fg">
-        Botón de emergencia: cierra todas las sesiones en todos los
-        dispositivos. Úsalo si sospechas que la contraseña se ha comprometido.
+        Botón de emergencia: cierra tu sesión en todos los dispositivos.
+        Úsalo si sospechas que tus credenciales se han comprometido.
       </p>
-      {done !== null && (
+      {done && (
         <p role="status" className="mt-2 text-sm text-muted-fg">
-          Sesiones invalidadas (epoch {done}). Vuelve a entrar.
+          Sesiones cerradas en todos los dispositivos. Vuelve a entrar.
         </p>
       )}
       {error && (

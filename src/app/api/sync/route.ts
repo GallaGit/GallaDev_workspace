@@ -7,8 +7,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+export async function POST() {
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const repo = getLeadRepository();

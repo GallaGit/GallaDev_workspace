@@ -24,7 +24,7 @@ function parseBool(v: string | null): boolean | null {
 }
 
 export async function GET(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const body = (await request.json()) as Record<string, unknown>;
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 const MAX_BULK_BODY_BYTES = 256 * 1024;
 
 export async function PATCH(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const parsed = await readCappedJson(request, MAX_BULK_BODY_BYTES);

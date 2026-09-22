@@ -10,14 +10,14 @@ import type { SettingsPatch } from "@/lib/settings/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
-  const denied = await requireApiSession(request);
+export async function GET() {
+  const denied = await requireApiSession();
   if (denied) return denied;
   return NextResponse.json(toPublicSettings(getSettingsService().getRaw()));
 }
 
 export async function PATCH(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const patch = (await request.json()) as SettingsPatch;

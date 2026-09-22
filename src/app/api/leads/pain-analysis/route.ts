@@ -25,7 +25,7 @@ export const maxDuration = 60;
  * Front drawer uses POST /api/leads/:id/analyze (same Groq + Notion path).
  */
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   let body: { id?: unknown; lead?: unknown; persist?: unknown; force?: unknown } =
     {};

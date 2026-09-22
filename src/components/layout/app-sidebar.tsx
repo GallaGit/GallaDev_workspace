@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavChrome } from "@/components/layout/nav-chrome";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
 
 const NAV = [
@@ -93,7 +94,8 @@ export function AppSidebar() {
     close();
     setAuthFlash("goodbye");
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.signOut();
     } catch {
       // Aun si falla la red, forzar salida al login.
     }

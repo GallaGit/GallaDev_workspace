@@ -10,7 +10,7 @@ type ScoreBody = {
 };
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     let body: ScoreBody = {};

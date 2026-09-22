@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 type Ctx = { params: Promise<{ action: string }> };
 
 export async function GET(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   const { action: rawAction } = await ctx.params;
   const action = resolveAutomationAction(rawAction);
@@ -30,7 +30,7 @@ export async function GET(request: Request, ctx: Ctx) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { action: rawAction } = await ctx.params;
@@ -71,7 +71,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function POST(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession(request);
+  const denied = await requireApiSession();
   if (denied) return denied;
   try {
     const { action: rawAction } = await ctx.params;

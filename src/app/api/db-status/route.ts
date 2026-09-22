@@ -17,8 +17,8 @@ export const dynamic = "force-dynamic";
 const TIMEOUT_MS = 8000;
 
 /** Health check barato de Supabase. No expone secretos ni datos. */
-export async function GET(request: Request): Promise<NextResponse> {
-  const denied = await requireApiSession(request);
+export async function GET(): Promise<NextResponse> {
+  const denied = await requireApiSession();
   if (denied) return denied;
   const provider = getActiveProvider();
   const started = Date.now();

@@ -1,14 +1,17 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Leads_CRM smoke", () => {
-  // M1: el servidor E2E corre en producción (npm run start) con auth
-  // activo; cada test entra por /login con las credenciales de prueba
-  // del webServer (E2E_AUTH_PASSWORD o el default local).
+  // Paso 2: el servidor E2E corre en producción con Supabase Auth;
+  // cada test entra por /login con el usuario de prueba (E2E_TEST_EMAIL
+  // + E2E_TEST_PASSWORD, creado a mano en el proyecto Supabase).
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
     await page
+      .getByTestId("login-email")
+      .fill(process.env.E2E_TEST_EMAIL ?? "e2e@test.local");
+    await page
       .getByTestId("login-password")
-      .fill(process.env.E2E_AUTH_PASSWORD ?? "e2e-test-password");
+      .fill(process.env.E2E_TEST_PASSWORD ?? "e2e-test-password");
     await page.getByTestId("login-submit").click();
     await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
   });
