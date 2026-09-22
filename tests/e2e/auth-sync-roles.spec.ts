@@ -11,10 +11,10 @@ import { test, expect, type Page } from "@playwright/test";
  *
  * Las credenciales se leen de variables de entorno (ver playwright.config.ts).
  */
-const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "";
-const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? "";
-const sellerEmail = process.env.E2E_SELLER_EMAIL ?? "";
-const sellerPassword = process.env.E2E_SELLER_PASSWORD ?? "";
+const adminEmail = (process.env.E2E_ADMIN_EMAIL ?? "").trim();
+const adminPassword = (process.env.E2E_ADMIN_PASSWORD ?? "").trim();
+const sellerEmail = (process.env.E2E_SELLER_EMAIL ?? "").trim();
+const sellerPassword = (process.env.E2E_SELLER_PASSWORD ?? "").trim();
 
 async function login(page: Page, email: string, password: string) {
   await page.goto("/login");
@@ -35,13 +35,7 @@ async function syncCount(page: Page) {
   };
 }
 
-// Test siempre ejecutable: verifica que el proxy exige login con auth activo.
-test("sin sesión /leads redirige a /login", async ({ page }) => {
-  await page.goto("/leads");
-  await expect(page).toHaveURL(/\/login/);
-});
-
-// Los siguientes tests solo se ejecutan si hay credenciales configuradas.
+// Sin credenciales → skip. El redirect sin sesión vive en critical-paths.spec.ts.
 const authDescribe =
   adminEmail && adminPassword && sellerEmail && sellerPassword
     ? test.describe
