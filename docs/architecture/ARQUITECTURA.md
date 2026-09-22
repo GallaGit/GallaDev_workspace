@@ -94,11 +94,11 @@ Ubicación: `src/lib/settings/`.
 
 Las APIs de Settings y Automations nunca devuelven secretos completos: solo flags, previews enmascarados (últimos 4) y estado de conexión (`never` | `syncing` | `ok` | `error`, con `lastSyncedAt`). Zustand no guarda claves.
 
-Notion, Groq y SerpAPI leen credenciales a través de este servicio, no de `process.env` en crudo.
+Supabase, Groq y SerpAPI leen credenciales a través de este servicio, no de `process.env` en crudo.
 
-## Integración n8n
+## Integración n8n (proveedor opcional, decisión #18)
 
-Ubicación: `src/lib/n8n/client.ts`. Las rutas HTTP no hacen `fetch` a n8n: usan `getAutomationClient()` (`src/lib/automations/get-client.ts`) para poder añadir Make/Zapier más adelante.
+Ubicación: `src/lib/n8n/client.ts`. Las rutas HTTP no hacen `fetch` a n8n: usan `getAutomationClient()` (`src/lib/automations/get-client.ts`) para poder añadir Make/Zapier más adelante. El diseño ya trata la automatización como intercambiable: sin toggle activo ni URL, el CRM funciona completo.
 
 Acciones internas (con alias de env legacy):
 
@@ -106,7 +106,7 @@ Acciones internas (con alias de env legacy):
 - `lead_updated` (Lead actualizado) — `N8N_WEBHOOK_LEAD_UPDATED`, alias `N8N_WEBHOOK_EJECUTAR` / `N8N_WEBHOOK_GENERAR_EMAIL`
 - `lead_analyzed` (Lead analizado) — `N8N_WEBHOOK_LEAD_ANALYZED`, alias `N8N_WEBHOOK_ANALIZAR_LEAD`
 
-El cliente es HTTP puro: timeout, errores HTTP, JSON inválido y logs (sin URL completa). No contiene lógica de negocio. Tras un alta, un PATCH exitoso o un análisis IA, `dispatchLeadCreated` / `dispatchLeadUpdated` / `dispatchLeadAnalyzed` llaman a n8n en segundo plano **solo si** el toggle está activo y hay URL; un error de webhook no falla la persistencia. En v1 no hay URLs ni triggers en el workflow: la captación se lanza en n8n (Manual/semanal) y escribe leads en Notion con estado `Nuevo` y `Origen=n8n` (ver [`INTEGRACIONES.md`](./INTEGRACIONES.md)). Leads_CRM no modifica el workflow n8n ni dispara la captación desde el CRM.
+El cliente es HTTP puro: timeout, errores HTTP, JSON inválido y logs (sin URL completa). No contiene lógica de negocio. Tras un alta, un PATCH exitoso o un análisis IA, `dispatchLeadCreated` / `dispatchLeadUpdated` / `dispatchLeadAnalyzed` llaman al proveedor en segundo plano **solo si** el toggle está activo y hay URL; un error de webhook no falla la persistencia. En v1 no hay URLs ni triggers: la captación llega por n8n (Manual/semanal), por las vías propias (`Nuevo lead`, `/api/ingest/*`) y persiste en Supabase con estado `Nuevo` + `Origen` de la fuente (ver [`INTEGRACIONES.md`](./INTEGRACIONES.md)). Leads_CRM no modifica el workflow n8n ni depende de él.
 
 ### Autenticación
 

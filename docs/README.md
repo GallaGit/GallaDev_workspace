@@ -1,6 +1,16 @@
-# Documentación — Leads_CRM
+# Documentación — GallaDev Workspace
 
-Este directorio reúne la documentación funcional y técnica de Leads_CRM, la app de prospección para asesorías y gestorías.
+Este directorio reúne la documentación funcional y técnica de GallaDev Workspace, la app de prospección para asesorías y gestorías.
+
+## Decisión actual de evolución
+
+El SaaS **no se desarrollará en una copia** de este proyecto. GallaDev Workspace seguirá siendo el único producto y repositorio: se parte del workspace actual y se evoluciona por hitos hacia SaaS.
+
+La secuencia es **M1 Seguro → validación SaaS mínima con un segundo usuario → M2 Sólido → M3 SaaS comercial**. Para aislar cambios se usarán ramas de Git o `git worktree`; para aislar datos se usarán entornos Supabase/Vercel separados. No se mantienen dos copias del código.
+
+La primera validación debe demostrar que un segundo usuario puede hacer `signup/login → leads → Kanban → email → cambio de estado` sin ver ni modificar leads ajenos. Stripe y las funcionalidades de escala quedan después de esa validación.
+
+La decisión completa, sus motivos y las reglas de trabajo están en [`product/DECISIONES.md`](product/DECISIONES.md) §0. El plan ejecutable está en [`product/GEM_ROADMAP.md`](product/GEM_ROADMAP.md) §2.1.
 
 ## Estructura
 
@@ -53,6 +63,6 @@ Las notas de `Nicho` son una fuente de investigación, no una especificación t�
 
 ## Alcance actual (resumen)
 
-La aplicación es local y de un solo usuario. Permite sincronizar leads desde Notion (entrada n8n = estado `Nuevo`), buscarlos, filtrarlos, abrir un panel de detalle, editar estado/notas/email, marcar favoritos y archivar registros.
+La aplicación es local y de un solo usuario. Permite captar leads por n8n, formulario web o alta manual (toda fuente entra en estado `Nuevo`), buscarlos, filtrarlos, abrir un panel de detalle, editar estado/notas/email, marcar favoritos y archivar registros. n8n es opcional: nada depende de él.
 
 Daily Work (incluye `Nuevo` + borradores), Kanban, Email, Statistics y Duplicados (merge seguro de campos vacíos) están operativos. Settings e Integraciones permiten configurar y probar conexiones; webhooks CRM → n8n quedan fuera de v1. **Detectar dolores** analiza un lead con Groq y persiste `Análisis IA`.

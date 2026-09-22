@@ -11,7 +11,7 @@ No reabrir decisiones v1 salvo que sean los items explicitly planificados en v2.
 
 **Ejecución:** el plan operativo (seguridad → tests → acabado → SaaS) vive en [`GEM_ROADMAP.md`](./GEM_ROADMAP.md).
 
-**Alineación n8n (2026-09-10):** el workflow de captación escribe estado `Nuevo`, `Origen=n8n`, email plano y cuerpo vacío; filtro operativo 3–10 empleados. Detalle en [`INTEGRACIONES.md`](./INTEGRACIONES.md). Webhooks CRM → n8n siguen fuera de v1 (decisión #12).
+**Captación (decisión #18: n8n opcional):** cualquier fuente entra con estado `Nuevo` + `Origen` (`n8n`, `web-galladev`, `Manual`). El workflow n8n escribe email plano y cuerpo vacío con filtro operativo 3–10 empleados; las vías propias (`Nuevo lead`, `/api/ingest/*`) no dependen de él. Detalle en [`INTEGRACIONES.md`](./INTEGRACIONES.md). Webhooks CRM → automatización siguen fuera de v1 (decisión #12).
 
 ---
 
@@ -122,7 +122,7 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 **Arquitectura v2.0**:
 - Supabase: Proyecto creado, RLS policies, schema leads (status enum, tags text[], responsable UUID)
 - Billing: Stripe integration (planes Free/Pro/Enterprise, webhooks)
-- n8n: Node migration from Notion a Supabase/PostgreSQL/HTTP (documentado pero pospuesto v2.1)
+- Automatización: cola interna propia (n8n queda como proveedor opcional, no como dependencia)
 - Email marketing: SendGrid/Mailgun triggers por status changes y tag updates
 - Real-time: Supabase subscriptions para triggers instantáneos
 
@@ -136,14 +136,14 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 - [x] Migración validada: la app opera en Supabase
 - [ ] Row-level security por rol (solo existe la permisiva de dev)
 - [ ] Stripe integration preparada (webhooks endpoints)
-- [ ] n8n nodes actualizados: Replace Notion nodes con Supabase/PostgreSQL/HTTP nodes
+- [ ] Proveedores externos (n8n y futuros) solo vía contrato de ingesta (`Nuevo` + `Origen`); sin lógica de negocio fuera del CRM
 
 #### Fase 2 — Multi-usuario & Roles (Semana 2-3)
 - [ ] Roles definidos: Admin, Vendedor, Viewer
 - [ ] Permisos RLS por rol (solo sus leads, ver todos, solo lectura)
 - [ ] Autenticación multiusuario (hoy: sesión propia HMAC de un solo usuario + cierre global de emergencia, PR #31; NextAuth/Supabase JWT queda como opción a decidir)
 - [ ] Routing protegido: Routes `/leads`, `/kanban`, `/settings` por rol
-- [ ] n8n workflows: Actualizados triggers con contexto usuario
+- [ ] Triggers de automatización con contexto usuario (cola interna; n8n solo como proveedor opcional)
 
 #### Fase 3 — Tags / Responsable & Billing (Semana 3-4)
 - [ ] UI Tags: Chips component con autocomplete tags
@@ -152,10 +152,10 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 - [ ] Email triggers: Status change → SendGrid notification
 - [ ] Marketing basic: Tag-based segmentation
 
-#### Fase 4 — Webhooks n8n & Marketing Automation (Semana 4-5)
-- [ ] n8n webhook cliente: TypeScript interfaces definidas
-- [ ] Webhooks configurados: Lead created, status changed, tag updated
-- [ ] Automation flows: n8n → Supabase → Email/Mailing
+#### Fase 4 — Automatización propia & Marketing Automation (Semana 4-5)
+- [ ] Cola interna (`work_queue` en Supabase): qué toca, por qué, reintentos; sustituye los dispatches best-effort actuales
+- [ ] Webhooks configurados: Lead created, status changed, tag updated (proveedor intercambiable, hoy n8n opcional)
+- [ ] Automation flows: CRM → cola → Email/Mailing (sin depender de n8n)
 - [ ] Real-time subscribers: Supabase channels para triggers instantáneos
 
 #### Fase 5 — Optimización Mobile Exhaustiva (Semana 5-6)
@@ -168,14 +168,14 @@ Objetivo: shell usable, tema Linear-like, env seguro, tipos de dominio, cliente 
 ### Dependencias v2.0
 ```bash
 npm install @supabase/ssr @supabase/js-sdk stripe @sendgrid/mail
-# n8n nodes: evaluar @n8n/nodes-base supabase node o PostgreSQL node
+# Automatización: cola interna en Supabase; n8n (o Make/Zapier) solo como proveedor opcional vía contrato de ingesta
 ```
 
 ### Skills requeridos v2.0
 - `supabase` - configuración y RLS policies
 - `stripe` - billing integration
 - `sendgrid` o `mailgun` - email automation
-- `n8n` - workflow node migration from Notion
+- `cola interna` - work queue propia en Supabase (n8n opcional, no dependencia)
 
 ### Migración Notion → Supabase
 - Mapping exacto de propiedades Notion a columnas Supabase
@@ -186,7 +186,7 @@ npm install @supabase/ssr @supabase/js-sdk stripe @sendgrid/mail
 ### Riesgos y Mitigación
 - Datos perdidos en migración: Backup Notion antes de export, validar conteo rows
 - RLS bloqueando accesos: Testing exhaustivo permisos por rol
-- n8n workflows rotos: Parallel run Notion + Supabase 2 semanas mínimo
+- Dependencia de n8n: mitigación ya aplicada — contrato de ingesta propio (`Nuevo` + `Origen`), vías sin n8n y dispatches best-effort (decisión #18); objetivo: apagar n8n sin perder captación
 - Precios Stripe inesperados: Monitoring webhooks y alertas
 
 ---
@@ -197,7 +197,7 @@ npm install @supabase/ssr @supabase/js-sdk stripe @sendgrid/mail
 - [ ] **Tags / Responsable** — UI chips + DB assignment + filtering
 - [x] **Sustituir Notion por otra DB** — hecho en PR #30 (Supabase única fuente, runtime Notion eliminado)
 - [ ] **Envío automático de email / marketing automation** — SendGrid triggers por status/tag changes
-- [ ] **Añadir webhooks al workflow n8n (solo preparar el cliente)** — TypeScript interfaces, webhook schemas preparados, sin activar toggles v1
+- [ ] **Automatización con cola interna** — cliente HTTP ya preparado; cola `work_queue` con reintentos en vez de más nodos n8n (decisión #18)
 - [ ] **Optimización mobile exhaustiva** — Responsive audit, touch gestures, device testing, WCAG 2.2 AA mobile
 
 ### Estado actual (2026-09-21)

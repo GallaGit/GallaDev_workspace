@@ -91,16 +91,16 @@ Ejemplos de soluciones que la agencia puede ofrecer:
 - integración entre aplicaciones;
 - asistentes internos con IA;
 - respuestas y solicitudes recurrentes automatizadas;
-- flujos n8n para eliminar traspasos manuales;
+- automatización (hoy n8n como proveedor opcional, mañana cola interna) para eliminar traspasos manuales;
 - preparación de comunicaciones comerciales personalizadas.
 
 ## Flujo operativo
 
 ```mermaid
 flowchart LR
-  Discovery[SerpAPI_Maps] --> Orchestration[n8n]
-  Orchestration --> SourceOfTruth[Notion]
-  SourceOfTruth --> Dashboard[Lead_CRM]
+  Discovery[SerpAPI_Maps] --> Providers[Proveedores_n8n_web_manual]
+  Providers --> SourceOfTruth[Supabase]
+  SourceOfTruth --> Dashboard[Workspace]
   Dashboard --> Qualification[Validacion_manual]
   Qualification --> SourceOfTruth
   SourceOfTruth --> Outreach[Campana_email]
@@ -125,7 +125,7 @@ El usuario trabaja desde Leads_CRM:
 
 ### Contacto
 
-El envío automático no forma parte de la implementación actual. El email preparado puede revisarse y copiarse desde el panel del lead. Los leads capturados por n8n entran en Notion como `Nuevo` (con borrador en texto plano) y se cualifican en Leads_CRM tras sincronizar. La capa de webhooks CRM → n8n está preparada en código pero fuera de v1.
+El envío automático no forma parte de la implementación actual. El email preparado puede revisarse y copiarse desde el panel del lead. Toda fuente entra con estado `Nuevo` (n8n además deja borrador en texto plano) y se cualifica en el workspace tras sincronizar. La capa de webhooks CRM → automatización está preparada en código pero fuera de v1; n8n es un proveedor opcional (decisión #18).
 
 ## Objetivo de negocio inicial
 

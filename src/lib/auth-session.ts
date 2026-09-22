@@ -105,14 +105,18 @@ export async function passwordOk(provided: string): Promise<boolean> {
   return constantTimeEqual(ha, hb);
 }
 
-/** Emite token `payload_b64.sig_b64`. Null si no hay AUTH_SECRET. */
+/**
+ * Emite token `payload_b64.sig_b64`.
+ * Null si no hay AUTH_SECRET o si el epoch es desconocido (fail-closed:
+ * no se emiten tokens que luego no se puedan validar).
+ */
 export async function issueSession(now = Date.now()): Promise<string | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
+  const sv = await getSessionEpoch();
+  if (sv === null) return null;
   const exp = now + sessionTtlMs();
-  const payload = b64urlEncode(
-    enc.encode(JSON.stringify({ exp, sv: await getSessionEpoch() })),
-  );
+  const payload = b64urlEncode(enc.encode(JSON.stringify({ exp, sv })));
   const sig = b64urlEncode(await hmac(secret, payload));
   return `${payload}.${sig}`;
 }
@@ -148,12 +152,15 @@ export async function verifySessionDetailed(
     const { exp, sv } = JSON.parse(
       new TextDecoder().decode(payloadBytes),
     ) as { exp: unknown; sv: unknown };
+    // Epoch desconocido → rechazar (fail-closed, ver session-epoch-edge).
+    const current = await getSessionEpoch();
     if (
       typeof exp !== "number" ||
       !(exp > now) ||
       typeof sv !== "number" ||
       !Number.isSafeInteger(sv) ||
-      sv !== (await getSessionEpoch())
+      current === null ||
+      sv !== current
     ) {
       return { ok: false };
     }

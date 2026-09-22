@@ -1,14 +1,51 @@
 # Decisiones de producto — Leads_CRM
 
-**Estado:** cerrado  
-**Fecha:** 2026-09-04  
-**Alcance:** especificación para Prompt 2+. No reabrir salvo petición explícita.
+**Estado:** cerrado, con estrategia SaaS añadida el 2026-09-22
+**Fecha:** 2026-09-04 (decisiones v1) · 2026-09-22 (estrategia de evolución)
+**Alcance:** especificación para Prompt 2+ y directrices de evolución a SaaS. No reabrir salvo petición explícita.
 
 La aplicación Next.js vive en la raíz de este repositorio. Este documento es la fuente de verdad de producto hasta que el código exista.
 
 ---
 
-## 1. Decisiones cerradas (17)
+## 0. Decisión estratégica: un solo producto y un solo repositorio
+
+La evolución a SaaS se hará **sobre este proyecto**, no sobre una copia independiente.
+
+### Decisión
+
+- GallaDev Workspace seguirá siendo el producto base y la única línea principal de desarrollo.
+- No crear una segunda carpeta, un segundo repositorio ni una copia paralela para construir el SaaS.
+- Usar ramas de Git y, cuando sea útil, `git worktree` para trabajar en paralelo sin duplicar el código ni la configuración.
+- Mantener una única fuente de verdad de código, esquema Supabase, contratos API, pruebas y documentación.
+- El workspace individual no se considera un producto que haya que “terminar y congelar” antes del SaaS. Se endurecerá y evolucionará hacia SaaS por hitos.
+
+### Motivo
+
+La copia duplicaría el mantenimiento de seguridad, autenticación, esquema de datos, correcciones y documentación. Además, el SaaS depende directamente de lo que ya existe: Supabase como fuente única, leads, Kanban, email, análisis IA, settings y automatizaciones. Construirlo aparte produciría divergencia y obligaría a migrar cambios después.
+
+### Secuencia obligatoria
+
+El orden de trabajo será:
+
+1. **M1 — Seguro:** cerrar las protecciones mínimas antes de exponer datos a otra persona.
+2. **Validación SaaS mínima:** permitir que un segundo usuario opere un flujo real sin acceder a datos ajenos.
+3. **M2 — Sólido:** ampliar cobertura, gates de CI, observabilidad, errores y documentación.
+4. **M3 — SaaS comercial:** añadir billing, automatización propia, realtime y capacidades de escala solo después de validar el uso.
+
+No se empezará por Stripe, marketing automation o una copia visual del producto. La primera validación debe demostrar que el producto resuelve el flujo de trabajo y que el aislamiento entre usuarios funciona.
+
+### Criterio de validación
+
+El hito SaaS mínimo se considera validado cuando un segundo usuario puede completar `signup/login → leads → Kanban → email → cambio de estado` en un entorno de prueba, mientras las políticas de acceso impiden que lea o modifique leads de otro usuario. Si este flujo no se valida, no se priorizarán billing ni funcionalidades SaaS accesorias.
+
+### Regla de trabajo
+
+Las ramas sirven para aislar cambios, no para crear productos divergentes. Cada cambio debe volver a la línea principal mediante revisión, pruebas y documentación actualizada. Si una prueba requiere conservar el workspace estable, se usará un entorno Supabase/Vercel separado, no una copia del repositorio.
+
+---
+
+## 1. Decisiones cerradas (18)
 
 | # | Tema | Decisión |
 |---|------|----------|
@@ -29,6 +66,7 @@ La aplicación Next.js vive en la raíz de este repositorio. Este documento es l
 | 15 | Ciudad | Normalizar (ver §4). Filtros y stats usan el nombre canónico. |
 | 16 | Notas | `Observaciones` = campo principal. Aviso cerca del límite Notion (~2000). Excedente → sección **Notas** en el cuerpo de la página. No truncar en silencio. |
 | 17 | Ubicación app | Raíz de este repositorio. |
+| 18 | n8n opcional | **n8n es un proveedor de captación intercambiable, no una dependencia.** Contrato de entrada: cualquier fuente que cree leads con estado `Nuevo` + `Origen=<fuente>` (`n8n`, `web-galladev`, `Manual`). El CRM cualifica igual venga de donde venga y funciona al 100% sin n8n (alta manual + `POST /api/ingest/lead` + `POST /api/ingest/n8n`). Los dispatches CRM → automatización son best-effort, desactivados por defecto y nunca bloquean la persistencia. Objetivo: poder apagar n8n mañana sin perder captación ni automatización. |
 
 ---
 
@@ -198,6 +236,7 @@ Al leer `Email generado` / `Asunto email`:
 - Workflow `Leads Asesorias Valencia` alineado (2026-09-10): estado `Nuevo`, `Origen=n8n`, email plano, cuerpo vacío, dedupe con email/archivados.  
 - Filtro operativo de empleados: **3–10** (ICP estratégico 5–30 sin cambiar en n8n).  
 - **No** añadir triggers webhook al workflow en v1 (decisión #12).
+- Postura vigente (decisión #18): n8n es **un proveedor más**. El workflow `Leads Asesorias Valencia` sigue operativo, pero el producto no depende de él: la entrada es el contrato `Nuevo` + `Origen`, no el workflow.
 
 ### Archivo y duplicados
 
