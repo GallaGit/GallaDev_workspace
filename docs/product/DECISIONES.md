@@ -1,10 +1,47 @@
 # Decisiones de producto — Leads_CRM
 
-**Estado:** cerrado  
-**Fecha:** 2026-09-04  
-**Alcance:** especificación para Prompt 2+. No reabrir salvo petición explícita.
+**Estado:** cerrado, con estrategia SaaS añadida el 2026-09-22
+**Fecha:** 2026-09-04 (decisiones v1) · 2026-09-22 (estrategia de evolución)
+**Alcance:** especificación para Prompt 2+ y directrices de evolución a SaaS. No reabrir salvo petición explícita.
 
 La aplicación Next.js vive en la raíz de este repositorio. Este documento es la fuente de verdad de producto hasta que el código exista.
+
+---
+
+## 0. Decisión estratégica: un solo producto y un solo repositorio
+
+La evolución a SaaS se hará **sobre este proyecto**, no sobre una copia independiente.
+
+### Decisión
+
+- GallaDev Workspace seguirá siendo el producto base y la única línea principal de desarrollo.
+- No crear una segunda carpeta, un segundo repositorio ni una copia paralela para construir el SaaS.
+- Usar ramas de Git y, cuando sea útil, `git worktree` para trabajar en paralelo sin duplicar el código ni la configuración.
+- Mantener una única fuente de verdad de código, esquema Supabase, contratos API, pruebas y documentación.
+- El workspace individual no se considera un producto que haya que “terminar y congelar” antes del SaaS. Se endurecerá y evolucionará hacia SaaS por hitos.
+
+### Motivo
+
+La copia duplicaría el mantenimiento de seguridad, autenticación, esquema de datos, correcciones y documentación. Además, el SaaS depende directamente de lo que ya existe: Supabase como fuente única, leads, Kanban, email, análisis IA, settings y automatizaciones. Construirlo aparte produciría divergencia y obligaría a migrar cambios después.
+
+### Secuencia obligatoria
+
+El orden de trabajo será:
+
+1. **M1 — Seguro:** cerrar las protecciones mínimas antes de exponer datos a otra persona.
+2. **Validación SaaS mínima:** permitir que un segundo usuario opere un flujo real sin acceder a datos ajenos.
+3. **M2 — Sólido:** ampliar cobertura, gates de CI, observabilidad, errores y documentación.
+4. **M3 — SaaS comercial:** añadir billing, automatización propia, realtime y capacidades de escala solo después de validar el uso.
+
+No se empezará por Stripe, marketing automation o una copia visual del producto. La primera validación debe demostrar que el producto resuelve el flujo de trabajo y que el aislamiento entre usuarios funciona.
+
+### Criterio de validación
+
+El hito SaaS mínimo se considera validado cuando un segundo usuario puede completar `signup/login → leads → Kanban → email → cambio de estado` en un entorno de prueba, mientras las políticas de acceso impiden que lea o modifique leads de otro usuario. Si este flujo no se valida, no se priorizarán billing ni funcionalidades SaaS accesorias.
+
+### Regla de trabajo
+
+Las ramas sirven para aislar cambios, no para crear productos divergentes. Cada cambio debe volver a la línea principal mediante revisión, pruebas y documentación actualizada. Si una prueba requiere conservar el workspace estable, se usará un entorno Supabase/Vercel separado, no una copia del repositorio.
 
 ---
 

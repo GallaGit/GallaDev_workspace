@@ -1,6 +1,16 @@
-# Documentación — Leads_CRM
+# Documentación — GallaDev Workspace
 
-Este directorio reúne la documentación funcional y técnica de Leads_CRM, la app de prospección para asesorías y gestorías.
+Este directorio reúne la documentación funcional y técnica de GallaDev Workspace, la app de prospección para asesorías y gestorías.
+
+## Decisión actual de evolución
+
+El SaaS **no se desarrollará en una copia** de este proyecto. GallaDev Workspace seguirá siendo el único producto y repositorio: se parte del workspace actual y se evoluciona por hitos hacia SaaS.
+
+La secuencia es **M1 Seguro → validación SaaS mínima con un segundo usuario → M2 Sólido → M3 SaaS comercial**. Para aislar cambios se usarán ramas de Git o `git worktree`; para aislar datos se usarán entornos Supabase/Vercel separados. No se mantienen dos copias del código.
+
+La primera validación debe demostrar que un segundo usuario puede hacer `signup/login → leads → Kanban → email → cambio de estado` sin ver ni modificar leads ajenos. Stripe y las funcionalidades de escala quedan después de esa validación.
+
+La decisión completa, sus motivos y las reglas de trabajo están en [`product/DECISIONES.md`](product/DECISIONES.md) §0. El plan ejecutable está en [`product/GEM_ROADMAP.md`](product/GEM_ROADMAP.md) §2.1.
 
 ## Estructura
 
