@@ -68,4 +68,4 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Rama `docs/bootcamp-enrichment-checklist` (fuera de master).
 - Nuevo checklist: `docs/02-roadmap-delivery/bootcamp-enrichment.es.md` (M1/M2/M3 canónico + enriquecimiento; no sustituye GDW).
 - Enlace de una línea en `GDW_context.es.md` y `GDW_context.md`.
-- PR abierto a master (sin merge automático en este paso).
+- PR abierto a master (sin merge automático): https://github.com/GallaGit/GallaDev_workspace/pull/41
