@@ -7,6 +7,8 @@
 - **M2 Solid:** broader tests, CI gates, observability, error handling, and documentation hardening.
 - **M3 Commercial SaaS:** billing, first-party automation, realtime, and scale capabilities.
 
+Optional enrichment checklist from bootcamp themes — does not replace this sequence: [`bootcamp-enrichment.es.md`](./bootcamp-enrichment.es.md).
+
 ## Current state
 
 Supabase is the active persistence layer and sole source of truth. The current application includes leads, Kanban, email, Daily Work, statistics, duplicates, settings, authentication scaffolding, ingestion endpoints, and AI analysis. n8n integrations are optional and best-effort.

@@ -7,6 +7,8 @@
 - **M2 Sólido:** más pruebas, gates de CI, observabilidad, gestión de errores y documentación endurecida.
 - **M3 SaaS comercial:** billing, automatización propia, realtime y capacidades de escala.
 
+Enriquecimiento opcional (checklist) desde temas del bootcamp — no sustituye esta secuencia: [`bootcamp-enrichment.es.md`](./bootcamp-enrichment.es.md).
+
 ## Estado actual
 
 Supabase es la capa de persistencia activa y la única fuente de verdad. La aplicación actual incluye leads, Kanban, email, Daily Work, estadísticas, duplicados, settings, base de autenticación, endpoints de ingesta y análisis IA. Las integraciones con n8n son opcionales y best-effort.
