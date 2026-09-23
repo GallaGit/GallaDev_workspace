@@ -27,14 +27,23 @@ export function LoginForm() {
         password,
       });
       if (signInError) {
-        setError("Credenciales incorrectas");
+        setError(
+          signInError.message?.toLowerCase().includes("invalid")
+            ? "Credenciales incorrectas"
+            : signInError.message || "No se pudo iniciar sesión",
+        );
         return;
       }
       setAuthFlash("welcome");
       router.push(from.startsWith("/") ? from : "/");
       router.refresh();
-    } catch {
-      setError("Error de red. Inténtalo de nuevo.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      setError(
+        msg.includes("no configurados")
+          ? "Supabase no está configurado en el cliente. Revisa NEXT_PUBLIC_SUPABASE_*."
+          : "Error de red. Inténtalo de nuevo.",
+      );
     } finally {
       setBusy(false);
     }
