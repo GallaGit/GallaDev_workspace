@@ -85,3 +85,39 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - `POST /api/leads/:id/analyze` y `POST /api/leads/pain-analysis` comparten un rate-limit en memoria (`isRateLimited`, namespace `ai:analyze`, 10 peticiones / 60s por id de usuario). `runLeadAnalyze` ya no cae al repositorio service_role: el fallback es la sesión (RLS).
 - `GET /api/team` solo Admin (antes cualquier sesión listaba perfiles y emails vía service_role). `GET /api/session` expone el rol propio para la UI.
 - Sin secretos en este registro.
+
+## 2026-09-24 — Quitar “Añadir tarjeta” del Kanban
+
+### Decisión (Ociel)
+- El control “+ Añadir tarjeta” abría un compositor local y no persistía el lead.
+- Se elimina la opción. Alta de leads sigue por formulario de landing / n8n / UI formal de nuevo lead, si existe.
+- No se conecta ese control a `createLead`. Independiente del PATCH con zod (PR #42).
+
+### Cambio
+- Eliminados el botón, el compositor y el atajo de ids `temp-` en `src/components/kanban/kanban-board.tsx`.
+- El gate de escritura de #44 se mantiene: sin permiso no se arrastra ni se hace PATCH. El control de añadir no vuelve ni para quien puede escribir.
+- Arrastrar una tarjeta existente entre columnas sigue haciendo `PATCH /api/leads/:id` con el nuevo estado.
+- Test de componente: no hay affordance de añadir, y el drop sigue cambiando el estado.
+- PR: https://github.com/GallaGit/GallaDev_workspace/pull/43
+
+## 2026-09-24 — Statistics: selector de tipo de gráfico
+
+### Inventario
+- Statistics no usaba Recharts (la dependencia ya estaba). La vista era tasas, rejilla del funnel y tablas con una barra de 1px.
+- No hay filtro de periodo en Statistics ni fixtures de visitor demo para esta vista.
+- Dataset del gráfico: los mismos conteos `byStatus` que la tabla «Por estado».
+
+### Cambio
+- Control «Tipo de gráfico»: Barras (lo que ya había, ahora como gráfico), Circular (donut) y Área (onda `monotone` a lo largo de los 9 estados, no serie por fecha).
+- El circular no se dibuja si hay menos de dos estados con leads.
+- Preferencia en `localStorage` (`gdw-stats-chart-type`).
+- Tasas, funnel y tablas de breakdown siguen visibles al cambiar el tipo.
+- Mismo PR #43, sin merge.
+
+## 2026-09-24 — Higiene de release (health, Dependabot, LICENSE)
+
+- `GET /api/health` → `{ ok: true }` con `Cache-Control: no-store`. Liveness del proceso: sin auth, sin base de datos y sin variables de entorno. La conexión a Supabase sigue en `GET /api/db-status` (con sesión). El matcher de `src/proxy.ts` ya omitía `api/health`; el proxy también lo deja pasar por si el matcher cambia.
+- Dependabot semanal: ecosistemas `npm` y `github-actions`, tope de PRs, agrupación de minor/patch. No hay auto-merge.
+- `LICENSE` MIT. No había otra licencia en `package.json` ni en docs. Titular: GallaDev (repo GallaGit).
+- CodeQL no se añade: en un repo privado el workflow estándar depende de GitHub Advanced Security, no solo del fichero. Branch protection / status checks obligatorios quedan fuera (ajustes del repo).
+- Mismo PR #43, sin merge.

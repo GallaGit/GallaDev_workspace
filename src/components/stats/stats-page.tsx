@@ -7,6 +7,7 @@ import {
   computeLeadStats,
   type CountRow,
 } from "@/lib/leads/compute-stats";
+import { StatusDistributionChart } from "@/components/stats/status-distribution-chart";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import type { LeadStatus } from "@/lib/domain/lead";
 import { LEAD_STATUSES } from "@/lib/domain/lead";
@@ -102,8 +103,8 @@ export function StatsPage() {
       <Topbar title="Statistics" />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <p className="mb-4 text-sm text-(--muted-fg)">
-          Breakdowns y tasas del funnel · {stats.total} leads activos. Sin
-          gráficos decorativos.
+          Tasas del funnel y distribución por estado · {stats.total} leads
+          activos.
         </p>
 
         {syncState === "syncing" && leads.length === 0 ? (
@@ -133,6 +134,8 @@ export function StatsPage() {
             </div>
           ))}
         </div>
+
+        <StatusDistributionChart rows={stats.byStatus} />
 
         {/* Funnel counts */}
         <section className="mb-4 rounded-lg border border-(--border) bg-(--panel)">
