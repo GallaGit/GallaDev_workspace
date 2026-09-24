@@ -13,6 +13,7 @@ import {
   validateIngest,
 } from "@/lib/ingest/validate-ingest";
 import { sendIngestEmails } from "@/lib/email/send-ingest-emails";
+import { errorClassOf, logRouteError, requestIdFrom } from "@/lib/route-log";
 
 export const dynamic = "force-dynamic";
 
@@ -53,18 +54,33 @@ async function safeSendEmails(args: {
   message: string;
   leadId: string;
   deduped: boolean;
+  requestId?: string;
 }): Promise<void> {
+  const { requestId, ...payload } = args;
   try {
-    await sendIngestEmails(args);
+    await sendIngestEmails(payload);
   } catch (e) {
-    console.error("[ingest] email fail-open", e);
+    logRouteError(
+      {
+        route: "POST /api/ingest/lead",
+        errorClass: errorClassOf(e),
+        requestId,
+      },
+      "warn",
+    );
   }
 }
 
 export async function POST(request: Request) {
+  const requestId = requestIdFrom(request);
   const secret = process.env.INGEST_SECRET ?? "";
   if (!secret) {
-    console.error("[ingest] INGEST_SECRET no configurado");
+    logRouteError({
+      route: "POST /api/ingest/lead",
+      status: 503,
+      errorClass: "NotConfigured",
+      requestId,
+    });
     return NextResponse.json(
       { ok: false, error: "Ingesta no configurada" },
       { status: 503 },
@@ -144,6 +160,7 @@ export async function POST(request: Request) {
         message: result.value.message,
         leadId: merged.id,
         deduped: true,
+        requestId,
       });
       return NextResponse.json(
         { ok: true, id: merged.id, deduped: true },
@@ -160,13 +177,19 @@ export async function POST(request: Request) {
       message: result.value.message,
       leadId: lead.id,
       deduped: false,
+      requestId,
     });
     return NextResponse.json(
       { ok: true, id: lead.id, deduped: false },
       { status: 201 },
     );
   } catch (e) {
-    console.error("[ingest] error al guardar lead web", e);
+    logRouteError({
+      route: "POST /api/ingest/lead",
+      status: 500,
+      errorClass: errorClassOf(e),
+      requestId,
+    });
     return NextResponse.json(
       { ok: false, error: "No se pudo guardar el lead" },
       { status: 500 },

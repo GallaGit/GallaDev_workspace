@@ -60,4 +60,40 @@ describe("runLeadAnalyze repository", () => {
     expect(getLeadRepository).not.toHaveBeenCalled();
     expect(get).toHaveBeenCalledWith("lead-2");
   });
+
+  it("registra el catch de lectura sin el mensaje ni el contacto", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const leaked = "supabase down token-secreto user@example.com";
+    const get = vi.fn(async () => {
+      throw new Error(leaked);
+    });
+    try {
+      const { runLeadAnalyze } = await import("./run-lead-analyze");
+      const result = await runLeadAnalyze("lead-9", {
+        repository: { get } as never,
+        route: "POST /api/leads/:id/analyze",
+        requestId: "req-analyze-1",
+      });
+      expect(result).toMatchObject({ ok: false, status: 500 });
+      const dumped = spy.mock.calls
+        .flat()
+        .map((part) => (typeof part === "string" ? part : JSON.stringify(part)))
+        .join("\n");
+      expect(dumped).not.toContain("token-secreto");
+      expect(dumped).not.toContain("user@example.com");
+      const line = spy.mock.calls
+        .map((call) => call[0])
+        .find((part) => typeof part === "string");
+      expect(JSON.parse(String(line))).toEqual({
+        level: "error",
+        route: "POST /api/leads/:id/analyze",
+        status: 500,
+        errorClass: "Error",
+        requestId: "req-analyze-1",
+        leadId: "lead-9",
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

@@ -125,3 +125,9 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 ## 2026-09-24 — M2 Slice 1 (docs)
 
 - Roadmap y guía de operación alineados con prod. Gates de CI ya obligatorios en `master` (estricto + `enforce_admins`): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. Secret scanning, CodeQL y audit trail siguen pendientes. Ver `docs/02-roadmap-delivery/`.
+
+## 2026-09-24 — M2 Slice 2 (ingest, error boundary, logs)
+
+- Tests de `POST /api/ingest/lead` y `POST /api/ingest/n8n`: 401 sin bearer válido, 429 del limitador en memoria, 413 por tope de cuerpo.
+- `src/app/error.tsx` y `src/app/global-error.tsx`: fallback para el usuario (reintentar / inicio). Sin Sentry: no hay DSN ni SDK en el repo.
+- Catch de ingest y analyze: una línea JSON (`route`, `status`, `errorClass`, `requestId` si la cabecera ya trae un id). Sin secretos, cuerpos ni PII.

@@ -8,6 +8,7 @@ import {
 import { getLeadRepository } from "@/lib/repository/get-repository";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import { dispatchLeadCreated } from "@/lib/automations/dispatch";
+import { errorClassOf, logRouteError, requestIdFrom } from "@/lib/route-log";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +39,15 @@ function bearerOk(provided: string, expected: string): boolean {
 }
 
 export async function POST(request: Request) {
+  const requestId = requestIdFrom(request);
   const secret = process.env.INGEST_SECRET ?? "";
   if (!secret) {
-    console.error("[ingest/n8n] INGEST_SECRET no configurado");
+    logRouteError({
+      route: "POST /api/ingest/n8n",
+      status: 503,
+      errorClass: "NotConfigured",
+      requestId,
+    });
     return NextResponse.json(
       { ok: false, error: "Ingesta no configurada" },
       { status: 503 },
@@ -106,7 +113,12 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (e) {
-    console.error("[ingest/n8n] error al guardar lead", e);
+    logRouteError({
+      route: "POST /api/ingest/n8n",
+      status: 500,
+      errorClass: errorClassOf(e),
+      requestId,
+    });
     return NextResponse.json(
       { ok: false, error: "No se pudo guardar el lead" },
       { status: 500 },
