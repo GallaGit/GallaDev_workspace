@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
-import type { LeadPatch } from "@/lib/domain/lead";
 import {
   changedKeys,
   dispatchLeadUpdated,
 } from "@/lib/automations/dispatch";
+import { validateLeadPatch } from "@/lib/leads/validate-lead-patch";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +32,27 @@ export async function GET(request: Request, ctx: Ctx) {
 export async function PATCH(request: Request, ctx: Ctx) {
   const denied = await requireApiSession();
   if (denied) return denied;
+
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return NextResponse.json({ error: "JSON no válido" }, { status: 400 });
+  }
+
+  const parsed = validateLeadPatch(raw);
+  if (!parsed.ok) {
+    return NextResponse.json(
+      { error: parsed.error, fieldErrors: parsed.fieldErrors },
+      { status: 400 },
+    );
+  }
+
   try {
     const { id } = await ctx.params;
-    const patch = (await request.json()) as LeadPatch;
     const repo = await getSessionLeadRepository();
-    const lead = await repo.update(id, patch);
-    const automation = dispatchLeadUpdated(lead, changedKeys(patch));
+    const lead = await repo.update(id, parsed.value);
+    const automation = dispatchLeadUpdated(lead, changedKeys(parsed.value));
     return NextResponse.json({ lead, automation });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al actualizar lead";

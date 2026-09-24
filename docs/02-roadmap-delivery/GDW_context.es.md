@@ -20,7 +20,8 @@ Supabase es la capa de persistencia activa y la única fuente de verdad. La apli
 - Cabeceras de seguridad (HSTS, CSP, frame/content-type/referrer/permissions).
 - Rate-limit compartido en memoria + topes de cuerpo en ingesta, login y PATCH masivo.
 - Migración RLS por rol aplicada en Supabase (`app_role`: Admin/Seller/Viewer; tabla `profiles`; policies por rol en `leads`/`lead_activities`).
-- Pendiente de M1: validación con `zod` en cuerpos PATCH; higiene (LICENSE, secret scanning, Dependabot, CodeQL).
+- Validación con `zod` en cuerpos PATCH de leads (`PATCH /api/leads/:id` y PATCH masivo).
+- Pendiente de M1: higiene (LICENSE, secret scanning, Dependabot, CodeQL).
 
 ### Planificado: historial de auditoría (especificado, no implementado)
 

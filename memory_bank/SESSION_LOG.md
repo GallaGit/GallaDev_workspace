@@ -69,3 +69,11 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Nuevo checklist: `docs/02-roadmap-delivery/bootcamp-enrichment.es.md` (M1/M2/M3 canónico + enriquecimiento; no sustituye GDW).
 - Enlace de una línea en `GDW_context.es.md` y `GDW_context.md`.
 - PR abierto a master (sin merge automático): https://github.com/GallaGit/GallaDev_workspace/pull/41
+
+## 2026-09-24 — Validación zod en PATCH de leads
+
+- `PATCH /api/leads/:id` y `PATCH /api/leads` (masivo) validan el cuerpo con zod (`validateLeadPatch` / `validateBulkLeadPatch`).
+- Campos y reglas alineados con `LeadPatch` y con `validateLeadCreate` cuando el campo viene en el cuerpo. Un PATCH válido se persiste sin reescribir el valor.
+- Cuerpo inválido → 400 `{ error, fieldErrors }` («Datos del lead no válidos»). JSON malformado en el PATCH individual → 400 «JSON no válido». El masivo conserva «ids y patch requeridos» si faltan `ids` o `patch`, y «Payload no válido o demasiado grande» si el JSON no parsea.
+- Eliminado el cast `as LeadPatch` en esas rutas.
+- Tests unitarios del validador y de las dos rutas PATCH.
