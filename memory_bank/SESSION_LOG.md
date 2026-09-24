@@ -99,3 +99,17 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Arrastrar una tarjeta existente entre columnas sigue haciendo `PATCH /api/leads/:id` con el nuevo estado.
 - Test de componente: no hay affordance de añadir, y el drop sigue cambiando el estado.
 - PR: https://github.com/GallaGit/GallaDev_workspace/pull/43
+
+## 2026-09-24 — Statistics: selector de tipo de gráfico
+
+### Inventario
+- Statistics no usaba Recharts (la dependencia ya estaba). La vista era tasas, rejilla del funnel y tablas con una barra de 1px.
+- No hay filtro de periodo en Statistics ni fixtures de visitor demo para esta vista.
+- Dataset del gráfico: los mismos conteos `byStatus` que la tabla «Por estado».
+
+### Cambio
+- Control «Tipo de gráfico»: Barras (lo que ya había, ahora como gráfico), Circular (donut) y Área (onda `monotone` a lo largo de los 9 estados, no serie por fecha).
+- El circular no se dibuja si hay menos de dos estados con leads.
+- Preferencia en `localStorage` (`gdw-stats-chart-type`).
+- Tasas, funnel y tablas de breakdown siguen visibles al cambiar el tipo.
+- Mismo PR #43, sin merge.
