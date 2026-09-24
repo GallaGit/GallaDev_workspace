@@ -13,6 +13,19 @@ export interface SessionUser {
   role: AppRole;
 }
 
+export function isAppRole(role: unknown): role is AppRole {
+  return role === "Admin" || role === "Seller" || role === "Viewer";
+}
+
+export function isAdminRole(role: AppRole): boolean {
+  return role === "Admin";
+}
+
+/** Escritura de leads y análisis IA. Viewer solo lee (RLS y API). */
+export function isLeadWriter(role: AppRole): boolean {
+  return role === "Admin" || role === "Seller";
+}
+
 export function isAuthDisabled(): boolean {
   if (process.env.NODE_ENV === "production") return false;
   return (

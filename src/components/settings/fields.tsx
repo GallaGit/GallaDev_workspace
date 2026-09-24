@@ -12,6 +12,7 @@ export function SecretField({
   value,
   onChange,
   placeholder = "Nuevo valor (opcional)",
+  disabled = false,
 }: {
   id: string;
   label: string;
@@ -20,6 +21,7 @@ export function SecretField({
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -43,6 +45,7 @@ export function SecretField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
       />
       <p className="mt-1 text-[11px] text-(--muted-fg)">
         {hint ?? "Vacío = no cambiar el secreto actual."}
@@ -58,6 +61,7 @@ export function TextField({
   onChange,
   placeholder,
   hint,
+  disabled = false,
 }: {
   id: string;
   label: string;
@@ -65,6 +69,7 @@ export function TextField({
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -80,6 +85,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
+        disabled={disabled}
       />
       {hint ? (
         <p className="mt-1 text-[11px] text-(--muted-fg)">{hint}</p>

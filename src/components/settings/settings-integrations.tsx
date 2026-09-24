@@ -14,6 +14,7 @@ import type {
   SettingsPatch,
 } from "@/lib/settings/types";
 import { AUTOMATION_ACTION_IDS } from "@/lib/settings/types";
+import { useSessionAccess } from "@/components/session-access";
 
 type Draft = {
   n8nBaseUrl: string;
@@ -82,6 +83,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
   const [saving, setSaving] = useState<IntegrationId | null>(null);
   const [testing, setTesting] = useState<IntegrationId | null>(null);
   const [clearing, setClearing] = useState<Record<string, boolean>>({});
+  const { isAdmin } = useSessionAccess();
 
   function remember(next: PublicSettings) {
     setSettings(next);
@@ -91,6 +93,10 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
   }
 
   async function save(patch: SettingsPatch, scope: IntegrationId) {
+    if (!isAdmin) {
+      toast.error("No tienes permiso para realizar esta acción");
+      return;
+    }
     setSaving(scope);
     try {
       const res = await fetch("/api/settings", {
@@ -118,6 +124,10 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
   }
 
   async function test(integration: IntegrationId, overrides?: SettingsPatch) {
+    if (!isAdmin) {
+      toast.error("No tienes permiso para realizar esta acción");
+      return;
+    }
     setTesting(integration);
     try {
       const res = await fetch("/api/settings/test", {
@@ -151,6 +161,13 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
 
   return (
     <div className="space-y-4">
+      {!isAdmin ? (
+        <p className="text-sm text-(--muted-fg)">
+          Solo un administrador puede cambiar la configuración. Puedes
+          consultar el estado de las integraciones.
+        </p>
+      ) : null}
+
       <p className="text-sm text-(--muted-fg)">
         Secretos solo en el servidor. Los valores se mezclan desde{" "}
         <code>.env.local</code> (arranque) y{" "}
@@ -185,6 +202,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           onChange={(v) => setDraft((d) => ({ ...d, n8nBaseUrl: v }))}
           placeholder="http://localhost:5678"
           hint="Opcional. Se usa para Probar conexión (/healthz)."
+          disabled={!isAdmin}
         />
         <SecretField
           id="n8n-key"
@@ -192,8 +210,9 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           field={settings.n8n.apiKey}
           value={draft.n8nApiKey}
           onChange={(v) => setDraft((d) => ({ ...d, n8nApiKey: v }))}
+          disabled={!isAdmin}
         />
-        {settings.n8n.apiKey.source === "file" ? (
+        {isAdmin && settings.n8n.apiKey.source === "file" ? (
           <ClearLink
             onClick={() => markClear("n8n.apiKey")}
             active={Boolean(clearing["n8n.apiKey"])}
@@ -213,6 +232,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
               }))
             }
             placeholder="https://…/webhook/…"
+            disabled={!isAdmin}
           />
         ))}
         <Actions
@@ -240,6 +260,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
               "n8n",
             );
           }}
+          locked={!isAdmin}
           onTest={() =>
             void test("n8n", {
               n8n: {
@@ -269,6 +290,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
             id="ai-provider"
             className="flex h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2.5 text-sm text-(--fg) focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--ring)"
             value={draft.aiProvider}
+            disabled={!isAdmin}
             onChange={(e) =>
               setDraft((d) => ({ ...d, aiProvider: e.target.value }))
             }
@@ -282,8 +304,9 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           field={settings.ai.apiKey}
           value={draft.aiApiKey}
           onChange={(v) => setDraft((d) => ({ ...d, aiApiKey: v }))}
+          disabled={!isAdmin}
         />
-        {settings.ai.apiKey.source === "file" ? (
+        {isAdmin && settings.ai.apiKey.source === "file" ? (
           <ClearLink
             onClick={() => markClear("ai.apiKey")}
             active={Boolean(clearing["ai.apiKey"])}
@@ -294,6 +317,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           label="Modelo"
           value={draft.aiModel}
           onChange={(v) => setDraft((d) => ({ ...d, aiModel: v }))}
+          disabled={!isAdmin}
         />
         <Actions
           saving={saving === "ai"}
@@ -318,6 +342,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
               "ai",
             )
           }
+          locked={!isAdmin}
           onTest={() =>
             void test("ai", {
               ai: {
@@ -343,8 +368,9 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           field={settings.serpapi.apiKey}
           value={draft.serpapiKey}
           onChange={(v) => setDraft((d) => ({ ...d, serpapiKey: v }))}
+          disabled={!isAdmin}
         />
-        {settings.serpapi.apiKey.source === "file" ? (
+        {isAdmin && settings.serpapi.apiKey.source === "file" ? (
           <ClearLink
             onClick={() => markClear("serpapi.apiKey")}
             active={Boolean(clearing["serpapi.apiKey"])}
@@ -365,6 +391,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
               "serpapi",
             )
           }
+          locked={!isAdmin}
           onTest={() =>
             void test("serpapi", {
               serpapi: { apiKey: optionalSecret(draft.serpapiKey) },
@@ -403,24 +430,26 @@ function Header({
 function Actions({
   saving,
   testing,
+  locked = false,
   onSave,
   onTest,
 }: {
   saving: boolean;
   testing: boolean;
+  locked?: boolean;
   onSave: () => void;
   onTest: () => void;
 }) {
   return (
     <div className="flex flex-wrap gap-2 pt-1">
-      <Button size="sm" onClick={onSave} disabled={saving || testing}>
+      <Button size="sm" onClick={onSave} disabled={locked || saving || testing}>
         {saving ? "Guardando…" : "Guardar"}
       </Button>
       <Button
         size="sm"
         variant="outline"
         onClick={onTest}
-        disabled={saving || testing}
+        disabled={locked || saving || testing}
       >
         {testing ? "Probando…" : "Probar conexión"}
       </Button>

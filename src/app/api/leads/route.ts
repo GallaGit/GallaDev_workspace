@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { readCappedJson } from "@/lib/rate-limit";
 import {
   getActiveProvider,
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession();
+  const denied = await requireLeadWriter();
   if (denied) return denied;
   try {
     const body = (await request.json()) as Record<string, unknown>;
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 const MAX_BULK_BODY_BYTES = 256 * 1024;
 
 export async function PATCH(request: Request) {
-  const denied = await requireApiSession();
+  const denied = await requireLeadWriter();
   if (denied) return denied;
   try {
     const parsed = await readCappedJson(request, MAX_BULK_BODY_BYTES);

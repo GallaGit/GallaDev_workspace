@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isAuthDisabled, type SessionUser } from "@/lib/auth";
+import {
+  isAppRole,
+  isAuthDisabled,
+  type AppRole,
+  type SessionUser,
+} from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const UNAUTHENTICATED = {
@@ -14,6 +19,12 @@ const NO_PROFILE = {
   error:
     "Tu usuario está autenticado pero no tiene un perfil asignado. Contacta al administrador.",
   code: "no_profile" as const,
+};
+
+const FORBIDDEN = {
+  ok: false as const,
+  error: "No tienes permiso para realizar esta acción",
+  code: "forbidden" as const,
 };
 
 type SessionResolution =
@@ -35,7 +46,36 @@ type SessionResolution =
 export async function requireApiSession(): Promise<NextResponse | null> {
   const resolved = await resolveApiSession();
   if (resolved.status === "ok") return null;
-  if (resolved.status === "no_profile") {
+  return sessionDenied(resolved.status);
+}
+
+/**
+ * Sesión válida y rol incluido en `allowed`.
+ * 401 si no hay sesión o perfil; 403 si el rol no alcanza.
+ */
+export async function requireApiRole(
+  allowed: readonly AppRole[],
+): Promise<NextResponse | null> {
+  const resolved = await resolveApiSession();
+  if (resolved.status !== "ok") return sessionDenied(resolved.status);
+  if (!allowed.includes(resolved.user.role)) {
+    return NextResponse.json(FORBIDDEN, { status: 403 });
+  }
+  return null;
+}
+
+/** Mutaciones de configuración y automatizaciones: solo Admin. */
+export function requireAdmin(): Promise<NextResponse | null> {
+  return requireApiRole(["Admin"]);
+}
+
+/** Escritura de leads y análisis IA: Admin o Seller. Viewer queda fuera. */
+export function requireLeadWriter(): Promise<NextResponse | null> {
+  return requireApiRole(["Admin", "Seller"]);
+}
+
+function sessionDenied(status: Exclude<SessionResolution["status"], "ok">) {
+  if (status === "no_profile") {
     return NextResponse.json(NO_PROFILE, { status: 401 });
   }
   return NextResponse.json(UNAUTHENTICATED, { status: 401 });
@@ -65,7 +105,7 @@ async function resolveApiSession(
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (!profile) return { status: "no_profile" };
+  if (!profile || !isAppRole(profile.role)) return { status: "no_profile" };
   return {
     status: "ok",
     user: { id: user.id, email: user.email ?? null, role: profile.role },

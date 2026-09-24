@@ -3,6 +3,7 @@
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/domain/lead";
+import { useSessionAccess } from "@/components/session-access";
 import { useUiStore } from "@/store/ui-store";
 import { toastAutomationBulk } from "@/components/automations/toast-dispatch";
 import {
@@ -20,11 +21,26 @@ export function BulkActionBar() {
     upsertLead,
     removeLead,
   } = useUiStore();
+  const { canWriteLeads } = useSessionAccess();
   const [confirm, setConfirm] = useState(false);
 
   if (selectedIds.length === 0) return null;
 
+  if (!canWriteLeads) {
+    return (
+      <div className="flex items-center gap-2 border-b border-(--border) bg-(--muted) px-4 py-2">
+        <span className="text-[12px] font-medium">
+          {selectedIds.length} seleccionados · solo lectura
+        </span>
+        <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
+          Cancelar
+        </Button>
+      </div>
+    );
+  }
+
   async function bulkPatch(patch: Partial<Lead>) {
+    if (!canWriteLeads) return;
     try {
       const res = await fetch("/api/leads", {
         method: "PATCH",
@@ -43,6 +59,7 @@ export function BulkActionBar() {
   }
 
   async function bulkArchive() {
+    if (!canWriteLeads) return;
     try {
       for (const id of selectedIds) {
         const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireAiAnalyzeAccess } from "@/lib/ai/require-ai-access";
 import { runLeadAnalyze } from "@/lib/ai/run-lead-analyze";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 
@@ -10,7 +10,7 @@ export const maxDuration = 60;
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+  const denied = await requireAiAnalyzeAccess();
   if (denied) return denied;
   const { id } = await ctx.params;
   let force = false;

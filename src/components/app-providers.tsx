@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { SessionAccessProvider } from "@/components/session-access";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/toast/toast";
 
@@ -18,8 +19,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <QueryClientProvider client={client}>
-        {children}
-        <Toaster position="bottom-right" />
+        <SessionAccessProvider>
+          {children}
+          <Toaster position="bottom-right" />
+        </SessionAccessProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getApiSession, requireApiSession } from "./api-auth";
+import {
+  getApiSession,
+  requireAdmin,
+  requireApiSession,
+  requireLeadWriter,
+} from "./api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // server.ts usa "server-only" (no resoluble en vitest): se intercepta el
@@ -86,5 +91,60 @@ describe("requireApiSession", () => {
       email: "a@b.c",
       role: "Seller",
     });
+  });
+
+  it("401 si el rol del perfil no es Admin, Seller ni Viewer", async () => {
+    vi.stubEnv("AUTH_DISABLED", "false");
+    serverClient.mockResolvedValue(
+      mockClient({ id: "u1", email: "a@b.c" }, "Owner"),
+    );
+    const denied = await requireApiSession();
+    expect(denied!.status).toBe(401);
+    expect(await denied!.json()).toMatchObject({ code: "no_profile" });
+  });
+});
+
+describe("requireApiRole", () => {
+  it("Admin pasa requireAdmin y requireLeadWriter", async () => {
+    vi.stubEnv("AUTH_DISABLED", "false");
+    serverClient.mockResolvedValue(
+      mockClient({ id: "admin", email: "admin@b.c" }, "Admin"),
+    );
+    expect(await requireAdmin()).toBeNull();
+    expect(await requireLeadWriter()).toBeNull();
+  });
+
+  it("Seller puede escribir leads y no puede administrar", async () => {
+    vi.stubEnv("AUTH_DISABLED", "false");
+    serverClient.mockResolvedValue(
+      mockClient({ id: "seller", email: "s@b.c" }, "Seller"),
+    );
+    expect(await requireLeadWriter()).toBeNull();
+    const denied = await requireAdmin();
+    expect(denied!.status).toBe(403);
+    expect(await denied!.json()).toMatchObject({
+      ok: false,
+      code: "forbidden",
+      error: "No tienes permiso para realizar esta acción",
+    });
+  });
+
+  it("Viewer no escribe leads ni administra", async () => {
+    vi.stubEnv("AUTH_DISABLED", "false");
+    serverClient.mockResolvedValue(
+      mockClient({ id: "viewer", email: "v@b.c" }, "Viewer"),
+    );
+    for (const denied of [await requireAdmin(), await requireLeadWriter()]) {
+      expect(denied!.status).toBe(403);
+      expect(await denied!.json()).toMatchObject({ code: "forbidden" });
+    }
+  });
+
+  it("sin sesión sigue siendo 401, no 403", async () => {
+    vi.stubEnv("AUTH_DISABLED", "false");
+    serverClient.mockResolvedValue(mockClient(null, null));
+    const denied = await requireAdmin();
+    expect(denied!.status).toBe(401);
+    expect(await denied!.json()).toMatchObject({ code: "unauthenticated" });
   });
 });

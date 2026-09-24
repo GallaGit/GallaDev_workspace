@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Topbar } from "@/components/layout/topbar";
 import { useEnsureLeadsSynced } from "@/hooks/use-ensure-leads-synced";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/domain/lead";
+import { useSessionAccess } from "@/components/session-access";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import { motionPresets } from "@/lib/motion/presets";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -27,12 +28,20 @@ async function patchStatus(id: string, status: LeadStatus): Promise<Lead> {
 interface KanbanCardProps {
   lead: Lead;
   draggingId: string | null;
+  canWrite: boolean;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   onClick: () => void;
 }
 
-function KanbanCard({ lead, draggingId, onDragStart, onDragEnd, onClick }: KanbanCardProps) {
+function KanbanCard({
+  lead,
+  draggingId,
+  canWrite,
+  onDragStart,
+  onDragEnd,
+  onClick,
+}: KanbanCardProps) {
   const reduced = useReducedMotion();
   const isDragging = draggingId === lead.id;
 
@@ -40,12 +49,16 @@ function KanbanCard({ lead, draggingId, onDragStart, onDragEnd, onClick }: Kanba
     <motion.div
       layout
       layoutId={lead.id}
-      draggable
-      onDragStart={() => onDragStart(lead.id)}
+      draggable={canWrite}
+      onDragStart={() => {
+        if (!canWrite) return;
+        onDragStart(lead.id);
+      }}
       onDragEnd={onDragEnd}
       onClick={onClick}
       className={cn(
-        "cursor-grab rounded-lg border border-gris-200 dark:border-gris-700",
+        canWrite ? "cursor-grab" : "cursor-pointer",
+        "rounded-lg border border-gris-200 dark:border-gris-700",
         "bg-blanco dark:bg-gris-800 p-3 text-left",
         "active:cursor-grabbing transition-shadow duration-150",
         isDragging ? "opacity-50 shadow-xl z-50 ring-2 ring-rojo" : "hover:shadow-md",
@@ -182,6 +195,7 @@ interface KanbanColumnProps {
   onDragLeave: () => void;
   onMoveLead: (leadId: string, status: LeadStatus) => void;
   onOpenLead: (lead: Lead) => void;
+  canWrite: boolean;
 }
 
 function KanbanColumn({
@@ -195,6 +209,7 @@ function KanbanColumn({
   onDragLeave,
   onMoveLead,
   onOpenLead,
+  canWrite,
 }: KanbanColumnProps) {
   const reduced = useReducedMotion();
   const isOver = overStatus === status;
@@ -209,6 +224,7 @@ function KanbanColumn({
       onDragLeave={onDragLeave}
       onDrop={(e) => {
         e.preventDefault();
+        if (!canWrite) return;
         const id = e.dataTransfer.getData("text/lead-id") || draggingId;
         if (id) onMoveLead(id, status);
       }}
@@ -236,11 +252,13 @@ function KanbanColumn({
               draggingId={draggingId}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              canWrite={canWrite}
               onClick={() => onOpenLead(lead)}
             />
           ))}
         </AnimatePresence>
 
+        {canWrite ? (
         <AddCard
           onAdd={(title) => {
             const newLead: Lead = {
@@ -285,6 +303,7 @@ function KanbanColumn({
             onMoveLead(newLead.id, status);
           }}
         />
+        ) : null}
       </div>
     </motion.div>
   );
@@ -298,6 +317,7 @@ export function KanbanBoard() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overStatus, setOverStatus] = useState<LeadStatus | null>(null);
   const reduced = useReducedMotion();
+  const { canWriteLeads } = useSessionAccess();
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(
@@ -332,6 +352,7 @@ export function KanbanBoard() {
   }, []);
 
   const moveLead = async (leadId: string, status: LeadStatus) => {
+    if (!canWriteLeads) return;
     const current = leads.find((l) => l.id === leadId);
     if (!current || current.status === status) return;
 
@@ -379,6 +400,7 @@ export function KanbanBoard() {
               onDragLeave={handleDragLeave}
               onMoveLead={moveLead}
               onOpenLead={handleOpenLead}
+              canWrite={canWriteLeads}
             />
           ))}
         </motion.div>

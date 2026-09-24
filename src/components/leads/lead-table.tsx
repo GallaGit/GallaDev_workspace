@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import type { Lead, LeadStatus } from "@/lib/domain/lead";
 import { LEAD_STATUSES } from "@/lib/domain/lead";
 import { filterLeads } from "@/lib/leads/filter-leads";
+import { useSessionAccess } from "@/components/session-access";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import { toast } from "sonner";
 
@@ -58,6 +59,7 @@ export function LeadTable() {
     toggleSelectedId,
     upsertLead,
   } = useUiStore();
+  const { canWriteLeads } = useSessionAccess();
 
   const [sortKey, setSortKey] = useState<ColKey>("lastActivity");
   const [sortDesc, setSortDesc] = useState(true);
@@ -180,7 +182,9 @@ export function LeadTable() {
                       <Cell
                         col={key}
                         lead={lead}
+                        canWrite={canWriteLeads}
                         onPatch={async (patch) => {
+                          if (!canWriteLeads) return;
                           try {
                             const updated = await patchLead(lead.id, patch);
                             upsertLead(updated);
@@ -207,14 +211,27 @@ export function LeadTable() {
 function Cell({
   col,
   lead,
+  canWrite,
   onPatch,
 }: {
   col: ColKey;
   lead: Lead;
+  canWrite: boolean;
   onPatch: (patch: Partial<Lead>) => void;
 }) {
   switch (col) {
     case "favorite":
+      if (!canWrite) {
+        return (
+          <Star
+            className={`h-3.5 w-3.5 ${
+              lead.favorite
+                ? "fill-amber-400 text-amber-400"
+                : "text-(--muted-fg)"
+            }`}
+          />
+        );
+      }
       return (
         <button
           type="button"
@@ -238,6 +255,13 @@ function Cell({
         <span className="font-medium text-(--fg)">{lead.companyName}</span>
       );
     case "status":
+      if (!canWrite) {
+        return (
+          <span className={`text-[11px] ${statusColor(lead.status)}`}>
+            {lead.status}
+          </span>
+        );
+      }
       return (
         <select
           className={`rounded px-1.5 py-0.5 text-[11px] outline-none ${statusColor(lead.status)}`}

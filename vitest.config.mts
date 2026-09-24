@@ -39,6 +39,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(rootDir, "./src"),
+      // El paquete `server-only` no está instalado y, si lo estuviera, lanzaría
+      // en el runner de Vitest. El stub permite importar rutas de servidor.
+      "server-only": path.resolve(rootDir, "./src/test/server-only-stub.ts"),
     },
   },
 });
