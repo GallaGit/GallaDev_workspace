@@ -21,6 +21,7 @@ import type { Lead } from "@/lib/domain/lead";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import type { LeadRepository } from "@/lib/repository/lead-repository";
 import { getSettingsService } from "@/lib/settings/service";
+import { errorClassOf, logRouteError } from "@/lib/route-log";
 
 export type AnalyzeLeadResult =
   | { ok: true; status: 200; body: AnalyzeSuccessBody }
@@ -57,6 +58,9 @@ export async function runLeadAnalyze(
     force?: boolean;
     persist?: boolean;
     repository?: LeadRepository;
+    /** Nombre de la ruta HTTP que invocó el análisis, para el log. */
+    route?: string;
+    requestId?: string;
   } = {},
 ): Promise<AnalyzeLeadResult> {
   // Sesión (RLS) si el caller no inyecta repositorio. El singleton
@@ -64,11 +68,30 @@ export async function runLeadAnalyze(
   const repo = options.repository ?? (await getSessionLeadRepository());
   const force = options.force === true;
   const persist = options.persist !== false;
+  const route = options.route ?? "lead-analyze";
+
+  const logFailure = (
+    error: unknown,
+    status?: number,
+    level: "error" | "warn" = "error",
+  ) => {
+    logRouteError(
+      {
+        route,
+        status,
+        errorClass: errorClassOf(error),
+        requestId: options.requestId,
+        leadId: id,
+      },
+      level,
+    );
+  };
 
   let lead: Lead | null;
   try {
     lead = await repo.get(id);
   } catch (e) {
+    logFailure(e, 500);
     const message = e instanceof Error ? e.message : "Error al obtener lead";
     return { ok: false, status: 500, body: { error: message } };
   }
@@ -91,6 +114,7 @@ export async function runLeadAnalyze(
     ) {
       return { ok: true, status: 200, body: emptySuccess(lead) };
     }
+    logFailure(e, 502);
     const message =
       e instanceof Error ? e.message : "Error al analizar el lead";
     return {
@@ -125,6 +149,7 @@ export async function runLeadAnalyze(
   try {
     saved = await repo.update(id, { aiAnalysis: text });
   } catch (e) {
+    logFailure(e, 500);
     const message =
       e instanceof Error ? e.message : "Error al guardar el análisis";
     return { ok: false, status: 500, body: { error: message } };
@@ -134,10 +159,7 @@ export async function runLeadAnalyze(
   try {
     activity = await repo.getActivity(id);
   } catch (error) {
-    console.error("[analyze] activity read failed", {
-      leadId: id,
-      reason: error instanceof Error ? error.message : "unknown",
-    });
+    logFailure(error, undefined, "warn");
   }
 
   let notified = false;
@@ -149,10 +171,7 @@ export async function runLeadAnalyze(
     );
     notified = automation.status === "dispatched";
   } catch (error) {
-    console.error("[analyze] notifyLeadAnalyzed failed", {
-      leadId: id,
-      reason: error instanceof Error ? error.message : "unknown",
-    });
+    logFailure(error, undefined, "warn");
   }
 
   return {

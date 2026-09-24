@@ -16,6 +16,7 @@ import {
 import { runLeadAnalyze } from "@/lib/ai/run-lead-analyze";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import { getSettingsService } from "@/lib/settings/service";
+import { errorClassOf, logRouteError, requestIdFrom } from "@/lib/route-log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,9 +26,12 @@ export const maxDuration = 60;
  * Grok / AI-engineer contract.
  * Front drawer uses POST /api/leads/:id/analyze (same Groq + Notion path).
  */
+const ROUTE = "POST /api/leads/pain-analysis";
+
 export async function POST(request: Request) {
   const denied = await requireAiAnalyzeAccess();
   if (denied) return denied;
+  const requestId = requestIdFrom(request);
   let body: { id?: unknown; lead?: unknown; persist?: unknown; force?: unknown } =
     {};
   try {
@@ -58,6 +62,8 @@ export async function POST(request: Request) {
       force: body.force === true,
       persist,
       repository: await getSessionLeadRepository(),
+      route: ROUTE,
+      requestId,
     });
     if (!result.ok) {
       return NextResponse.json(result.body, { status: result.status });
@@ -107,6 +113,12 @@ export async function POST(request: Request) {
         }),
       );
     }
+    logRouteError({
+      route: ROUTE,
+      status: 502,
+      errorClass: errorClassOf(e),
+      requestId,
+    });
     const message =
       e instanceof Error ? e.message : "Error al analizar el lead";
     return NextResponse.json(
