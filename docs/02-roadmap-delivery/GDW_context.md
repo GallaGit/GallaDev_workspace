@@ -21,7 +21,16 @@ Supabase is the active persistence layer and sole source of truth. The current a
 - Shared in-memory rate limiter + body caps on ingest, login, and bulk PATCH.
 - Role-based RLS migration applied in Supabase (`app_role`: Admin/Seller/Viewer; `profiles` table; per-role policies on `leads`/`lead_activities`).
 - `zod` validation on lead PATCH bodies (`PATCH /api/leads/:id` and bulk PATCH).
-- Remaining M1 items: hygiene (LICENSE, secret scanning, Dependabot, CodeQL).
+- Hygiene done: MIT `LICENSE` and Dependabot (npm and GitHub Actions; opens PRs, does not merge them).
+- Remaining M1 items: secret scanning and CodeQL.
+
+### M1 close / post-M1 in production (2026-09-24)
+
+Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":true}` (the process answers HTTP; no session and no database).
+
+- **RBAC High** (PR #44): settings and automation mutations are Admin-only; lead writes and AI analysis are Admin or Seller; Viewer gets 403 on writes. `GET /api/team` is Admin-only. AI analysis uses the authenticated session (RLS), not `service_role` for normal user requests, with a cap of 10 requests / 60s. The UI gates actions from the session role.
+- **Kanban, Statistics, and release hygiene** (PR #43): removed the dead Kanban “+ add card” control (it did not persist); Statistics chart-type selector (bars / donut / area); `GET /api/health`; MIT `LICENSE`; Dependabot.
+- **M2 Slice 1 — CI gates on `master`:** required and strict, with `enforce_admins` on: Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL is not a required check. Required reviews are not above 0.
 
 ### Planned: audit trail (specified, not implemented)
 

@@ -26,6 +26,18 @@ Configura en `.env.local` la URL de Supabase y las claves publishable/secret. Us
 
 Los leads nuevos entran en la cola `Nuevo`. Se puede buscar por empresa, dominio, email, ciudad, provincia o LinkedIn; combinar filtros; editar notas y borradores; cambiar el estado; archivar registros y gestionar duplicados. La aplicación guarda los cambios en Supabase.
 
+## Roles y límites de IA
+
+El rol sale de `profiles.app_role`: Admin, Seller o Viewer.
+
+- **Admin:** mutaciones de settings y automatizaciones, `GET /api/team`, escrituras de leads y análisis IA.
+- **Seller:** escrituras de leads y análisis IA (con el límite de tasa). No cambia settings ni automatizaciones y no lista el equipo.
+- **Viewer:** solo lectura. Las APIs de escritura responden 403.
+
+El análisis IA (`POST /api/leads/:id/analyze` y `POST /api/leads/pain-analysis`) admite 10 peticiones / 60s por usuario de la sesión (límite en memoria). Usa la sesión autenticada y RLS; las peticiones normales de usuario no usan el rol privilegiado `service_role`.
+
+Comprobación de vida para uptime: `GET /api/health` (sin sesión). Responde `{"ok":true}` si el proceso atiende HTTP. No comprueba Supabase.
+
 ## Diagnóstico
 
 - Si login o la invalidación de sesiones devuelve 503, comprueba la conexión con Supabase y que esté aplicada la migración del epoch de sesiones.

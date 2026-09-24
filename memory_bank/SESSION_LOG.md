@@ -121,3 +121,7 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - `LICENSE` MIT. No había otra licencia en `package.json` ni en docs. Titular: GallaDev (repo GallaGit).
 - CodeQL no se añade: en un repo privado el workflow estándar depende de GitHub Advanced Security, no solo del fichero. Branch protection / status checks obligatorios quedan fuera (ajustes del repo).
 - Mismo PR #43, sin merge.
+
+## 2026-09-24 — M2 Slice 1 (docs)
+
+- Roadmap y guía de operación alineados con prod. Gates de CI ya obligatorios en `master` (estricto + `enforce_admins`): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. Secret scanning, CodeQL y audit trail siguen pendientes. Ver `docs/02-roadmap-delivery/`.

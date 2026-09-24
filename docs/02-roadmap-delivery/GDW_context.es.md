@@ -21,7 +21,16 @@ Supabase es la capa de persistencia activa y la única fuente de verdad. La apli
 - Rate-limit compartido en memoria + topes de cuerpo en ingesta, login y PATCH masivo.
 - Migración RLS por rol aplicada en Supabase (`app_role`: Admin/Seller/Viewer; tabla `profiles`; policies por rol en `leads`/`lead_activities`).
 - Validación con `zod` en cuerpos PATCH de leads (`PATCH /api/leads/:id` y PATCH masivo).
-- Pendiente de M1: higiene (LICENSE, secret scanning, Dependabot, CodeQL).
+- Higiene hecha: `LICENSE` MIT y Dependabot (npm y GitHub Actions; abre PRs, no los fusiona).
+- Pendiente de M1: secret scanning y CodeQL.
+
+### Cierre M1 / post-M1 en prod (2026-09-24)
+
+Producción: `https://workspace.galladev.com`. `GET /api/health` responde `{"ok":true}` (el proceso atiende HTTP; sin sesión ni base de datos).
+
+- **RBAC High** (PR #44): mutaciones de settings y automatizaciones solo Admin; escrituras de leads y análisis IA para Admin o Seller; Viewer recibe 403 en escrituras. `GET /api/team` solo Admin. El análisis IA usa la sesión autenticada (RLS), no `service_role` en las peticiones normales, con tope de 10 peticiones / 60s. La UI se guía por el rol de la sesión.
+- **Kanban, Statistics e higiene de release** (PR #43): eliminado el “+ añadir tarjeta” del Kanban (no persistía); selector de tipo de gráfico en Statistics (barras / donut / área); `GET /api/health`; `LICENSE` MIT; Dependabot.
+- **M2 Slice 1 — gates de CI en `master`:** obligatorios y estrictos, con `enforce_admins` activo: Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL no es check obligatorio. Las revisiones requeridas no están por encima de 0.
 
 ### Planificado: historial de auditoría (especificado, no implementado)
 
