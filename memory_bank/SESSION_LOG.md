@@ -85,3 +85,17 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - `POST /api/leads/:id/analyze` y `POST /api/leads/pain-analysis` comparten un rate-limit en memoria (`isRateLimited`, namespace `ai:analyze`, 10 peticiones / 60s por id de usuario). `runLeadAnalyze` ya no cae al repositorio service_role: el fallback es la sesión (RLS).
 - `GET /api/team` solo Admin (antes cualquier sesión listaba perfiles y emails vía service_role). `GET /api/session` expone el rol propio para la UI.
 - Sin secretos en este registro.
+
+## 2026-09-24 — Quitar “Añadir tarjeta” del Kanban
+
+### Decisión (Ociel)
+- El control “+ Añadir tarjeta” abría un compositor local y no persistía el lead.
+- Se elimina la opción. Alta de leads sigue por formulario de landing / n8n / UI formal de nuevo lead, si existe.
+- No se conecta ese control a `createLead`. Independiente del PATCH con zod (PR #42).
+
+### Cambio
+- Eliminados el botón, el compositor y el atajo de ids `temp-` en `src/components/kanban/kanban-board.tsx`.
+- El gate de escritura de #44 se mantiene: sin permiso no se arrastra ni se hace PATCH. El control de añadir no vuelve ni para quien puede escribir.
+- Arrastrar una tarjeta existente entre columnas sigue haciendo `PATCH /api/leads/:id` con el nuevo estado.
+- Test de componente: no hay affordance de añadir, y el drop sigue cambiando el estado.
+- PR: https://github.com/GallaGit/GallaDev_workspace/pull/43

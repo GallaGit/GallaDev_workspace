@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Plus } from "lucide-react";
+import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { Topbar } from "@/components/layout/topbar";
 import { useEnsureLeadsSynced } from "@/hooks/use-ensure-leads-synced";
@@ -112,78 +112,6 @@ function DropIndicator({ isOver }: DropIndicatorProps) {
   );
 }
 
-interface AddCardProps {
-  onAdd: (title: string) => void;
-}
-
-function AddCard({ onAdd }: AddCardProps) {
-  const [showing, setShowing] = useState(false);
-  const [text, setText] = useState("");
-  const reduced = useReducedMotion();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    onAdd(text.trim());
-    setText("");
-    setShowing(false);
-  };
-
-  if (!showing) {
-    return (
-      <motion.button
-        layout
-        onClick={() => setShowing(true)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gris-500 dark:text-gris-400 hover:text-grafito dark:hover:text-gris-100 hover:bg-gris-100 dark:hover:bg-gris-800 rounded-lg transition-colors duration-150"
-        initial={reduced ? undefined : { opacity: 0, y: 4 }}
-        animate={reduced ? undefined : { opacity: 1, y: 0 }}
-        transition={reduced ? { duration: 0 } : { duration: 0.15, delay: 0.1 }}
-      >
-        <Plus className="h-4 w-4" aria-hidden="true" />
-        <span>Añadir tarjeta</span>
-      </motion.button>
-    );
-  }
-
-  return (
-    <motion.form
-      layout
-      onSubmit={handleSubmit}
-      initial={reduced ? undefined : { opacity: 0, height: 0 }}
-      animate={reduced ? undefined : { opacity: 1, height: "auto" }}
-      exit={reduced ? undefined : { opacity: 0, height: 0 }}
-      transition={reduced ? { duration: 0 } : { duration: 0.15 }}
-      className="w-full space-y-2 p-2 bg-gris-50 dark:bg-gris-800/50 rounded-lg"
-    >
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setShowing(false); }}
-        autoFocus
-        placeholder="Título de la tarjeta..."
-        rows={2}
-        className="w-full min-h-15 resize-none rounded border border-gris-300 dark:border-gris-600 bg-blanco dark:bg-gris-800 px-3 py-2 text-sm text-grafito dark:text-gris-100 placeholder:text-gris-400 focus:outline-none focus:ring-2 focus:ring-rojo focus:border-transparent"
-      />
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => { setText(""); setShowing(false); }}
-          className="px-3 py-1.5 text-xs text-gris-500 dark:text-gris-400 hover:text-grafito dark:hover:text-gris-100 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blanco bg-rojo rounded-lg hover:bg-rojo-hover transition-colors"
-        >
-          <Plus className="h-3 w-3" aria-hidden="true" />
-          Añadir
-        </button>
-      </div>
-    </motion.form>
-  );
-}
-
 interface KanbanColumnProps {
   status: LeadStatus;
   leads: Lead[];
@@ -257,53 +185,6 @@ function KanbanColumn({
             />
           ))}
         </AnimatePresence>
-
-        {canWrite ? (
-        <AddCard
-          onAdd={(title) => {
-            const newLead: Lead = {
-              id: `temp-${Date.now()}`,
-              url: "",
-              companyName: title,
-              website: null,
-              email: null,
-              emailCommercial: null,
-              emailManager: null,
-              phone: null,
-              address: null,
-              postalCode: null,
-              city: null,
-              cityCanonical: null,
-              province: null,
-              employees: null,
-              linkedin: null,
-              services: [],
-              status,
-              lastActivity: null,
-              createdAt: new Date().toISOString(),
-              discoveredAt: new Date().toISOString(),
-              notes: null,
-              notesOverflow: null,
-              emailSubject: null,
-              emailBody: null,
-              score: null,
-              manager: null,
-              role: null,
-              confidence: null,
-              software: null,
-              source: "manual",
-              lastContact: null,
-              nextFollowUp: null,
-              favorite: false,
-              aiAnalysis: null,
-              lastEditedTime: null,
-              archived: false,
-              responsibleId: null,
-            };
-            onMoveLead(newLead.id, status);
-          }}
-        />
-        ) : null}
       </div>
     </motion.div>
   );
@@ -356,13 +237,8 @@ export function KanbanBoard() {
     const current = leads.find((l) => l.id === leadId);
     if (!current || current.status === status) return;
 
-    if (leadId.startsWith("temp-")) {
-      upsertLead({ ...current!, status });
-      return;
-    }
-
-    const previous = { ...current! };
-    upsertLead({ ...current!, status });
+    const previous = { ...current };
+    upsertLead({ ...current, status });
     try {
       const updated = await patchStatus(leadId, status);
       upsertLead(updated);
