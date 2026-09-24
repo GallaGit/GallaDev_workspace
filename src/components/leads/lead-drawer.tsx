@@ -34,6 +34,7 @@ import {
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
+import { useSessionAccess } from "@/components/session-access";
 import type { TeamMember } from "@/app/api/team/route";
 
 function isGenericNetworkError(message: string): boolean {
@@ -123,6 +124,7 @@ function LeadDrawerBody({
   const [analyzeEmpty, setAnalyzeEmpty] = useState(false);
   const [apiAnalysis, setApiAnalysis] = useState<unknown>(null);
   const doloresRef = useRef<HTMLElement | null>(null);
+  const { canWriteLeads, isAdmin, userId } = useSessionAccess();
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +149,14 @@ function LeadDrawerBody({
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLeadId, upsertLead]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
     fetch("/api/team")
       .then(async (res) => {
         if (!res.ok) return;
@@ -159,10 +169,10 @@ function LeadDrawerBody({
     return () => {
       cancelled = true;
     };
-  }, [selectedLeadId, upsertLead]);
+  }, [isAdmin]);
 
   async function savePatch(patch: Partial<Lead>) {
-    if (!lead) return;
+    if (!lead || !canWriteLeads) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/leads/${lead.id}`, {
@@ -184,7 +194,7 @@ function LeadDrawerBody({
   }
 
   async function detectPains(force = false) {
-    if (!lead || analyzing || loading) return;
+    if (!lead || analyzing || loading || !canWriteLeads) return;
     const previous = lead;
     setAnalyzing(true);
     setAnalyzeError(null);
@@ -257,7 +267,7 @@ function LeadDrawerBody({
   }
 
   async function archive() {
-    if (!lead) return;
+    if (!lead || !canWriteLeads) return;
     try {
       const res = await fetch(`/api/leads/${lead.id}`, { method: "DELETE" });
       const data = await res.json();
@@ -328,12 +338,14 @@ function LeadDrawerBody({
               variant="outline"
               size="icon"
               title="Favorito"
+              disabled={!canWriteLeads}
               onClick={() => savePatch({ favorite: !lead.favorite })}
             >
               <Star
                 className={`h-3.5 w-3.5 ${lead.favorite ? "fill-amber-400 text-amber-400" : ""}`}
               />
             </Button>
+            {canWriteLeads ? (
             <span className="flex gap-1">
               <Button
                 variant="outline"
@@ -358,6 +370,7 @@ function LeadDrawerBody({
                 <Trash2 className="h-3.5 w-3.5 text-red-400" />
               </Button>
             </span>
+            ) : null}
           </div>
         ) : null}
 
@@ -404,7 +417,7 @@ function LeadDrawerBody({
               <select
                 className={`mt-1 w-full rounded-md border border-(--border) bg-(--bg) px-2 py-1.5 text-sm ${statusColor(lead.status)}`}
                 value={lead.status}
-                disabled={saving}
+                disabled={saving || !canWriteLeads}
                 onChange={(e) =>
                   savePatch({ status: e.target.value as LeadStatus })
                 }
@@ -422,17 +435,29 @@ function LeadDrawerBody({
                 data-testid="lead-responsible"
                 className="mt-1 w-full rounded-md border border-(--border) bg-(--bg) px-2 py-1.5 text-sm"
                 value={lead.responsibleId ?? ""}
-                disabled={saving}
+                disabled={saving || !canWriteLeads}
                 onChange={(e) =>
                   savePatch({ responsibleId: e.target.value || null })
                 }
               >
                 <option value="">Sin asignar</option>
-                {team.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.email ?? m.id} ({m.role})
+                {isAdmin
+                  ? team.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.email ?? m.id} ({m.role})
+                      </option>
+                    ))
+                  : null}
+                {!isAdmin && userId ? (
+                  <option value={userId}>Yo</option>
+                ) : null}
+                {!isAdmin &&
+                lead.responsibleId &&
+                lead.responsibleId !== userId ? (
+                  <option value={lead.responsibleId}>
+                    {lead.responsibleId}
                   </option>
-                ))}
+                ) : null}
               </select>
               <Field label="Score" value={lead.score?.toString()} />
               <Field label="Confianza" value={lead.confidence} />
@@ -457,6 +482,7 @@ function LeadDrawerBody({
               error={analyzeError}
               empty={analyzeEmpty}
               analysis={resolvePainAnalysis(apiAnalysis, lead.aiAnalysis)}
+              allowRetry={canWriteLeads}
               onRetry={() => void detectPains(true)}
             />
 
@@ -465,6 +491,7 @@ function LeadDrawerBody({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={5}
+                readOnly={!canWriteLeads}
               />
               {notes.length >= OBSERVACIONES_SOFT_LIMIT && (
                 <p className="mt-1 text-[11px] text-amber-400">
@@ -472,14 +499,16 @@ function LeadDrawerBody({
                   cuerpo de la página.
                 </p>
               )}
-              <Button
-                className="mt-2"
-                size="sm"
-                disabled={saving}
-                onClick={() => savePatch({ notes })}
-              >
-                Guardar notas
-              </Button>
+              {canWriteLeads ? (
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => savePatch({ notes })}
+                >
+                  Guardar notas
+                </Button>
+              ) : null}
             </Section>
 
             <Section title="Email preparado">
@@ -490,6 +519,7 @@ function LeadDrawerBody({
                 onSubjectChange={setEmailSubject}
                 onBodyChange={setEmailBody}
                 saving={saving}
+                readOnly={!canWriteLeads}
                 onSave={() =>
                   void savePatch({
                     emailSubject,

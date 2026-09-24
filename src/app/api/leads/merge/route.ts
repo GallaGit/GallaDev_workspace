@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireLeadWriter } from "@/lib/api-auth";
 import {
   buildEmptyFieldMerge,
   MERGEABLE_FIELD_LABELS,
@@ -18,7 +18,7 @@ type MergeBody = {
 };
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession();
+  const denied = await requireLeadWriter();
   if (denied) return denied;
   try {
     const body = (await request.json()) as MergeBody;

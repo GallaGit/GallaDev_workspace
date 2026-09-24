@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireAdmin, requireApiSession } from "@/lib/api-auth";
 import {
   getSettingsService,
   toPublicSettings,
@@ -17,7 +17,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const denied = await requireApiSession();
+  const denied = await requireAdmin();
   if (denied) return denied;
   try {
     const patch = (await request.json()) as SettingsPatch;

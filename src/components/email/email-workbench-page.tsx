@@ -10,6 +10,7 @@ import { outreachV1 } from "@/lib/templates/outreach-v1";
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
 import { useUiStore } from "@/store/ui-store";
 import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
+import { useSessionAccess } from "@/components/session-access";
 
 function hasDraft(lead: Lead): boolean {
   return (
@@ -101,8 +102,10 @@ function EmailDraftPanel({
   const [subject, setSubject] = useState(selected.emailSubject ?? "");
   const [body, setBody] = useState(selected.emailBody ?? "");
   const [saving, setSaving] = useState(false);
+  const { canWriteLeads } = useSessionAccess();
 
   async function savePatch(patch: Partial<Lead>) {
+    if (!canWriteLeads) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/leads/${selected.id}`, {
@@ -151,6 +154,7 @@ function EmailDraftPanel({
         onSubjectChange={setSubject}
         onBodyChange={setBody}
         saving={saving}
+        readOnly={!canWriteLeads}
         showApplyTemplate
         onApplyTemplate={applyTemplate}
         onSave={() =>

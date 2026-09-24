@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isAuthDisabled } from "./auth";
+import { isAdminRole, isAuthDisabled, isLeadWriter } from "./auth";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -22,5 +22,15 @@ describe("isAuthDisabled", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("AUTH_DISABLED", "true");
     expect(isAuthDisabled()).toBe(false);
+  });
+});
+
+describe("roles de escritura", () => {
+  it("Admin y Seller escriben leads; Viewer no", () => {
+    expect(isLeadWriter("Admin")).toBe(true);
+    expect(isLeadWriter("Seller")).toBe(true);
+    expect(isLeadWriter("Viewer")).toBe(false);
+    expect(isAdminRole("Admin")).toBe(true);
+    expect(isAdminRole("Seller")).toBe(false);
   });
 });

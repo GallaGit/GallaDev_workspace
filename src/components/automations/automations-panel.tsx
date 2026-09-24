@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { SecretField } from "@/components/settings/fields";
 import type { PublicAutomation, PublicSettings } from "@/lib/settings/types";
+import { useSessionAccess } from "@/components/session-access";
 
 async function fetchAutomations(): Promise<PublicAutomation[]> {
   const res = await fetch("/api/automations");
@@ -26,11 +27,16 @@ export function AutomationsPanel() {
   });
   const [webhookDraft, setWebhookDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const { isAdmin } = useSessionAccess();
 
   async function patch(
     action: string,
     body: { enabled?: boolean; webhookUrl?: string },
   ) {
+    if (!isAdmin) {
+      toast.error("No tienes permiso para realizar esta acción");
+      return;
+    }
     setBusy(action);
     try {
       const res = await fetch(`/api/automations/${action}`, {
@@ -62,6 +68,10 @@ export function AutomationsPanel() {
   }
 
   async function test(action: string) {
+    if (!isAdmin) {
+      toast.error("No tienes permiso para realizar esta acción");
+      return;
+    }
     setBusy(`test:${action}`);
     try {
       const res = await fetch(`/api/automations/${action}`, {
@@ -107,6 +117,11 @@ export function AutomationsPanel() {
 
   return (
     <div className="space-y-3">
+      {!isAdmin ? (
+        <p className="text-sm text-muted-fg">
+          Solo un administrador puede cambiar o probar automatizaciones.
+        </p>
+      ) : null}
       <p className="text-sm text-muted-fg">
         La captación se lanza en n8n (Manual o semanal), no desde esta pantalla.
         Leads_CRM no edita el workflow. En v1 no actives los toggles ni pegues
@@ -136,7 +151,7 @@ export function AutomationsPanel() {
                 </span>
                 <Switch
                   checked={item.enabled}
-                  disabled={busy === item.action}
+                  disabled={!isAdmin || busy === item.action}
                   onCheckedChange={(enabled) =>
                     void patch(item.action, { enabled })
                   }
@@ -168,13 +183,14 @@ export function AutomationsPanel() {
               }
               placeholder="https://…/webhook/…"
               hint="Vacío = no cambiar. Guarda para persistir un override local."
+              disabled={!isAdmin}
             />
 
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                disabled={busy !== null}
+                disabled={!isAdmin || busy !== null}
                 onClick={() =>
                   void patch(item.action, {
                     webhookUrl: webhookDraft[item.action]?.trim() || undefined,
@@ -185,7 +201,7 @@ export function AutomationsPanel() {
               </Button>
               <Button
                 size="sm"
-                disabled={busy !== null || !configured}
+                disabled={!isAdmin || busy !== null || !configured}
                 onClick={() => void test(item.action)}
               >
                 {busy === `test:${item.action}` ? "Enviando…" : "Probar"}

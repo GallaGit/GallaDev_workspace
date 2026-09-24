@@ -18,6 +18,7 @@ type EmailEditorProps = {
   onMarkPrepared: () => void;
   onApplyTemplate?: () => void;
   showApplyTemplate?: boolean;
+  readOnly?: boolean;
 };
 
 export function EmailEditor({
@@ -32,6 +33,7 @@ export function EmailEditor({
   onMarkPrepared,
   onApplyTemplate,
   showApplyTemplate,
+  readOnly = false,
 }: EmailEditorProps) {
   function redactarEnGmail() {
     if (!subject.trim() && !body.trim()) {
@@ -50,6 +52,7 @@ export function EmailEditor({
         className="mb-2"
         placeholder="Asunto"
         value={subject}
+        readOnly={readOnly}
         onChange={(e) => onSubjectChange(e.target.value)}
       />
       <Textarea
@@ -57,13 +60,14 @@ export function EmailEditor({
         onChange={(e) => onBodyChange(e.target.value)}
         rows={10}
         placeholder="Cuerpo (texto plano)"
+        readOnly={readOnly}
       />
       <div className="mt-2 flex flex-wrap gap-2">
         <Button size="sm" onClick={redactarEnGmail}>
           <Mail className="h-3.5 w-3.5" />
           Redactar email
         </Button>
-        <Button size="sm" disabled={saving} onClick={onSave}>
+        <Button size="sm" disabled={saving || readOnly} onClick={onSave}>
           Guardar email
         </Button>
         <Button size="sm" variant="outline" onClick={onCopy}>
@@ -72,13 +76,18 @@ export function EmailEditor({
         <Button
           size="sm"
           variant="secondary"
-          disabled={saving}
+          disabled={saving || readOnly}
           onClick={onMarkPrepared}
         >
           Marcar preparado
         </Button>
         {showApplyTemplate && onApplyTemplate ? (
-          <Button size="sm" variant="ghost" onClick={onApplyTemplate}>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={readOnly}
+            onClick={onApplyTemplate}
+          >
             Aplicar plantilla
           </Button>
         ) : null}

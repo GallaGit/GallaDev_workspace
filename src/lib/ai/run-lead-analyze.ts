@@ -18,7 +18,7 @@ import {
 import { dispatchLeadAnalyzed } from "@/lib/automations/dispatch";
 import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import type { LeadRepository } from "@/lib/repository/lead-repository";
 import { getSettingsService } from "@/lib/settings/service";
 
@@ -59,7 +59,9 @@ export async function runLeadAnalyze(
     repository?: LeadRepository;
   } = {},
 ): Promise<AnalyzeLeadResult> {
-  const repo = options.repository ?? getLeadRepository();
+  // Sesión (RLS) si el caller no inyecta repositorio. El singleton
+  // service_role queda reservado a ingesta pública y health.
+  const repo = options.repository ?? (await getSessionLeadRepository());
   const force = options.force === true;
   const persist = options.persist !== false;
 

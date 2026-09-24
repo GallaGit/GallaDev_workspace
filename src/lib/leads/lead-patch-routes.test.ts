@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import { dispatchLeadUpdated } from "@/lib/automations/dispatch";
 
 vi.mock("@/lib/api-auth", () => ({
   requireApiSession: vi.fn(async () => null),
+  requireLeadWriter: vi.fn(async () => null),
 }));
 
 vi.mock("@/lib/repository/get-repository", () => ({
@@ -39,6 +40,7 @@ describe("PATCH /api/leads/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireApiSession).mockResolvedValue(null);
+    vi.mocked(requireLeadWriter).mockResolvedValue(null);
     update.mockClear();
     vi.mocked(getSessionLeadRepository).mockResolvedValue({
       update,
@@ -105,6 +107,7 @@ describe("PATCH /api/leads bulk", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireApiSession).mockResolvedValue(null);
+    vi.mocked(requireLeadWriter).mockResolvedValue(null);
     update.mockClear();
     vi.mocked(getSessionLeadRepository).mockResolvedValue({
       update,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import {
   changedKeys,
@@ -30,7 +30,7 @@ export async function GET(request: Request, ctx: Ctx) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+  const denied = await requireLeadWriter();
   if (denied) return denied;
 
   let raw: unknown;
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function DELETE(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+  const denied = await requireLeadWriter();
   if (denied) return denied;
   try {
     const { id } = await ctx.params;

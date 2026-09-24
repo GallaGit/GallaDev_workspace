@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Lead } from "@/lib/domain/lead";
 import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
+import { useSessionAccess } from "@/components/session-access";
 import type {
   DuplicateGroup,
   DuplicateLeadRef,
@@ -68,6 +69,7 @@ export function DuplicatesPage() {
   const [pairLoading, setPairLoading] = useState(false);
   const [pairError, setPairError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
+  const { canWriteLeads } = useSessionAccess();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -190,6 +192,7 @@ export function DuplicatesPage() {
   }
 
   async function runMerge() {
+    if (!canWriteLeads) return;
     if (!confirm || confirm.type !== "merge") return;
     setBusy(true);
     try {
@@ -221,6 +224,7 @@ export function DuplicatesPage() {
   }
 
   async function runArchive() {
+    if (!canWriteLeads) return;
     if (!confirm || confirm.type !== "archive") return;
     setBusy(true);
     try {
@@ -455,6 +459,7 @@ export function DuplicatesPage() {
                                 </tbody>
                               </table>
                             </div>
+                            {canWriteLeads ? (
                             <div className="mt-3 flex flex-wrap gap-2">
                               <Button
                                 size="sm"
@@ -487,6 +492,11 @@ export function DuplicatesPage() {
                                 Solo archivar origen
                               </Button>
                             </div>
+                            ) : (
+                              <p className="mt-3 text-[12px] text-(--muted-fg)">
+                                Solo lectura: no puedes fusionar ni archivar.
+                              </p>
+                            )}
                           </>
                         ) : null}
                       </div>

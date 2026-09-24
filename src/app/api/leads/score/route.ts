@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireLeadWriter } from "@/lib/api-auth";
 import { scoreLead } from "@/lib/leads/lead-scorer";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 
@@ -10,7 +10,7 @@ type ScoreBody = {
 };
 
 export async function POST(request: Request) {
-  const denied = await requireApiSession();
+  const denied = await requireLeadWriter();
   if (denied) return denied;
   try {
     let body: ScoreBody = {};

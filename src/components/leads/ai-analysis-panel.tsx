@@ -12,6 +12,7 @@ export function AiAnalysisPanel({
   empty,
   analysis,
   onRetry,
+  allowRetry = true,
   sectionRef,
 }: {
   analyzing: boolean;
@@ -19,6 +20,7 @@ export function AiAnalysisPanel({
   empty: boolean;
   analysis: PainAnalysis | null;
   onRetry: () => void;
+  allowRetry?: boolean;
   sectionRef?: Ref<HTMLElement>;
 }) {
   return (
@@ -34,14 +36,16 @@ export function AiAnalysisPanel({
             <p className="text-[12px] text-(--fg)">
               No se pudo detectar dolores. {error}
             </p>
-            <Button
-              className="mt-2"
-              variant="outline"
-              size="sm"
-              onClick={onRetry}
-            >
-              Reintentar
-            </Button>
+            {allowRetry ? (
+              <Button
+                className="mt-2"
+                variant="outline"
+                size="sm"
+                onClick={onRetry}
+              >
+                Reintentar
+              </Button>
+            ) : null}
           </div>
         ) : null}
 
@@ -50,15 +54,19 @@ export function AiAnalysisPanel({
             <p className="text-[12px] text-(--muted-fg)">
               No hay señales suficientes en este lead.
             </p>
-            <p className="mt-1 text-[11px] text-(--muted-fg)">
-              Añade web, servicios o notas y vuelve a intentar.
-            </p>
+            {allowRetry ? (
+              <p className="mt-1 text-[11px] text-(--muted-fg)">
+                Añade web, servicios o notas y vuelve a intentar.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
         {!analyzing && !error && !empty && !analysis ? (
           <p className="text-[12px] text-(--muted-fg)">
-            Aún no hay análisis. Pulsa Detectar dolores.
+            {allowRetry
+              ? "Aún no hay análisis. Pulsa Detectar dolores."
+              : "Aún no hay análisis."}
           </p>
         ) : null}
 

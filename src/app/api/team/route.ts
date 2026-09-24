@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireAdmin } from "@/lib/api-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -12,11 +12,11 @@ export interface TeamMember {
 
 /**
  * GET /api/team — miembros del workspace para asignación de responsable.
- * Equipo interno pequeño: cualquier usuario autenticado ve la lista
- * (id + email + rol). Sin emails fuera del equipo: no hay signup público.
+ * Solo Admin: el listado usa service_role (bypass RLS de profiles, que
+ * solo permite leer el propio perfil). Seller y Viewer reciben 403.
  */
 export async function GET() {
-  const denied = await requireApiSession();
+  const denied = await requireAdmin();
   if (denied) return denied;
   try {
     const sb = createSupabaseAdminClient();

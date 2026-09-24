@@ -77,3 +77,11 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Cuerpo inválido → 400 `{ error, fieldErrors }` («Datos del lead no válidos»). JSON malformado en el PATCH individual → 400 «JSON no válido». El masivo conserva «ids y patch requeridos» si faltan `ids` o `patch`, y «Payload no válido o demasiado grande» si el JSON no parsea.
 - Eliminado el cast `as LeadPatch` en esas rutas.
 - Tests unitarios del validador y de las dos rutas PATCH.
+
+## 2026-09-24 — RBAC en settings, leads, IA y equipo
+
+- Mutaciones de settings y automatizaciones (`PATCH /api/settings`, `POST /api/settings/test`, `PATCH|POST /api/automations/:action`) exigen rol Admin. Lectura sigue abierta a cualquier sesión.
+- Escrituras de leads (crear, PATCH individual y masivo, archivar, fusionar, puntuar) y análisis IA exigen Admin o Seller. Viewer recibe 403. La UI oculta o desactiva esas acciones.
+- `POST /api/leads/:id/analyze` y `POST /api/leads/pain-analysis` comparten un rate-limit en memoria (`isRateLimited`, namespace `ai:analyze`, 10 peticiones / 60s por id de usuario). `runLeadAnalyze` ya no cae al repositorio service_role: el fallback es la sesión (RLS).
+- `GET /api/team` solo Admin (antes cualquier sesión listaba perfiles y emails vía service_role). `GET /api/session` expone el rol propio para la UI.
+- Sin secretos en este registro.

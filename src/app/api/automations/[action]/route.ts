@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireAdmin, requireApiSession } from "@/lib/api-auth";
 import { getAutomationClient } from "@/lib/automations/get-client";
 import { N8nClientError } from "@/lib/n8n/errors";
 import { sampleAutomationPayload } from "@/lib/n8n/payloads";
@@ -30,7 +30,7 @@ export async function GET(request: Request, ctx: Ctx) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+  const denied = await requireAdmin();
   if (denied) return denied;
   try {
     const { action: rawAction } = await ctx.params;
@@ -71,7 +71,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function POST(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+  const denied = await requireAdmin();
   if (denied) return denied;
   try {
     const { action: rawAction } = await ctx.params;

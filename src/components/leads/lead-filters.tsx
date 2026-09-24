@@ -15,6 +15,7 @@ import {
 } from "@/lib/domain/lead";
 import { CANONICAL_CITIES } from "@/lib/geo/cities";
 import { getWorkQueueTitle } from "@/lib/leads/work-queues";
+import { useSessionAccess } from "@/components/session-access";
 import { useUiStore } from "@/store/ui-store";
 import {
   FILTER_DIMENSIONS,
@@ -36,8 +37,10 @@ export function LeadFiltersBar() {
   } = useUiStore();
   const [scoring, setScoring] = useState(false);
   const router = useRouter();
+  const { canWriteLeads } = useSessionAccess();
 
   async function recalculateScores() {
+    if (!canWriteLeads) return;
     setScoring(true);
     try {
       const body = selectedIds.length > 0 ? { ids: selectedIds } : {};
@@ -215,24 +218,25 @@ export function LeadFiltersBar() {
         </Button>
       )}
 
-      {/* Right-side actions */}
-      <div className="ml-auto flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={scoring}
-          onClick={() => void recalculateScores()}
-          title={
-            selectedIds.length > 0
-              ? `Recalcular score de ${selectedIds.length} seleccionados`
-              : "Recalcular score de todos los leads activos"
-          }
-        >
-          <Calculator className="h-3.5 w-3.5" />
-          {scoring ? "Puntuando…" : "Recalcular scores"}
-        </Button>
-        <CreateLeadDialog />
-      </div>
+      {canWriteLeads ? (
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={scoring}
+            onClick={() => void recalculateScores()}
+            title={
+              selectedIds.length > 0
+                ? `Recalcular score de ${selectedIds.length} seleccionados`
+                : "Recalcular score de todos los leads activos"
+            }
+          >
+            <Calculator className="h-3.5 w-3.5" />
+            {scoring ? "Puntuando…" : "Recalcular scores"}
+          </Button>
+          <CreateLeadDialog />
+        </div>
+      ) : null}
     </div>
   );
 }
