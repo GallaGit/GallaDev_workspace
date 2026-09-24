@@ -21,7 +21,7 @@ Flower “porque el hito lo pide”: se toma la **idea**, no la herramienta.
 
 ## Orden sugerido post go-live
 
-1. [ ] Cerrar pendientes canónicos de M1 que siguen abiertos (higiene, audit trail). La validación zod de PATCH de leads ya está hecha.
+1. [ ] Cerrar pendientes canónicos de M1 que siguen abiertos (secret scanning, CodeQL, audit trail). LICENSE, Dependabot y la validación zod de PATCH de leads ya están hechos.
 2. [ ] Observabilidad mínima (errores + eventos de producto).
 3. [ ] Jobs en background para sync / analyze IA.
 4. [ ] Reporting de negocio (KPIs CRM) si Stats se queda corto.
@@ -48,7 +48,8 @@ usuario sin ver leads ajenos.
 ### Canónico — pendiente
 
 - [x] Validación `zod` en cuerpos PATCH (`PATCH /api/leads/:id` y PATCH masivo).
-- [ ] Higiene: LICENSE, secret scanning, Dependabot, CodeQL.
+- [x] Higiene parcial: `LICENSE` MIT y Dependabot (npm y GitHub Actions; sin auto-merge). PR #43.
+- [ ] Higiene restante: secret scanning, CodeQL.
 - [ ] Historial de auditoría (quién hizo qué) — especificado en
       [`audit-trail.es.md`](./audit-trail.es.md) (EN: [`audit-trail.md`](./audit-trail.md)).
 
@@ -67,7 +68,7 @@ y documentación endurecida.
 
 ### Canónico
 
-- [x] CI con lint, typecheck, unit, component y e2e (Playwright).
+- [x] CI con lint, typecheck, unit, component y e2e (Playwright). M2 Slice 1 (2026-09-24): esos cuatro jobs son gates obligatorios en `master` (estricto, `enforce_admins` activo): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL no es check requerido; las revisiones requeridas no están por encima de 0.
 - [ ] Ampliar cobertura de tests donde haya huecos reales (no vanity %).
 - [ ] Observabilidad y gestión de errores endurecidas (hoy: logs ad hoc).
 - [ ] Documentación operativa al día con el comportamiento desplegado.

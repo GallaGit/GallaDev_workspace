@@ -26,6 +26,18 @@ Configure the Supabase URL and publishable/secret keys in `.env.local`. Use `AUT
 
 New leads enter the `Nuevo` queue. Users can search by company, domain, email, city, province, or LinkedIn; combine filters; edit notes and email drafts; change status; archive records; and manage duplicates. The application saves changes to Supabase.
 
+## Roles and AI limits
+
+The role comes from `profiles.app_role`: Admin, Seller, or Viewer.
+
+- **Admin:** settings and automation mutations, `GET /api/team`, lead writes, and AI analysis.
+- **Seller:** lead writes and AI analysis (subject to the rate limit). Cannot change settings or automations, and cannot list the team.
+- **Viewer:** read-only. Write APIs return 403.
+
+AI analysis (`POST /api/leads/:id/analyze` and `POST /api/leads/pain-analysis`) allows 10 requests / 60s per session user (in-memory limit). It uses the authenticated session and RLS; normal user requests do not use the privileged `service_role`.
+
+Uptime check: `GET /api/health` (no session). It returns `{"ok":true}` when the process answers HTTP. It does not check Supabase.
+
 ## Troubleshooting
 
 - If login or session invalidation returns 503, verify Supabase connectivity and that the session-epoch migration is applied.
