@@ -113,3 +113,11 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Preferencia en `localStorage` (`gdw-stats-chart-type`).
 - Tasas, funnel y tablas de breakdown siguen visibles al cambiar el tipo.
 - Mismo PR #43, sin merge.
+
+## 2026-09-24 — Higiene de release (health, Dependabot, LICENSE)
+
+- `GET /api/health` → `{ ok: true }` con `Cache-Control: no-store`. Liveness del proceso: sin auth, sin base de datos y sin variables de entorno. La conexión a Supabase sigue en `GET /api/db-status` (con sesión). El matcher de `src/proxy.ts` ya omitía `api/health`; el proxy también lo deja pasar por si el matcher cambia.
+- Dependabot semanal: ecosistemas `npm` y `github-actions`, tope de PRs, agrupación de minor/patch. No hay auto-merge.
+- `LICENSE` MIT. No había otra licencia en `package.json` ni en docs. Titular: GallaDev (repo GallaGit).
+- CodeQL no se añade: en un repo privado el workflow estándar depende de GitHub Advanced Security, no solo del fichero. Branch protection / status checks obligatorios quedan fuera (ajustes del repo).
+- Mismo PR #43, sin merge.

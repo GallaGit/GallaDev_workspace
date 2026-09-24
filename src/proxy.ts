@@ -10,11 +10,16 @@ import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
  * Convención `proxy` vigente en Next 16 (`middleware` está deprecado).
  * Con auth desactivado (dev local) deja pasar todo. En caso contrario
  * exige sesión Supabase: APIs sin usuario → 401 JSON, páginas → /login.
- * La ingesta pública (/api/ingest/*, bearer propio) queda exenta.
+ * La ingesta pública (/api/ingest/*, bearer propio) y el liveness
+ * `/api/health` quedan exentos. El matcher también omite `api/health`
+ * para no exigir Supabase en el probe.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname === "/api/health" || pathname.startsWith("/api/health/")) {
+    return NextResponse.next();
+  }
   if (pathname.startsWith("/api/ingest/")) {
     return NextResponse.next();
   }
