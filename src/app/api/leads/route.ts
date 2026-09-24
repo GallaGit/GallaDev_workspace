@@ -7,6 +7,7 @@ import {
 } from "@/lib/repository/get-repository";
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
+import { validateBulkLeadPatch } from "@/lib/leads/validate-lead-patch";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
 import {
   changedKeys,
@@ -105,13 +106,14 @@ export async function PATCH(request: Request) {
         { status: parsed.status },
       );
     }
-    const { ids, patch } = parsed.value as {
-      ids: string[];
-      patch: Record<string, unknown>;
-    };
-    if (!ids?.length || !patch) {
-      return NextResponse.json({ error: "ids y patch requeridos" }, { status: 400 });
+    const validated = validateBulkLeadPatch(parsed.value);
+    if (!validated.ok) {
+      return NextResponse.json(
+        { error: validated.error, fieldErrors: validated.fieldErrors },
+        { status: 400 },
+      );
     }
+    const { ids, patch } = validated.value;
     const repo = await getSessionLeadRepository();
     const updated = [];
     const automations = [];

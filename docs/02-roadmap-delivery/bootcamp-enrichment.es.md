@@ -21,7 +21,7 @@ Flower “porque el hito lo pide”: se toma la **idea**, no la herramienta.
 
 ## Orden sugerido post go-live
 
-1. [ ] Cerrar pendientes canónicos de M1 (zod PATCH, higiene, audit trail).
+1. [ ] Cerrar pendientes canónicos de M1 que siguen abiertos (higiene, audit trail). La validación zod de PATCH de leads ya está hecha.
 2. [ ] Observabilidad mínima (errores + eventos de producto).
 3. [ ] Jobs en background para sync / analyze IA.
 4. [ ] Reporting de negocio (KPIs CRM) si Stats se queda corto.
@@ -47,7 +47,7 @@ usuario sin ver leads ajenos.
 
 ### Canónico — pendiente
 
-- [ ] Validación `zod` en cuerpos PATCH.
+- [x] Validación `zod` en cuerpos PATCH (`PATCH /api/leads/:id` y PATCH masivo).
 - [ ] Higiene: LICENSE, secret scanning, Dependabot, CodeQL.
 - [ ] Historial de auditoría (quién hizo qué) — especificado en
       [`audit-trail.es.md`](./audit-trail.es.md) (EN: [`audit-trail.md`](./audit-trail.md)).

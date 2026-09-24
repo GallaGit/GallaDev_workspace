@@ -20,7 +20,8 @@ Supabase is the active persistence layer and sole source of truth. The current a
 - Security headers (HSTS, CSP, frame/content-type/referrer/permissions).
 - Shared in-memory rate limiter + body caps on ingest, login, and bulk PATCH.
 - Role-based RLS migration applied in Supabase (`app_role`: Admin/Seller/Viewer; `profiles` table; per-role policies on `leads`/`lead_activities`).
-- Remaining M1 items: `zod` validation for PATCH bodies; hygiene (LICENSE, secret scanning, Dependabot, CodeQL).
+- `zod` validation on lead PATCH bodies (`PATCH /api/leads/:id` and bulk PATCH).
+- Remaining M1 items: hygiene (LICENSE, secret scanning, Dependabot, CodeQL).
 
 ### Planned: audit trail (specified, not implemented)
 
