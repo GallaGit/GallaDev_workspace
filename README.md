@@ -26,9 +26,13 @@ LEADS_DB_PROVIDER=supabase
 SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 SUPABASE_SECRET_KEY=<secret-key-never-commit>
+# Browser client. Next inlines NEXT_PUBLIC_* at build time; use the same URL and publishable key.
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 AUTH_DISABLED=true
-# Production: AUTH_SECRET + AUTH_PASSWORD. Session: SESSION_TTL_DAYS=1 (1–90).
 ```
+
+Sign-in is Supabase Auth (email + password). There is no self-signup: an Admin creates accounts in the Supabase Dashboard (Authentication → Users). The `on_auth_user_created` trigger inserts a `profiles` row with role Seller; set Admin with SQL on `profiles.role`. `AUTH_DISABLED=true` skips login only when `NODE_ENV` is not `production`.
 
 ## Documentation
 
@@ -52,6 +56,7 @@ npx tsc --noEmit
 npm run test:unit
 npm run test:component
 npm run build
+npm run test:e2e
 ```
 
 See [Testing](./TESTING.md) and the [roadmap and delivery context](./docs/02-roadmap-delivery/GDW_context.md) before assuming roadmap sections are complete.

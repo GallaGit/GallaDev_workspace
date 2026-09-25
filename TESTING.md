@@ -1,14 +1,14 @@
-# Testing Guide — Leads_CRM
+# Testing Guide — GallaDev Workspace
 
 ## Overview
 
 This project uses a multi-layered testing strategy:
 
-| Layer | Tool | Coverage Target | Location |
+| Layer | Tool | Coverage goal (not enforced) | Location |
 |-------|------|-----------------|----------|
-| **Unit** | Vitest | 80% (lines/functions), 70% (branches) | `src/lib/**/*.test.ts` |
+| **Unit** | Vitest | 80% lines/functions, 70% branches | `src/lib/**/*.test.ts` |
 | **Component** | Vitest + RTL | 40% | `src/components/**/*.test.tsx` |
-| **E2E** | Playwright | 6 critical paths + edge cases | `tests/e2e/*.spec.ts` |
+| **E2E** | Playwright | `critical-paths`, `auth-sync-roles`, `visitor-demo` | `tests/e2e/*.spec.ts` |
 
 ---
 
@@ -35,16 +35,21 @@ npm run test:component
 
 ### E2E Tests
 
-```bash
-# Requires dev server running
-npm run dev  # in another terminal
+Playwright starts `npm run start` itself (`playwright.config.ts` `webServer`). Build the production bundle first. Do not rely on `npm run dev` for this suite.
 
-# Run E2E tests
+```bash
+npm run build
 npm run test:e2e
 
-# With UI
+# With UI (still expects the production server on port 3000)
 npm run test:e2e:ui
 ```
+
+Specs in `tests/e2e/`:
+
+- `critical-paths.spec.ts` — unauthenticated redirect, and shell checks that log in when `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD` are set.
+- `auth-sync-roles.spec.ts` — Admin and Seller (`E2E_ADMIN_*`, `E2E_SELLER_*`). Skipped when those four vars are empty. No Viewer credential.
+- `visitor-demo.spec.ts` — passwordless visitor. The Playwright server forces `DEMO_MODE_ENABLED=true` and `DEMO_SESSION_SECRET`.
 
 ### Full CI Pipeline
 
@@ -73,23 +78,43 @@ src/
 │   │   └── cities.test.ts               # 25+ tests
 │   ├── utils/
 │   │   └── email-plain.test.ts          # 8+ tests
-│   └── domain/
-│       └── lead.test.ts                 # 8+ tests
+│   ├── domain/
+│   │   └── lead.test.ts                 # 8+ tests
+│   ├── auth.test.ts                     # AUTH_DISABLED fail-closed
+│   ├── auth/
+│   │   └── rbac-routes.test.ts
+│   ├── api-auth.test.ts                 # no_profile, roles
+│   └── demo/
+│       ├── config.test.ts
+│       ├── token.test.ts
+│       ├── demo-enter.test.ts
+│       ├── demo-lead-repository.test.ts
+│       ├── visitor-proxy.test.ts
+│       ├── visitor-routes.test.ts
+│       └── visitor-isolation.test.ts   # getSessionLeadRepository → DemoLeadRepository
 ├── components/
+│   ├── session-access.test.tsx
+│   ├── app-error-fallback.test.tsx
+│   ├── theme-provider.test.tsx
+│   ├── demo/
+│   │   └── demo-entry.test.tsx
+│   ├── kanban/
+│   │   └── kanban-board.test.tsx
+│   ├── stats/
+│   │   └── status-distribution-chart.test.tsx
 │   └── leads/
-│       ├── lead-table.test.tsx          # 12+ tests
-│       ├── lead-drawer.test.tsx         # 15+ tests
-│       ├── lead-filters.test.tsx        # 10+ tests
-│       ├── email-editor.test.tsx        # 8+ tests
-│       └── pain-analysis-section.test.tsx # 8+ tests
+│       ├── email-editor.test.tsx
+│       └── pain-analysis-section.test.tsx
 tests/
 ├── e2e/
-│   └── critical-paths.spec.ts           # 7 paths + 6 edge cases
+│   ├── critical-paths.spec.ts
+│   ├── auth-sync-roles.spec.ts
+│   └── visitor-demo.spec.ts
 ├── factories/
 │   └── lead.ts                          # Test data factories
 └── mocks/
-    ├── handlers.ts                      # MSW handlers
-    └── server.ts                        # MSW server
+    ├── handlers.ts                      # leftover Notion MSW; not started by vitest.setup.ts
+    └── server.ts                        # not imported by the test setup
 ```
 
 ---
@@ -124,17 +149,9 @@ describe('normalizeEmail', () => {
 })
 ```
 
-### Mocking External APIs
+### Mocking
 
-Use MSW handlers in `tests/mocks/handlers.ts`:
-
-```typescript
-http.get('https://api.notion.com/v1/data-sources/:id/query', () => {
-  return HttpResponse.json({ results: [...] })
-})
-```
-
-The server is auto-started/stopped in `vitest.setup.ts`.
+`vitest.setup.ts` does not start MSW. It stubs browser APIs (`matchMedia`, `localStorage`, `ResizeObserver`). `tests/mocks/handlers.ts` still registers `https://api.notion.com/v1/data-sources/:id/query`, and `tests/mocks/server.ts` is not imported by the setup. That pair is leftover from the Notion runtime. Do not copy it. Route and auth tests mock modules with `vi.mock` (see `src/lib/demo/*.test.ts` and `src/lib/auth/rbac-routes.test.ts`). Retargeting `handlers.ts` is a follow-up; this docs pass does not change that file.
 
 ---
 
@@ -219,16 +236,7 @@ npx playwright show-trace trace.zip
 
 ## Coverage Thresholds
 
-Configured in `vitest.config.ts`:
-
-```typescript
-thresholds: {
-  lines: 80,
-  functions: 80,
-  branches: 70,
-  statements: 80,
-}
-```
+The Vitest config file is `vitest.config.mts` (not `vitest.config.ts`). It sets the v8 provider, reporters, and an `include` list. It does **not** set `coverage.thresholds`, so 80% lines/functions and 70% branches are goals, not a CI failure.
 
 View HTML report after `npm run test:coverage`:
 
@@ -242,13 +250,12 @@ open coverage/index.html
 
 GitHub Actions workflow (`.github/workflows/ci.yml`):
 
-1. **Lint & TypeCheck** - ESLint + TypeScript
+1. **Lint & TypeCheck** - ESLint + TypeScript (Node 22)
 2. **Unit Tests** - With coverage upload
 3. **Component Tests**
-4. **E2E Tests** - Against built app
-5. **Docker Build** - Verify container builds
+4. **E2E Tests** - `npm run build`, then Playwright (`npm run start`)
 
-All jobs must pass for PR merge.
+There is no Docker Build job. `package.json` has no `docker:*` scripts, and the repo has no Dockerfile or Compose file. The four jobs above are the required checks.
 
 ---
 
@@ -311,9 +318,8 @@ it('shows skeleton while loading', () => {
 
 | Issue | Solution |
 |-------|----------|
-| `ReferenceError: vi is not defined` | Add `globals: true` to vitest.config.ts |
-| MSW not intercepting | Ensure `server.listen()` in setup, check `onUnhandledRequest` |
-| Playwright timeout | Increase timeout, check `baseURL`, verify dev server |
+| `ReferenceError: vi is not defined` | Import `vi` from `vitest`. `vitest.config.mts` sets `globals: false`. |
+| Playwright timeout | Increase timeout, check `baseURL`, and confirm `npm run build` succeeded. Playwright starts `npm run start`, not the dev server. |
 | Coverage below threshold | Add tests for uncovered lines, check `exclude` in config |
 | Flaky E2E | Add `waitForLoadState`, use `data-testid`, retry in CI |
 

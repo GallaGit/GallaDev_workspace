@@ -34,7 +34,13 @@ Key env facts (see `.env.example` for the full list):
 | Variable | Meaning |
 |---|---|
 | `LEADS_DB_PROVIDER` | Ignored (always Supabase). Kept in `.env.example` for clarity. |
-| `AUTH_DISABLED=true` | Local dev without login. Production requires `AUTH_SECRET` + `AUTH_PASSWORD`. |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` | Server Supabase client. The secret key never reaches the browser. |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Same public URL and publishable key. Next inlines `NEXT_PUBLIC_*` at build time for the browser client. |
+| `AUTH_DISABLED=true` | Local dev without login. Ignored when `NODE_ENV=production` (fail-closed). Sign-in is Supabase Auth email + password; an Admin creates accounts in the Dashboard (the trigger assigns Seller). |
+| `DEMO_MODE_ENABLED` | `true` or `1` turns the visitor demo on. Unset, empty, or any other value is off. |
+| `DEMO_SESSION_SECRET` | HMAC secret for the visitor cookie, at least 16 characters. Required while the demo is on. Generate with `openssl rand -hex 32`. |
+| `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Optional Playwright login smoke. `critical-paths` skips that login when they are empty. |
+| `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Admin and Seller users for `tests/e2e/auth-sync-roles.spec.ts`. CI has no Viewer E2E credentials. |
 | `INGEST_SECRET` | Shared secret for `POST /api/ingest/lead`. Generate with `openssl rand -hex 32`. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Transactional email after web ingest (fail-open: the lead is still saved if email fails). |
 
@@ -115,7 +121,7 @@ Testing conventions (details in [`TESTING.md`](./TESTING.md)):
 
 ## 8. Project-specific notes
 
-- **Source of truth is Supabase (PostgreSQL).** `getLeadRepository()` in `src/lib/repository/get-repository.ts` always returns `SupabaseLeadRepository` (Notion runtime removed). New persistence code must implement the `LeadRepository` interface, not import provider types in UI or route handlers.
+- **Source of truth is Supabase (PostgreSQL).** `getLeadRepository()` in `src/lib/repository/get-repository.ts` returns `SupabaseLeadRepository` (Notion runtime removed): service role when called without a client, RLS when passed the session client. `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. New persistence code must implement the `LeadRepository` interface, not import provider types in UI or route handlers.
 - **Lead pipeline:** exactly 9 statuses (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Legacy Notion names are normalized on read, never written.
 - **n8n prospecting** writes new leads (`Origen=n8n`, state `Nuevo`); the CRM never edits the capture workflow. Webhook dispatches are best-effort and must never fail persistence.
 - **UI language is Spanish.** Code, commits, issues, and PRs are in English; user-facing strings in Spanish.

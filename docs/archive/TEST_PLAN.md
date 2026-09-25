@@ -1,3 +1,7 @@
+# Test Plan — Leads_CRM (historical)
+
+> **Historical (Notion era, 2026-09-11).** This plan targeted `feat/testing-setup` when Notion was the source of truth. It is not the current test contract. Use [`TESTING.md`](../../TESTING.md) and `.github/workflows/ci.yml`. The MSW examples below still name `api.notion.com`; `tests/mocks/handlers.ts` was not updated in the docs alignment (follow-up).
+
 # Test Plan — Leads_CRM
 
 **Fecha:** 2026-09-11  

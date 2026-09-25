@@ -13,8 +13,8 @@ GallaDev Workspace es un CRM para revisar, cualificar y gestionar leads de aseso
 - `04-operations-user-guide`: instalación, configuración, operación diaria y diagnóstico.
 - `05-ux-ai-contracts`: especificación UX y contrato del análisis de dolores con IA.
 - `06-history-maintenance`: sesiones de desarrollo y notas históricas de mantenimiento.
-- `diagrams`: diagramas de arquitectura y artefactos de comprobación visual.
-- `archive`: script histórico de migración; no forma parte del runtime.
+- `diagrams`: solo un puntero. El HTML/PNG generado por Archify seguía mostrando Notion y `src/middleware.ts`; esos ficheros son históricos y viven en `archive/diagrams-notion-era/`.
+- `archive`: script histórico de migración, el plan de tests de la era Notion y los diagramas archivados. Nada de eso forma parte del runtime.
 
 ## Orden recomendado de lectura
 
@@ -39,6 +39,6 @@ Supabase es la fuente actual de verdad de los leads. Las referencias a Notion de
 
 ## Resumen actual del producto
 
-La aplicación permite captar leads, buscarlos, filtrarlos, editar su detalle, usar Kanban, revisar emails, consultar estadísticas, gestionar duplicados, configurar integraciones y ejecutar análisis de dolores con IA. Todo lead nuevo entra en estado `Nuevo` y lleva un valor `Origen`. n8n es opcional; la alta manual y la ingesta web siguen siendo vías válidas.
+La aplicación permite captar leads, buscarlos, filtrarlos, editar su detalle, usar Kanban, revisar emails, consultar estadísticas, gestionar duplicados, asignar un responsable (`responsibleId`), configurar integraciones y ejecutar análisis de dolores con IA. Todo lead nuevo entra en estado `Nuevo` y lleva un valor `Origen`. n8n es opcional; la alta manual y la ingesta web siguen siendo vías válidas. Una demo de visitante sin contraseña (apagada salvo que `DEMO_MODE_ENABLED` sea `true` o `1`) muestra la misma UI con leads ficticios de solo lectura y no abre Supabase.
 
-El primer objetivo de validación SaaS es `signup/login -> leads -> Kanban -> email -> cambio de estado`, impidiendo que cada usuario lea o modifique leads ajenos.
+No hay alta pública. Un Admin crea las cuentas en el Dashboard de Supabase; el trigger `on_auth_user_created` asigna el rol Seller. El primer objetivo de validación SaaS es `login -> leads -> Kanban -> email -> cambio de estado`, impidiendo que cada usuario lea o modifique leads ajenos.
