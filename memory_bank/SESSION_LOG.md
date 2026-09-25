@@ -124,7 +124,7 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 
 ## 2026-09-24 — M2 Slice 1 (docs)
 
-- Roadmap y guía de operación alineados con prod. Gates de CI ya obligatorios en `master` (estricto + `enforce_admins`): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. Secret scanning, CodeQL y audit trail siguen pendientes. Ver `docs/02-roadmap-delivery/`.
+- Roadmap y guía de operación alineados con prod. Gates de CI ya obligatorios en `master` (estricto + `enforce_admins`): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL y audit trail siguen pendientes. Secret scanning y push protection están activados. El repo es público, así que el CodeQL default setup de GitHub no exige Advanced Security; sigue sin workflow en el repo. Ver `docs/02-roadmap-delivery/`.
 
 ## 2026-09-24 — M2 Slice 2 (ingest, error boundary, logs)
 
@@ -132,6 +132,12 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - `src/app/error.tsx` y `src/app/global-error.tsx`: fallback para el usuario (reintentar / inicio). Sin Sentry: no hay DSN ni SDK en el repo.
 - Catch de ingest y analyze: una línea JSON (`route`, `status`, `errorClass`, `requestId` si la cabecera ya trae un id). Sin secretos, cuerpos ni PII.
 
-## 2026-09-25 — Demo de visitante
+## 2026-09-25 — Demo de visitante (PR #55, `3fcf7e7`)
 
-- Modo visitante sin contraseña (`DEMO_MODE_ENABLED`, apagado si no está definido): cookie httpOnly firmada, repositorio ficticio en memoria, sin Supabase.
+- Modo visitante sin contraseña. `DEMO_MODE_ENABLED` solo enciende con `true` o `1`; si no está, está vacío o es otro valor, queda apagado. Hace falta `DEMO_SESSION_SECRET` (≥ 16 caracteres) para firmar la cookie.
+- Cookie httpOnly `gdw_visitor` (HMAC-SHA256, 4 horas). `getSessionLeadRepository()` devuelve `DemoLeadRepository` (memoria, leads ficticios). Esa petición no construye el cliente de Supabase ni el repositorio service role.
+- Páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas responden 403 `demo_readonly` (equipo, settings, automatizaciones, db-status, ingesta, escrituras, merge, score, análisis IA real).
+- `POST /api/demo/enter`: 404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited` (8 / 15 min / IP, limitador en memoria). `POST /api/demo/exit` borra la cookie. `GET /api/session` con cookie válida: `{ id: "visitor", role: null, visitor: true }`.
+- Puerta en `src/proxy.ts` (no hay `src/middleware.ts`).
+- Secret scanning y push protection: activados. CodeQL sigue pendiente; al ser el repo público, el default setup no requiere Advanced Security.
+- Pendiente de M2 además de CodeQL: tests E2E de Viewer (403; CI solo tiene credenciales Admin/Seller), rate limit distribuido (el limitador es en memoria por instancia) y audit trail (la identidad por usuario ya existe; el log no).

@@ -27,7 +27,8 @@ These names are shared by lists, Kanban, filters, KPIs, and Daily Work. New lead
 ## Product rules
 
 - n8n is an optional, replaceable acquisition provider.
-- There are no tags or responsible-user fields in v1.
+- There is no tags field in the product UI.
+- A lead has a responsible user (`Lead.responsibleId`, column `responsable`). The drawer assignee dropdown lists the team from `GET /api/team` for an Admin; other writers can assign themselves (**Yo**). The leads list has a **Mis leads** filter on the signed-in user id.
 - Favorites persist with the lead.
 - Deletion means archiving, not destructive removal.
 - Merging fills only empty fields in the surviving lead and archives the other record.
@@ -37,4 +38,6 @@ These names are shared by lists, Kanban, filters, KPIs, and Daily Work. New lead
 
 ## SaaS validation gate
 
-The minimum SaaS milestone is validated when a second user can complete the real workflow `signup/login -> leads -> Kanban -> email -> status change` while row-level access controls prevent cross-user reads and writes. Billing and scale features follow this validation.
+There is no self-signup. An Admin creates each account in the Supabase Dashboard (Authentication → Users); `on_auth_user_created` assigns Seller, and Admin is set on `profiles.role`. A passwordless visitor demo (off by default) can show fictional read-only leads without a Supabase session.
+
+The minimum SaaS milestone is validated when a second user can complete the real workflow `login -> leads -> Kanban -> email -> status change` while row-level access controls prevent cross-user reads and writes. Billing and scale features follow this validation.

@@ -1,9 +1,10 @@
 # Historial De Auditoría (Quién Hizo Qué) — Requisito Futuro
 
-> **Estado:** especificado, no implementado · **Fecha:** 2026-09-22
-> **Prerrequisito:** Paso 2 slice SaaS (identidad por usuario con Supabase Auth).
-> No presentar como comportamiento actual: hoy la app tiene una sola
-> sesión compartida y no puede atribuir acciones a una persona.
+> **Estado:** especificado, no implementado · **Actualizado:** 2026-09-25
+> **Prerrequisito:** cumplido. La identidad por usuario existe (Supabase Auth
+> email + contraseña, `profiles.role` Admin / Seller / Viewer, PR #37 y #44).
+> El registro de auditoría en sí sigue sin implementarse. No presentar como
+> comportamiento actual: las mutaciones no se escriben en `audit_log`.
 
 ## 1. Objetivo
 

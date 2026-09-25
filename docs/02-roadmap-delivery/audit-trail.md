@@ -1,9 +1,10 @@
 # Audit Trail (Who Did What) — Future Requirement
 
-> **Status:** specified, not implemented · **Date:** 2026-09-22
-> **Prerequisite:** Paso 2 slice SaaS (per-user identity via Supabase Auth).
-> Do not present this as current behavior: today the app has a single shared
-> session and cannot attribute actions to a person.
+> **Status:** specified, not implemented · **Updated:** 2026-09-25
+> **Prerequisite:** met. Per-user identity exists (Supabase Auth email +
+> password, `profiles.role` of Admin / Seller / Viewer, PR #37 and #44).
+> The audit log itself is still not implemented. Do not present this as
+> current behavior: mutations are not written to `audit_log`.
 
 ## 1. Goal
 

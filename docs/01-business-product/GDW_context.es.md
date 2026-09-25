@@ -27,7 +27,8 @@ Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los le
 ## Reglas de producto
 
 - n8n es un proveedor de captación opcional e intercambiable.
-- En v1 no existen campos de tags ni de responsable.
+- En la UI del producto no hay campo de tags.
+- Un lead tiene responsable (`Lead.responsibleId`, columna `responsable`). El desplegable del panel lista el equipo desde `GET /api/team` si el usuario es Admin; el resto de quien puede escribir se asigna a sí mismo (**Yo**). La lista de leads tiene el filtro **Mis leads** sobre el id del usuario con sesión.
 - Los favoritos se persisten con el lead.
 - Borrar significa archivar, no eliminar de forma destructiva.
 - El merge solo rellena campos vacíos del lead conservado y archiva el otro.
@@ -37,4 +38,6 @@ Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los le
 
 ## Puerta de validación SaaS
 
-El hito SaaS mínimo se valida cuando un segundo usuario puede completar el flujo real `signup/login -> leads -> Kanban -> email -> cambio de estado`, mientras los controles de acceso por fila impiden leer o modificar datos de otros usuarios. Billing y las capacidades de escala vienen después.
+No hay alta pública. Un Admin crea cada cuenta en el Dashboard de Supabase (Authentication → Users); `on_auth_user_created` asigna Seller, y el Admin se marca en `profiles.role`. Una demo de visitante sin contraseña (apagada por defecto) puede mostrar leads ficticios de solo lectura sin sesión de Supabase.
+
+El hito SaaS mínimo se valida cuando un segundo usuario puede completar el flujo real `login -> leads -> Kanban -> email -> cambio de estado`, mientras los controles de acceso por fila impiden leer o modificar datos de otros usuarios. Billing y las capacidades de escala vienen después.

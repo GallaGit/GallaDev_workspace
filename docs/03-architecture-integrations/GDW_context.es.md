@@ -13,8 +13,10 @@ Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
 ## Persistencia y seguridad
 
 - Los leads y las actividades viven en Supabase.
-- `getLeadRepository()` selecciona la implementación activa del repositorio.
-- La autenticación y el middleware protegen las rutas sensibles.
+- `getLeadRepository()` devuelve `SupabaseLeadRepository` (service role sin cliente; el cliente de sesión si se le pasa, y entonces aplica RLS).
+- `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. `AUTH_DISABLED` (solo fuera de producción) usa el repositorio service role.
+- `src/proxy.ts` es la puerta de sesión (convención `proxy` de Next.js 16; no hay `src/middleware.ts`). Exime `/api/health`, `/api/demo/enter`, `/api/demo/exit` y `/api/ingest/*`.
+- Los route handlers añaden una capa RBAC: `requireApiSession`, `requireApiRole`, `requireAdmin` y `requireLeadWriter`. Los roles son `profiles.role` (`Admin`, `Seller`, `Viewer`).
 - RLS es la frontera de aislamiento de datos entre usuarios.
 - Settings muestra previews enmascarados y nunca devuelve secretos completos.
 - Los fallos de dispatch a n8n no hacen fallar la persistencia del lead.
@@ -37,11 +39,24 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 
 ## Superficie principal de API
 
-- `GET/POST/PATCH/DELETE /api/leads`
-- `GET/PATCH /api/leads/:id`
+- `GET/POST/PATCH /api/leads` (PATCH masivo sobre la colección)
+- `GET/PATCH/DELETE /api/leads/:id`
 - `POST /api/leads/:id/analyze`
+- `GET /api/leads/duplicates`
+- `POST /api/leads/merge`
+- `POST /api/leads/score`
+- `POST /api/leads/pain-analysis`
 - `POST /api/sync`
+- `GET /api/health` (liveness, sin sesión ni base de datos)
+- `GET /api/db-status` (sesión; conectividad con Supabase)
+- `GET /api/session` (`visitor: true` con cookie de visitante)
+- `GET /api/team` (Admin)
+- `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`)
+- `POST /api/demo/exit`
 - `GET/PATCH /api/settings`
+- `GET /api/settings/status`
+- `POST /api/settings/test`
+- `GET /api/automations`
 - `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
 - `POST /api/ingest/n8n`

@@ -33,7 +33,13 @@ Variables clave (ver `.env.example` para la lista completa):
 | Variable | Significado |
 |---|---|
 | `LEADS_DB_PROVIDER` | Ignorado (siempre Supabase). Se mantiene en `.env.example` por claridad. |
-| `AUTH_DISABLED=true` | Desarrollo local sin login. Producción requiere `AUTH_SECRET` + `AUTH_PASSWORD`. |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` | Cliente de Supabase en servidor. La clave secret no llega al navegador. |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | La misma URL pública y la clave publishable. Next incrusta `NEXT_PUBLIC_*` en el build para el cliente del navegador. |
+| `AUTH_DISABLED=true` | Desarrollo local sin login. Se ignora con `NODE_ENV=production` (fail-closed). El acceso es email + contraseña de Supabase Auth; un Admin crea las cuentas en el Dashboard (el trigger asigna Seller). |
+| `DEMO_MODE_ENABLED` | `true` o `1` enciende la demo de visitante. Si no está, está vacía o es otro valor, queda apagada. |
+| `DEMO_SESSION_SECRET` | Secreto HMAC de la cookie de visitante, al menos 16 caracteres. Obligatorio con la demo encendida. Genera con `openssl rand -hex 32`. |
+| `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Smoke de login opcional en Playwright. `critical-paths` omite ese login si están vacías. |
+| `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Usuarios Admin y Seller para `tests/e2e/auth-sync-roles.spec.ts`. CI no tiene credenciales E2E de Viewer. |
 | `INGEST_SECRET` | Secreto compartido para `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Email transaccional tras ingesta web (fail-open: el lead se guarda aunque falle el email). |
 
@@ -114,7 +120,7 @@ Convenciones de testing (detalle en [`TESTING.md`](./TESTING.md)):
 
 ## 8. Notas específicas del proyecto
 
-- **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository()` en `src/lib/repository/get-repository.ts` siempre devuelve `SupabaseLeadRepository` (runtime Notion eliminado). El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
+- **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository()` en `src/lib/repository/get-repository.ts` devuelve `SupabaseLeadRepository` (runtime Notion eliminado): service role si se llama sin cliente, RLS si recibe el cliente de sesión. `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
 - **Pipeline de leads:** exactamente 9 estados (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Los nombres legacy de Notion se normalizan al leer, nunca se escriben.
 - **La prospección con n8n** escribe leads nuevos (`Origen=n8n`, estado `Nuevo`); el CRM nunca edita el workflow de captación. Los dispatches de webhooks son best-effort y nunca deben impedir la persistencia.
 - **La UI está en español.** Código, commits, issues y PRs van en inglés; las cadenas visibles al usuario, en español.
