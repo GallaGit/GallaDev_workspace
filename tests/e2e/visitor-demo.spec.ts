@@ -34,7 +34,7 @@ test("visitante entra, recorre leads, kanban y estadísticas, y sale", async ({
   await page.goto("/stats");
   await expect(page.getByRole("heading", { name: "Statistics" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Por estado" }),
+    page.getByRole("heading", { name: "Por estado", exact: true }),
   ).toBeVisible();
 
   const blocked = await page.request.get("/api/team");
