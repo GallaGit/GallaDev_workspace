@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useNavChrome } from "@/components/layout/nav-chrome";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
+import { useSessionAccess } from "@/components/session-access";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -32,10 +33,13 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const HIDDEN_FOR_VISITOR = new Set(["/email", "/automations", "/settings"]);
+
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { open, close, navId } = useNavChrome();
+  const { isVisitor } = useSessionAccess();
   const asideRef = useRef<HTMLElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -92,6 +96,28 @@ export function AppSidebar() {
 
   async function handleLogout() {
     close();
+    let visitor = isVisitor;
+    if (!visitor) {
+      try {
+        const res = await fetch("/api/session");
+        if (res.ok) {
+          const data = (await res.json()) as { visitor?: unknown };
+          visitor = data.visitor === true;
+        }
+      } catch {
+        visitor = false;
+      }
+    }
+    if (visitor) {
+      try {
+        await fetch("/api/demo/exit", { method: "POST" });
+      } catch {
+        // La cookie se intenta borrar igual; el login no abre datos reales.
+      }
+      router.push("/login");
+      router.refresh();
+      return;
+    }
     setAuthFlash("goodbye");
     try {
       const supabase = createSupabaseBrowserClient();
@@ -126,7 +152,9 @@ export function AppSidebar() {
         </span>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 p-2" aria-label="Principal">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.filter(
+          (item) => !isVisitor || !HIDDEN_FOR_VISITOR.has(item.href),
+        ).map(({ href, label, icon: Icon }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
@@ -156,7 +184,7 @@ export function AppSidebar() {
           className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-muted-fg transition-colors hover:bg-muted hover:text-fg"
         >
           <LogOut className="h-4 w-4 opacity-70" />
-          Cerrar sesión
+          {isVisitor ? "Salir de la demo" : "Cerrar sesión"}
         </button>
         <div className="text-[11px] text-muted-fg">developed by GallaDev</div>
       </div>

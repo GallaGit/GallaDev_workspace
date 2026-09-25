@@ -81,6 +81,9 @@ jobs:
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_SELLER_EMAIL: ${{ secrets.E2E_SELLER_EMAIL }}
           E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
+          # El servidor de Playwright fuerza estos valores; aquí quedan explícitos.
+          DEMO_MODE_ENABLED: "true"
+          DEMO_SESSION_SECRET: "e2e-visitor-demo-secret"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

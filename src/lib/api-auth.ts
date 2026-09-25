@@ -6,6 +6,8 @@ import {
   type AppRole,
   type SessionUser,
 } from "@/lib/auth";
+import { visitorDeniedResponse } from "@/lib/demo/gate";
+import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const UNAUTHENTICATED = {
@@ -29,6 +31,7 @@ const FORBIDDEN = {
 
 type SessionResolution =
   | { status: "ok"; user: SessionUser }
+  | { status: "visitor" }
   | { status: "unauthenticated" }
   | { status: "no_profile" };
 
@@ -42,9 +45,17 @@ type SessionResolution =
  * Devuelve `null` si la petición está autorizada (auth local desactivado
  * o usuario Supabase con perfil) o una respuesta 401 JSON si no lo está.
  * Sin fila en `profiles` → denegado (fail-closed: nadie opera sin rol).
+ *
+ * `allowVisitor` solo en lecturas de la demo (leads, sync, duplicados).
+ * El resto de rutas reciben 403 sin abrir Supabase.
  */
-export async function requireApiSession(): Promise<NextResponse | null> {
+export async function requireApiSession(options?: {
+  allowVisitor?: boolean;
+}): Promise<NextResponse | null> {
   const resolved = await resolveApiSession();
+  if (resolved.status === "visitor") {
+    return options?.allowVisitor ? null : visitorDeniedResponse();
+  }
   if (resolved.status === "ok") return null;
   return sessionDenied(resolved.status);
 }
@@ -57,6 +68,7 @@ export async function requireApiRole(
   allowed: readonly AppRole[],
 ): Promise<NextResponse | null> {
   const resolved = await resolveApiSession();
+  if (resolved.status === "visitor") return visitorDeniedResponse();
   if (resolved.status !== "ok") return sessionDenied(resolved.status);
   if (!allowed.includes(resolved.user.role)) {
     return NextResponse.json(FORBIDDEN, { status: 403 });
@@ -92,6 +104,10 @@ export async function getApiSession(
 async function resolveApiSession(
   client?: SupabaseClient,
 ): Promise<SessionResolution> {
+  // Antes que AUTH_DISABLED y que Supabase: la cookie de demo no abre la base.
+  if (!client && (await isVisitorRequest())) {
+    return { status: "visitor" };
+  }
   if (isAuthDisabled()) {
     return { status: "ok", user: { id: "local", email: null, role: "Admin" } };
   }

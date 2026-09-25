@@ -3,6 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LeadRepository } from "./lead-repository";
 import { isAuthDisabled } from "@/lib/auth";
+import { getDemoLeadRepository } from "@/lib/demo/demo-lead-repository";
+import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { SupabaseLeadRepository } from "@/lib/supabase/supabase-lead-repository";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { type DbProvider } from "@/lib/supabase/env";
@@ -35,6 +37,8 @@ export function getLeadRepository(client?: SupabaseClient): LeadRepository {
  * 0 filas en silencio. Para probar RLS real: AUTH_DISABLED=false.
  */
 export async function getSessionLeadRepository(): Promise<LeadRepository> {
+  // Visitante primero: ni service_role ni cliente de sesión.
+  if (await isVisitorRequest()) return getDemoLeadRepository();
   if (isAuthDisabled()) return getLeadRepository();
   return getLeadRepository(await createSupabaseServerClient());
 }

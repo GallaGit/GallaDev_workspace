@@ -6,7 +6,7 @@ import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const denied = await requireApiSession();
+  const denied = await requireApiSession({ allowVisitor: true });
   if (denied) return denied;
   try {
     const repo = await getSessionLeadRepository();

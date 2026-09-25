@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
+import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { readCappedJson } from "@/lib/rate-limit";
 import {
   getActiveProvider,
@@ -25,7 +26,7 @@ function parseBool(v: string | null): boolean | null {
 }
 
 export async function GET(request: Request) {
-  const denied = await requireApiSession();
+  const denied = await requireApiSession({ allowVisitor: true });
   if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
       leads: filtered,
       total: filtered.length,
       syncedAt: new Date().toISOString(),
-      provider: getActiveProvider(),
+      provider: (await isVisitorRequest()) ? "demo" : getActiveProvider(),
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al listar leads";

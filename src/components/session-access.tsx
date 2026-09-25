@@ -10,6 +10,8 @@ export type SessionAccess = {
   canWriteLeads: boolean;
   isAdmin: boolean;
   userId: string | null;
+  /** Sesión de demo: no es Admin, Seller ni Viewer. */
+  isVisitor: boolean;
 };
 
 const LOCKED: SessionAccess = {
@@ -18,6 +20,7 @@ const LOCKED: SessionAccess = {
   canWriteLeads: false,
   isAdmin: false,
   userId: null,
+  isVisitor: false,
 };
 
 const SessionAccessContext = createContext<SessionAccess>(LOCKED);
@@ -40,20 +43,35 @@ export function SessionAccessProvider({
     fetch("/api/session")
       .then(async (res) => {
         if (!res.ok) return null;
-        return (await res.json()) as { id?: unknown; role?: unknown };
+        return (await res.json()) as {
+          id?: unknown;
+          role?: unknown;
+          visitor?: unknown;
+        };
       })
       .then((data) => {
         if (cancelled) return;
         const role = data?.role;
-        const value: SessionAccess = isAppRole(role)
-          ? {
-              role,
-              ready: true,
-              canWriteLeads: isLeadWriter(role),
-              isAdmin: isAdminRole(role),
-              userId: typeof data?.id === "string" ? data.id : null,
-            }
-          : { ...LOCKED, ready: true };
+        const value: SessionAccess =
+          data?.visitor === true
+            ? {
+                role: null,
+                ready: true,
+                canWriteLeads: false,
+                isAdmin: false,
+                userId: null,
+                isVisitor: true,
+              }
+            : isAppRole(role)
+              ? {
+                  role,
+                  ready: true,
+                  canWriteLeads: isLeadWriter(role),
+                  isAdmin: isAdminRole(role),
+                  userId: typeof data?.id === "string" ? data.id : null,
+                  isVisitor: false,
+                }
+              : { ...LOCKED, ready: true };
         setAccess({ path: pathname, value });
       })
       .catch(() => {

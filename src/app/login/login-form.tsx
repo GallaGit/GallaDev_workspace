@@ -6,7 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
 
-export function LoginForm() {
+export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
@@ -15,6 +15,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,7 +50,28 @@ export function LoginForm() {
     }
   }
 
-  const canSubmit = !busy && email.trim().length > 0 && password.length > 0;
+  async function enterDemo() {
+    setError("");
+    setDemoBusy(true);
+    try {
+      const res = await fetch("/api/demo/enter", { method: "POST" });
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        setError(data?.error || "No se pudo abrir la demo");
+        return;
+      }
+      router.push("/leads");
+      router.refresh();
+    } catch {
+      setError("Error de red. Inténtalo de nuevo.");
+    } finally {
+      setDemoBusy(false);
+    }
+  }
+
+  const canSubmit = !busy && !demoBusy && email.trim().length > 0 && password.length > 0;
 
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -117,6 +139,22 @@ export function LoginForm() {
       >
         {busy ? "Entrando…" : "Entrar"}
       </button>
+      {demoEnabled ? (
+        <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+          <button
+            type="button"
+            data-testid="demo-enter"
+            onClick={() => void enterDemo()}
+            disabled={demoBusy || busy}
+            className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800"
+          >
+            {demoBusy ? "Abriendo demo…" : "Entrar como visitante"}
+          </button>
+          <p className="mt-2 text-center text-xs text-gray-500">
+            Ver demo sin cuenta. Solo datos ficticios.
+          </p>
+        </div>
+      ) : null}
     </form>
   );
 }

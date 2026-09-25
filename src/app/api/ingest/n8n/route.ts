@@ -5,6 +5,8 @@ import {
   isRateLimited,
   readCappedJson,
 } from "@/lib/rate-limit";
+import { isVisitorRequest } from "@/lib/demo/visitor-request";
+import { visitorDeniedResponse } from "@/lib/demo/gate";
 import { getLeadRepository } from "@/lib/repository/get-repository";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import { dispatchLeadCreated } from "@/lib/automations/dispatch";
@@ -39,6 +41,7 @@ function bearerOk(provided: string, expected: string): boolean {
 }
 
 export async function POST(request: Request) {
+  if (await isVisitorRequest()) return visitorDeniedResponse();
   const requestId = requestIdFrom(request);
   const secret = process.env.INGEST_SECRET ?? "";
   if (!secret) {

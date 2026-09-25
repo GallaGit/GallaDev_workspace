@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+  const denied = await requireApiSession({ allowVisitor: true });
   if (denied) return denied;
   try {
     const { id } = await ctx.params;

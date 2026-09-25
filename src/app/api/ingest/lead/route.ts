@@ -5,6 +5,8 @@ import {
   isRateLimited,
   readCappedJson,
 } from "@/lib/rate-limit";
+import { isVisitorRequest } from "@/lib/demo/visitor-request";
+import { visitorDeniedResponse } from "@/lib/demo/gate";
 import { getLeadRepository } from "@/lib/repository/get-repository";
 import { findLocalDuplicates } from "@/lib/leads/validate-lead";
 import {
@@ -72,6 +74,7 @@ async function safeSendEmails(args: {
 }
 
 export async function POST(request: Request) {
+  if (await isVisitorRequest()) return visitorDeniedResponse();
   const requestId = requestIdFrom(request);
   const secret = process.env.INGEST_SECRET ?? "";
   if (!secret) {
