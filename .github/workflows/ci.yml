@@ -84,7 +84,7 @@ jobs:
           # El servidor de Playwright fuerza estos valores; aquí quedan explícitos.
           DEMO_MODE_ENABLED: "true"
           DEMO_SESSION_SECRET: "e2e-visitor-demo-secret"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
