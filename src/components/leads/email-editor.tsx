@@ -19,6 +19,8 @@ type EmailEditorProps = {
   onApplyTemplate?: () => void;
   showApplyTemplate?: boolean;
   readOnly?: boolean;
+  /** En la demo no se abre Gmail ni mailto desde el editor. */
+  allowCompose?: boolean;
 };
 
 export function EmailEditor({
@@ -34,6 +36,7 @@ export function EmailEditor({
   onApplyTemplate,
   showApplyTemplate,
   readOnly = false,
+  allowCompose = true,
 }: EmailEditorProps) {
   function redactarEnGmail() {
     if (!subject.trim() && !body.trim()) {
@@ -63,10 +66,12 @@ export function EmailEditor({
         readOnly={readOnly}
       />
       <div className="mt-2 flex flex-wrap gap-2">
-        <Button size="sm" onClick={redactarEnGmail}>
-          <Mail className="h-3.5 w-3.5" />
-          Redactar email
-        </Button>
+        {allowCompose ? (
+          <Button size="sm" onClick={redactarEnGmail}>
+            <Mail className="h-3.5 w-3.5" />
+            Redactar email
+          </Button>
+        ) : null}
         <Button size="sm" disabled={saving || readOnly} onClick={onSave}>
           Guardar email
         </Button>

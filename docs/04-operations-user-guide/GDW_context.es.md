@@ -38,6 +38,17 @@ El análisis IA (`POST /api/leads/:id/analyze` y `POST /api/leads/pain-analysis`
 
 Comprobación de vida para uptime: `GET /api/health` (sin sesión). Responde `{"ok":true}` si el proceso atiende HTTP. No comprueba Supabase.
 
+## Demo de visitante
+
+El login puede ofrecer **Entrar como visitante** («Ver demo sin cuenta»). La sesión es una cookie httpOnly firmada (`gdw_visitor`, 4 horas). No es Admin, Seller ni Viewer, y no abre el repositorio de leads de Supabase ni el cliente service role. La UI muestra unas veinte asesorías ficticias (correos `example.com`). Algunos leads traen un análisis de dolores ya escrito, así el panel lo enseña sin llamar a un modelo. Mover una tarjeta del Kanban muestra un aviso en español y no se guarda. Settings, automatizaciones, equipo, ingesta, la página de email y el análisis IA real quedan bloqueados (HTTP 403). Las respuestas de la demo envían `X-Robots-Tag: noindex, nofollow` (el layout de la app ya es `noindex`).
+
+| Variable | Papel |
+| --- | --- |
+| `DEMO_MODE_ENABLED` | `true` o `1` enciende la demo. **Si no está, está vacía o es otro valor, queda apagada.** |
+| `DEMO_SESSION_SECRET` | Secreto HMAC, al menos 16 caracteres. Obligatorio con el flag encendido. Generar con `openssl rand -hex 32`. |
+
+Para desactivarla en producción sin cambiar código: `DEMO_MODE_ENABLED=false` o borrar la variable, y reiniciar o redesplegar para que el proceso lea el entorno. La entrada está limitada (8 peticiones / 15 minutos / IP). El servidor de Playwright enciende el flag solo para el E2E; producción sigue apagada hasta que definas las variables.
+
 ## Diagnóstico
 
 - Si login o la invalidación de sesiones devuelve 503, comprueba la conexión con Supabase y que esté aplicada la migración del epoch de sesiones.

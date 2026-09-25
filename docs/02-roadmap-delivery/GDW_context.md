@@ -32,6 +32,10 @@ Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":t
 - **Kanban, Statistics, and release hygiene** (PR #43): removed the dead Kanban “+ add card” control (it did not persist); Statistics chart-type selector (bars / donut / area); `GET /api/health`; MIT `LICENSE`; Dependabot.
 - **M2 Slice 1 — CI gates on `master`:** required and strict, with `enforce_admins` on: Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL is not a required check. Required reviews are not above 0.
 
+### Visitor demo (2026-09-25)
+
+Passwordless demo for recruiters and reviewers. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. A signed httpOnly cookie (4 hours) resolves server-side to an in-memory fictional `LeadRepository`. Visitor requests do not construct the Supabase session client or the service-role repository. Writes, settings, automations, team, ingest, email, and live AI analysis return 403. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). See the operations guide.
+
 ### Planned: audit trail (specified, not implemented)
 
 Who-did-what history for team work is specified in

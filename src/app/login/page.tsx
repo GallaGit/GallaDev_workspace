@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
 import { AuthFlashBanner } from "@/components/auth-flash-banner";
+import { isDemoConfigured } from "@/lib/demo/config";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Entrar · GallaDev Workspace",
@@ -24,7 +27,7 @@ export default function LoginPage() {
         </p>
         <AuthFlashBanner kind="goodbye" />
         <Suspense>
-          <LoginForm />
+          <LoginForm demoEnabled={isDemoConfigured()} />
         </Suspense>
       </div>
     </div>

@@ -198,7 +198,8 @@ export function KanbanBoard() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overStatus, setOverStatus] = useState<LeadStatus | null>(null);
   const reduced = useReducedMotion();
-  const { canWriteLeads } = useSessionAccess();
+  const { canWriteLeads, isVisitor } = useSessionAccess();
+  const canDrag = canWriteLeads || isVisitor;
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(
@@ -233,6 +234,12 @@ export function KanbanBoard() {
   }, []);
 
   const moveLead = async (leadId: string, status: LeadStatus) => {
+    if (isVisitor) {
+      toast("En la demo los cambios no se guardan", {
+        description: "Los datos son ficticios y de solo lectura.",
+      });
+      return;
+    }
     if (!canWriteLeads) return;
     const current = leads.find((l) => l.id === leadId);
     if (!current || current.status === status) return;
@@ -276,7 +283,7 @@ export function KanbanBoard() {
               onDragLeave={handleDragLeave}
               onMoveLead={moveLead}
               onOpenLead={handleOpenLead}
-              canWrite={canWriteLeads}
+              canWrite={canDrag}
             />
           ))}
         </motion.div>

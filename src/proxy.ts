@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAuthDisabled } from "@/lib/auth";
+import { VISITOR_COOKIE, demoSessionSecret, isDemoConfigured } from "@/lib/demo/config";
+import {
+  isVisitorBlockedApi,
+  isVisitorBlockedPage,
+  visitorDeniedResponse,
+} from "@/lib/demo/gate";
+import { verifyVisitorToken } from "@/lib/demo/token";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 
 /**
@@ -14,12 +21,42 @@ import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
  * `/api/health` quedan exentos. El matcher también omite `api/health`
  * para no exigir Supabase en el probe.
  */
+function visitorAllowed(request: NextRequest): boolean {
+  if (!isDemoConfigured()) return false;
+  const secret = demoSessionSecret();
+  if (!secret) return false;
+  return verifyVisitorToken(request.cookies.get(VISITOR_COOKIE)?.value, secret);
+}
+
+function nextWithNoindex(request: NextRequest) {
+  const response = NextResponse.next({ request });
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/api/health" || pathname.startsWith("/api/health/")) {
     return NextResponse.next();
   }
+  // Entrar y salir de la demo no exige sesión Supabase.
+  if (pathname === "/api/demo/enter" || pathname === "/api/demo/exit") {
+    return NextResponse.next();
+  }
+
+  if (visitorAllowed(request)) {
+    if (isVisitorBlockedApi(pathname, request.method)) {
+      return visitorDeniedResponse();
+    }
+    if (isVisitorBlockedPage(pathname)) {
+      return NextResponse.redirect(new URL("/leads", request.url));
+    }
+    // Cookie válida: no se crea el cliente de Supabase.
+    return nextWithNoindex(request);
+  }
+
   if (pathname.startsWith("/api/ingest/")) {
     return NextResponse.next();
   }

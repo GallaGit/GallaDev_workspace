@@ -124,7 +124,7 @@ function LeadDrawerBody({
   const [analyzeEmpty, setAnalyzeEmpty] = useState(false);
   const [apiAnalysis, setApiAnalysis] = useState<unknown>(null);
   const doloresRef = useRef<HTMLElement | null>(null);
-  const { canWriteLeads, isAdmin, userId } = useSessionAccess();
+  const { canWriteLeads, isAdmin, isVisitor, userId } = useSessionAccess();
 
   useEffect(() => {
     let cancelled = false;
@@ -311,7 +311,7 @@ function LeadDrawerBody({
             {mapsUrl && (
               <Action href={mapsUrl} icon={MapPin} tip="Google Maps" />
             )}
-            {lead.email && (
+            {lead.email && !isVisitor && (
               <Action href={`mailto:${lead.email}`} icon={Mail} tip="Email" />
             )}
             {lead.email && (
@@ -520,6 +520,7 @@ function LeadDrawerBody({
                 onBodyChange={setEmailBody}
                 saving={saving}
                 readOnly={!canWriteLeads}
+                allowCompose={!isVisitor}
                 onSave={() =>
                   void savePatch({
                     emailSubject,

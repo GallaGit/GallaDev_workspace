@@ -15,6 +15,10 @@ npm run dev
 
 Open [http://localhost:3000/leads](http://localhost:3000/leads). The app syncs on load; you can also press **Sincronizar**.
 
+## Demo
+
+A passwordless visitor session shows the real UI with fictional leads only. It is **off unless** `DEMO_MODE_ENABLED` is `true` or `1`, and it also needs `DEMO_SESSION_SECRET` (16+ characters). Then the login page shows **Entrar como visitante**. The signed cookie lasts 4 hours, never reads or writes Supabase, and blocks settings, automations, team, ingest, email, and live AI. Set `DEMO_MODE_ENABLED=false` (or unset it) to turn the button off without a code change. Details: [operations guide](./docs/04-operations-user-guide/GDW_context.md).
+
 Minimal config:
 
 ```dotenv

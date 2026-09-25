@@ -131,3 +131,7 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Tests de `POST /api/ingest/lead` y `POST /api/ingest/n8n`: 401 sin bearer válido, 429 del limitador en memoria, 413 por tope de cuerpo.
 - `src/app/error.tsx` y `src/app/global-error.tsx`: fallback para el usuario (reintentar / inicio). Sin Sentry: no hay DSN ni SDK en el repo.
 - Catch de ingest y analyze: una línea JSON (`route`, `status`, `errorClass`, `requestId` si la cabecera ya trae un id). Sin secretos, cuerpos ni PII.
+
+## 2026-09-25 — Demo de visitante
+
+- Modo visitante sin contraseña (`DEMO_MODE_ENABLED`, apagado si no está definido): cookie httpOnly firmada, repositorio ficticio en memoria, sin Supabase.
