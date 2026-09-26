@@ -31,9 +31,9 @@ Hechos del código y del esquema. Lo que no está en esta tabla es **PROPOSED**.
 | Auditoría | Especificada en [`audit-trail.es.md`](./audit-trail.es.md). La tabla `audit_log` no existe. |
 | Cliente admin | `createSupabaseAdminClient()` (`src/lib/supabase/admin.ts`) usa la service role y solo vive en servidor. Hoy el equipo se lista con `sb.auth.admin.listUsers()` en `GET /api/team` (solo Admin). |
 
-## 2. Decisiones propuestas (pendiente OK de Ociel)
+## 2. Decisiones aprobadas
 
-Estas cuatro decisiones enmarcan el diseño. Siguen abiertas hasta el OK de Ociel. El resto del documento las da por buenas y marca **PROPOSED** cada tabla, ruta y policy que aún no existe.
+Aprobadas por Ociel el 26 Sep 2026. Estas cuatro decisiones enmarcan el diseño. El resto del documento las da por buenas y marca **PROPOSED** cada tabla, ruta y policy que aún no existe. Las preguntas de la sección 13 siguen abiertas.
 
 1. **Sin contraseña en claro.** El correo lleva un enlace de invitación de un solo uso que caduca (objetivo: 48 horas). Lo acuña Supabase Auth: `inviteUserByEmail` o `generateLink` con tipo `invite`. El cliente elige su contraseña. El email acordado es la identidad de login. `client_id` es una referencia visible (`projects.public_ref`), no un secreto y no sirve para entrar. Hay reenvío, revocación y restablecimiento de contraseña.
 2. **El disparador es una confirmación, no el cambio de estado a solas.** Cuando un usuario interno pasa un lead a `Cliente`, GDW pide el email acordado (precargado si ya consta, siempre editable) y solo entonces crea el proyecto y envía la invitación. Ese paso queda registrado: quién confirmó y cuándo. Un `PATCH` de estado no envía correo por su cuenta.
@@ -42,7 +42,7 @@ Estas cuatro decisiones enmarcan el diseño. Siguen abiertas hasta el OK de Ocie
 
 ### Correo: Auth acuña el enlace; Resend lo entrega
 
-Recomendación de esta spec, también pendiente del OK: usar `generateLink` (`type: 'invite'`) en el servidor con `createSupabaseAdminClient()` y enviar el texto en español por Resend, con el remitente que ya existe (`emailFromClients()`). Así el mensaje puede ir en español, con prioridad alta y sin pasar por la plantilla genérica de Auth.
+Recomendación de esta spec, todavía abierta (pregunta 8): usar `generateLink` (`type: 'invite'`) en el servidor con `createSupabaseAdminClient()` y enviar el texto en español por Resend, con el remitente que ya existe (`emailFromClients()`). Así el mensaje puede ir en español, con prioridad alta y sin pasar por la plantilla genérica de Auth. La decisión 1 ya aprueba el enlace de Auth (`inviteUserByEmail` o `generateLink`); lo que queda abierto es qué canal entrega el texto.
 
 `inviteUserByEmail` sigue siendo válido si Ociel prefiere la plantilla de Supabase (Authentication → Email Templates). Esa plantilla tendría que estar en español. En ese camino Resend no interviene y las cabeceras de prioridad alta no salen de esta app.
 
