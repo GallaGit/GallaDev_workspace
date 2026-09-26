@@ -13,8 +13,8 @@ GallaDev Workspace is a CRM for reviewing, qualifying, and managing leads for ad
 - `04-operations-user-guide`: installation, configuration, daily operation, and troubleshooting.
 - `05-ux-ai-contracts`: UX specification and the AI pain-analysis contract.
 - `06-history-maintenance`: development sessions and historical maintenance notes.
-- `diagrams`: generated architecture diagrams and visual-check artifacts.
-- `archive`: historical migration script; it is not part of the runtime.
+- `diagrams`: pointer only. The generated Archify HTML/PNG still showed Notion and `src/middleware.ts`; those files are historical and live under `archive/diagrams-notion-era/`.
+- `archive`: historical migration script, the Notion-era test plan, and the archived diagrams. None of it is part of the runtime.
 
 ## Recommended reading order
 
@@ -39,6 +39,6 @@ Supabase is the current source of truth for leads. References to Notion describe
 
 ## Current product summary
 
-The application supports lead ingestion, search, filtering, detail editing, Kanban, email review, statistics, duplicate handling, settings, and AI pain analysis. Every new lead enters the `Nuevo` state and carries an `Origen` value. n8n is optional; manual and web ingestion remain valid paths.
+The application supports lead ingestion, search, filtering, detail editing, Kanban, email review, statistics, duplicate handling, assignee (`responsibleId`), settings, and AI pain analysis. Every new lead enters the `Nuevo` state and carries an `Origen` value. n8n is optional; manual and web ingestion remain valid paths. A passwordless visitor demo (off unless `DEMO_MODE_ENABLED` is `true` or `1`) shows the same UI with fictional read-only leads and does not open Supabase.
 
-The first SaaS validation target is `signup/login -> leads -> Kanban -> email -> status change`, with users unable to read or modify another user's leads.
+There is no self-signup. An Admin creates accounts in the Supabase Dashboard; the `on_auth_user_created` trigger assigns role Seller. The first SaaS validation target is `login -> leads -> Kanban -> email -> status change`, with users unable to read or modify another user's leads.

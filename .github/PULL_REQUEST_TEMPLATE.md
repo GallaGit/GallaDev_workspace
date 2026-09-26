@@ -22,4 +22,4 @@
 
 ## Breaking changes / migration notes
 
-<!-- Supabase migration steps, env changes, Notion-legacy impact — or "None". -->
+<!-- Env or schema changes — or "None". Notion is not part of the runtime. -->

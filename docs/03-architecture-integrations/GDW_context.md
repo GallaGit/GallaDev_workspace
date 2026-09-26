@@ -13,8 +13,10 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 ## Persistence and security
 
 - Leads and activities live in Supabase.
-- `getLeadRepository()` selects the active repository implementation.
-- Authentication and middleware protect sensitive routes.
+- `getLeadRepository()` returns `SupabaseLeadRepository` (service role without a client; the session client when one is passed, so RLS applies).
+- `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. `AUTH_DISABLED` (non-production only) uses the service-role repository.
+- `src/proxy.ts` is the session gate (Next.js 16 `proxy`; there is no `src/middleware.ts`). It exempts `/api/health`, `/api/demo/enter`, `/api/demo/exit`, and `/api/ingest/*`.
+- Route handlers add an RBAC layer: `requireApiSession`, `requireApiRole`, `requireAdmin`, and `requireLeadWriter`. Roles are `profiles.role` (`Admin`, `Seller`, `Viewer`).
 - Row-level security is the boundary for user data isolation.
 - Settings expose masked previews and never return complete secrets.
 - n8n dispatch failures do not fail lead persistence.
@@ -37,11 +39,24 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 
 ## Main API surface
 
-- `GET/POST/PATCH/DELETE /api/leads`
-- `GET/PATCH /api/leads/:id`
+- `GET/POST/PATCH /api/leads` (bulk PATCH on the collection)
+- `GET/PATCH/DELETE /api/leads/:id`
 - `POST /api/leads/:id/analyze`
+- `GET /api/leads/duplicates`
+- `POST /api/leads/merge`
+- `POST /api/leads/score`
+- `POST /api/leads/pain-analysis`
 - `POST /api/sync`
+- `GET /api/health` (liveness, no session, no database)
+- `GET /api/db-status` (session; Supabase connectivity)
+- `GET /api/session` (`visitor: true` for a visitor cookie)
+- `GET /api/team` (Admin)
+- `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`)
+- `POST /api/demo/exit`
 - `GET/PATCH /api/settings`
+- `GET /api/settings/status`
+- `POST /api/settings/test`
+- `GET /api/automations`
 - `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
 - `POST /api/ingest/n8n`

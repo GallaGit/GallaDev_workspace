@@ -32,7 +32,9 @@ Objetivo: confirmar recepción en 72 horas, compartir un plan de remediación y 
 
 ## Notas de alcance
 
-- Auth: producción requiere `AUTH_SECRET` + `AUTH_PASSWORD` con `SESSION_TTL_DAYS` entre 1 y 90. `AUTH_DISABLED=true` es solo para desarrollo local.
-- Cierre de emergencia (`POST /api/auth/logout-all`, Settings → Seguridad) exige sesión válida e incrementa el `app_session_epoch` compartido en Supabase; todos los tokens anteriores pasan a 401. El logout normal solo borra la cookie del dispositivo actual. Fail-closed: si el epoch no se puede leer, los tokens se rechazan y el login devuelve 503. Aplica `supabase/migrations/20260919120000_add_session_epoch.sql` o el endpoint devuelve 503.
+- La auth es Supabase Auth (email + contraseña). Los roles `Admin`, `Seller` y `Viewer` salen de `profiles.role`. Un usuario autenticado sin fila en `profiles`, o con un rol fuera de ese enum, queda denegado (`401`, `code: "no_profile"`). No hay alta pública: un Admin crea las cuentas en el Dashboard de Supabase; el trigger `on_auth_user_created` asigna Seller.
+- `AUTH_DISABLED=true` (o `1`) omite la sesión solo fuera de producción. En producción es fail-closed: con `NODE_ENV=production` la auth sigue activa. `AUTH_SECRET`, `AUTH_PASSWORD` y `SESSION_TTL_DAYS` no se usan.
+- **Cerrar todas las sesiones** (Settings → Seguridad) llama a `supabase.auth.signOut({ scope: "global" })`. El logout de la barra lateral llama a `supabase.auth.signOut()` sin argumento `scope`. No existe `POST /api/auth/logout-all` y la app no lee `app_session_epoch`.
+- Demo de visitante: cookie httpOnly firmada con HMAC-SHA256 (`gdw_visitor`, 4 horas) usando `DEMO_SESSION_SECRET` (al menos 16 caracteres). Apagada salvo que `DEMO_MODE_ENABLED` sea `true` o `1`. La sesión es de solo lectura, con datos ficticios, y no construye un cliente de Supabase. `/settings`, `/automations` y `/email` redirigen a `/leads`; las APIs bloqueadas responden `403` con `code: "demo_readonly"`.
 - La ingesta pública (`POST /api/ingest/lead`, `POST /api/ingest/n8n`) está protegida con bearer token (`INGEST_SECRET`); reporta un bypass de auth como severidad alta.
 - El email transaccional (Resend) es fail-open por diseño — el lead se guarda aunque falle el email. No lo reportes como bug.

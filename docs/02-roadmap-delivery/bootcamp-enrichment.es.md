@@ -21,8 +21,8 @@ Flower “porque el hito lo pide”: se toma la **idea**, no la herramienta.
 
 ## Orden sugerido post go-live
 
-1. [ ] Cerrar pendientes canónicos de M1 que siguen abiertos (secret scanning, CodeQL, audit trail). LICENSE, Dependabot y la validación zod de PATCH de leads ya están hechos.
-2. [ ] Observabilidad mínima (errores + eventos de producto).
+1. [ ] Cerrar pendientes canónicos que siguen abiertos (CodeQL, audit trail). Secret scanning y push protection están activados. LICENSE, Dependabot y la validación zod de PATCH de leads ya están hechos.
+2. [ ] Observabilidad mínima de producto (eventos). Los errores de UI y los logs JSON de ingesta/análisis ya cubren una parte (PR #54).
 3. [ ] Jobs en background para sync / analyze IA.
 4. [ ] Reporting de negocio (KPIs CRM) si Stats se queda corto.
 5. [ ] Cola/offload (`202` + `job_id`) solo si los requests empiezan a bloquearse.
@@ -40,7 +40,7 @@ usuario sin ver leads ajenos.
 - [x] Sesión verificada en rutas API sensibles (`requireApiSession`).
 - [x] Auth email/password con Supabase Auth; perfiles + roles (`Admin` / `Seller` / `Viewer`).
 - [x] RLS por rol en `leads` / `lead_activities`.
-- [x] Rate-limit en memoria + topes de cuerpo (ingesta, login, PATCH masivo).
+- [x] Rate-limit en memoria + topes de cuerpo (ingesta pública, análisis IA, demo enter; tope de cuerpo en PATCH masivo). El login de esta app no tiene rate-limit propio.
 - [x] Cabeceras de seguridad (HSTS, CSP, frame/content-type/referrer/permissions).
 - [x] `AUTH_DISABLED` fail-closed en producción.
 - [x] Go-live interno mínimo (login prod, smoke Admin/Seller, ingest bearer).
@@ -49,7 +49,8 @@ usuario sin ver leads ajenos.
 
 - [x] Validación `zod` en cuerpos PATCH (`PATCH /api/leads/:id` y PATCH masivo).
 - [x] Higiene parcial: `LICENSE` MIT y Dependabot (npm y GitHub Actions; sin auto-merge). PR #43.
-- [ ] Higiene restante: secret scanning, CodeQL.
+- [x] Secret scanning y push protection activados.
+- [ ] Higiene restante: CodeQL. El repo es público, así que el default setup de GitHub no exige Advanced Security; sigue sin workflow en el repo.
 - [ ] Historial de auditoría (quién hizo qué) — especificado en
       [`audit-trail.es.md`](./audit-trail.es.md) (EN: [`audit-trail.md`](./audit-trail.md)).
 
@@ -70,8 +71,8 @@ y documentación endurecida.
 
 - [x] CI con lint, typecheck, unit, component y e2e (Playwright). M2 Slice 1 (2026-09-24): esos cuatro jobs son gates obligatorios en `master` (estricto, `enforce_admins` activo): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL no es check requerido; las revisiones requeridas no están por encima de 0.
 - [ ] Ampliar cobertura de tests donde haya huecos reales (no vanity %).
-- [ ] Observabilidad y gestión de errores endurecidas (hoy: logs ad hoc).
-- [ ] Documentación operativa al día con el comportamiento desplegado.
+- [x] Observabilidad parcial (PR #54, M2 Slice 2): `src/app/error.tsx` y `src/app/global-error.tsx`; una línea JSON en los catch de ingesta y análisis (`route`, `status`, `errorClass`, `requestId`) vía `src/lib/route-log.ts`. Sin Sentry ni eventos de producto.
+- [x] Documentación operativa alineada con `master` (Supabase Auth, RBAC, slices M2, demo de visitante).
 
 ### Enriquecimiento bootcamp
 

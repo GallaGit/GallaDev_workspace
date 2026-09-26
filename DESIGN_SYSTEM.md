@@ -332,19 +332,21 @@ Board (9 columns)
 │   ├── Drop indicator: Rojo line (2px)
 │   ├── Content: Title, meta (city, score)
 │   └── Hover: Quick actions (archive, edit)
-├── Add Card: Inline form (Rojo focus ring)
+├── No inline Add Card form (leads are created outside the board)
 └── Archive column: Burn barrel → Archive icon
 ```
 
 ### Stats (`/stats`)
 ```
-Tabs: [Estado] [Provincia] [Ciudad] [Tamaño] [Funnel]
+Chart type selector (radiogroup "Tipo de gráfico"): Barras | Circular (donut) | Área
+Preference: localStorage `gdw-stats-chart-type`
+Circular is not drawn when fewer than two statuses have leads
+Área is a wave across the nine pipeline states, not a time series
 
 Tab Content
-├── Summary cards (4): Total, Validados, Email listos, Clientes
-├── Breakdown table (sortable)
-├── Micro-chart per row (sparkline)
-└── Rates section: Funnel visual (horizontal bars)
+├── Summary cards
+├── Breakdown tables
+└── Rates / funnel stay visible when the chart type changes
 ```
 
 ---
