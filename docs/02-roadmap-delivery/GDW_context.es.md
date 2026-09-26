@@ -56,6 +56,11 @@ El quién-hizo-qué para trabajo en equipo está especificado en
 La identidad por usuario (Supabase Auth + `profiles.role`) ya existe. El
 registro de auditoría en sí, no. No tratarlo como comportamiento actual.
 
+### Propuesto — pendiente de validación
+
+- **Portal de cliente (traza del proyecto).** Especificado, no implementado, y no entra en M2. Ver [`client-portal.es.md`](./client-portal.es.md). Cuando un lead pasa a `Cliente`, un rol nuevo `client` (hoy `app_role` es solo Admin, Seller y Viewer) vería su proyecto en `/portal`. Decisiones de producto aprobadas por Ociel el 26 Sep 2026.
+- **Gestión de emails en la plataforma GDW.** Placeholder. Aún no especificada. No entra en M2.
+
 ## Reglas de entrega
 
 El trabajo se aísla con ramas y entornos, no con copias del repositorio. Los cambios de producto deben actualizar el contexto canónico y mantenerse alineados con el código y el esquema de base de datos. Los informes históricos de verificación son evidencias de su fecha, no garantías sobre el build actual.
