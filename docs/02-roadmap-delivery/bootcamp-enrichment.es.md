@@ -49,6 +49,7 @@ usuario sin ver leads ajenos.
 
 - [x] Validación `zod` en cuerpos PATCH (`PATCH /api/leads/:id` y PATCH masivo).
 - [x] Higiene parcial: `LICENSE` MIT y Dependabot (npm y GitHub Actions; sin auto-merge). PR #43.
+- Dependabot ignora las actualizaciones semver-major y agrupa las actualizaciones semanalmente.
 - [x] Secret scanning y push protection activados.
 - [ ] Higiene restante: CodeQL. El repo es público, así que el default setup de GitHub no exige Advanced Security; sigue sin workflow en el repo.
 - [ ] Historial de auditoría (quién hizo qué) — especificado en
