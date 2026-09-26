@@ -58,7 +58,8 @@ registro de auditoría en sí, no. No tratarlo como comportamiento actual.
 
 ### Propuesto — pendiente de validación
 
-- **Portal de cliente (traza del proyecto).** Especificado, no implementado, y no entra en M2. Ver [`client-portal.es.md`](./client-portal.es.md). Cuando un lead pasa a `Cliente`, un rol nuevo `client` (hoy `app_role` es solo Admin, Seller y Viewer) vería su proyecto en `/portal`. Pendiente del OK de Ociel.
+- **Portal de cliente (traza del proyecto).** Especificado, no implementado, y no entra en M2. Ver [`client-portal.es.md`](./client-portal.es.md). Cuando un lead pasa a `Cliente`, un rol nuevo `client` (hoy `app_role` es solo Admin, Seller y Viewer) vería su proyecto en `/portal`. Decisiones de producto aprobadas por Ociel el 26 Sep 2026.
+- **Gestión de emails en la plataforma GDW.** Placeholder. Aún no especificada. No entra en M2.
 
 ## Reglas de entrega
 

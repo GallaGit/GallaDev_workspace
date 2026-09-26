@@ -57,7 +57,8 @@ Per-user identity (Supabase Auth + `profiles.role`) is in place. The audit log i
 
 ### Proposed — pending validation
 
-- **Client portal (project trace).** Specified, not implemented, and not part of M2. Spanish spec: [`client-portal.es.md`](./client-portal.es.md). When a lead becomes `Cliente`, a new `client` role (today `app_role` is only Admin, Seller, and Viewer) would see their project at `/portal`. Waiting on Ociel's OK.
+- **Client portal (project trace).** Specified, not implemented, and not part of M2. Spanish spec: [`client-portal.es.md`](./client-portal.es.md). When a lead becomes `Cliente`, a new `client` role (today `app_role` is only Admin, Seller, and Viewer) would see their project at `/portal`. Product decisions approved by Ociel on 26 Sep 2026.
+- **Email management inside GDW** («Gestión de emails en la plataforma GDW»). Placeholder. Not specified. Not part of M2.
 
 ## Delivery rules
 
