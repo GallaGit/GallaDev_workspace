@@ -22,6 +22,7 @@ Supabase es la capa de persistencia activa y la única fuente de verdad. La apli
 - Migración RLS por rol aplicada en Supabase (`app_role`: Admin/Seller/Viewer; `profiles.role`; policies por rol en `leads`/`lead_activities`).
 - Validación con `zod` en cuerpos PATCH de leads (`PATCH /api/leads/:id` y PATCH masivo).
 - Higiene hecha: `LICENSE` MIT, Dependabot (npm y GitHub Actions; abre PRs, no los fusiona) y secret scanning con push protection (activados).
+- Dependabot ignora las actualizaciones semver-major y agrupa las actualizaciones semanalmente.
 - Higiene M1 que queda: **solo CodeQL**. El repositorio es público, así que el CodeQL default setup de GitHub no exige Advanced Security. Sigue sin haber workflow de CodeQL, y CodeQL no es un status check obligatorio.
 
 ### Cierre M1 / post-M1 en prod (2026-09-24)

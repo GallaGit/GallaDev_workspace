@@ -22,6 +22,7 @@ Supabase is the active persistence layer and sole source of truth. The current a
 - Role-based RLS migration applied in Supabase (`app_role`: Admin/Seller/Viewer; `profiles.role`; per-role policies on `leads`/`lead_activities`).
 - `zod` validation on lead PATCH bodies (`PATCH /api/leads/:id` and bulk PATCH).
 - Hygiene done: MIT `LICENSE`, Dependabot (npm and GitHub Actions; opens PRs, does not merge them), and secret scanning with push protection (enabled).
+- Dependabot ignores semver-major updates and groups updates weekly.
 - Remaining M1 hygiene: **CodeQL only**. The repository is public, so GitHub’s default CodeQL setup does not require Advanced Security. There is still no CodeQL workflow, and CodeQL is not a required status check.
 
 ### M1 close / post-M1 in production (2026-09-24)
