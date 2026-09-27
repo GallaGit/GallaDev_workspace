@@ -43,12 +43,11 @@ Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":t
 
 Passwordless demo for recruiters and reviewers. It stays. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). Activation in Vercel Production is still pending. See the operations guide.
 
-### Next slices (Ociel’s decisions, 26-27 Sep 2026)
+### Next slice: «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026)
 
-Specified, not implemented. Not current behavior. In this order. The visitor demo is not part of these slices: it stays as it is.
+Specified, not implemented. Not current behavior. The visitor demo is not part of this slice: it stays as it is.
 
-1. **Qué es / What it is** (small). Added on the login page, alongside “Entrar como visitante”. Text and static screenshots with fictional data, no session. [`what-it-is.md`](./what-it-is.md) (ES: [`what-it-is.es.md`](./what-it-is.es.md)).
-2. **English as the secondary language.** Spanish stays the default. Visible switcher, persisted choice, catalogs, and a phased plan. [`i18n.md`](./i18n.md) (ES: [`i18n.es.md`](./i18n.es.md)).
+Added on the login page, alongside “Entrar como visitante”. The visible title is «¿Qué es?» (EN: “What is it?”). Text and static screenshots with fictional data, no session. [`what-it-is.md`](./what-it-is.md) (ES: [`what-it-is.es.md`](./what-it-is.es.md)).
 
 ### M2 pending
 

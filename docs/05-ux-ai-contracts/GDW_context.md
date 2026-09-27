@@ -18,8 +18,6 @@ The response is organized into:
 
 The model must not invent websites, figures, software, customer information, or other facts. A Groq error must not modify the lead. Existing analysis is overwritten only after a successful new analysis.
 
-The language of the generated text stays an **open question** (Ociel, 26-27 Sep 2026). It is out of the i18n slice unless wiring it is trivial. See [`i18n.md`](../02-roadmap-delivery/i18n.md).
-
 ## Endpoints and persistence
 
 - `POST /api/leads/:id/analyze` is the canonical endpoint.

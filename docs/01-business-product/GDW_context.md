@@ -32,12 +32,12 @@ These names are shared by lists, Kanban, filters, KPIs, and Daily Work. New lead
 - Favorites persist with the lead.
 - Deletion means archiving, not destructive removal.
 - Merging fills only empty fields in the surviving lead and archives the other record.
-- Spanish is the default interface language. English is the secondary language for the whole product (Ociel’s decision, 26-27 Sep 2026). The slice is specified and not implemented: the UI is still Spanish only today. The previous rule “the user interface remains Spanish” is superseded. See [`i18n.md`](../02-roadmap-delivery/i18n.md).
+- The user interface remains Spanish.
 - AI analysis is stored in `Análisis IA` and distinguishes evidence, inference, and speculation.
 - The strategic ICP is 5–30 employees; the current n8n operational filter is 3–10.
 
 ## SaaS validation gate
 
-There is no self-signup. An Admin creates each account in the Supabase Dashboard (Authentication → Users); `on_auth_user_created` assigns Seller, and Admin is set on `profiles.role`. A passwordless visitor demo (off by default) can show fictional read-only leads without a Supabase session. It stays; activation in Vercel Production is still pending. The same login page gains a “What it is” section, specified and not implemented yet ([`what-it-is.md`](../02-roadmap-delivery/what-it-is.md)): it explains the tool with no session and sits alongside “Entrar como visitante”.
+There is no self-signup. An Admin creates each account in the Supabase Dashboard (Authentication → Users); `on_auth_user_created` assigns Seller, and Admin is set on `profiles.role`. A passwordless visitor demo (off by default) can show fictional read-only leads without a Supabase session. It stays; activation in Vercel Production is still pending. The same login page gains a “What is it?” section (ES: «¿Qué es?»), specified and not implemented yet ([`what-it-is.md`](../02-roadmap-delivery/what-it-is.md)): it explains the tool with no session and sits alongside “Entrar como visitante”.
 
 The minimum SaaS milestone is validated when a second user can complete the real workflow `login -> leads -> Kanban -> email -> status change` while row-level access controls prevent cross-user reads and writes. Billing and scale features follow this validation.

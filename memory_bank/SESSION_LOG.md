@@ -142,9 +142,8 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Secret scanning y push protection: activados. CodeQL sigue pendiente; al ser el repo público, el default setup no requiere Advanced Security.
 - Pendiente de M2 además de CodeQL: tests E2E de Viewer (403; CI solo tiene credenciales Admin/Seller), rate limit distribuido (el limitador es en memoria por instancia) y audit trail (la identidad por usuario ya existe; el log no).
 
-## 2026-09-27 — Decisiones de Ociel (docs): Qué es junto a la demo + inglés secundario
+## 2026-09-27 — Decisión de Ociel (docs): sección «¿Qué es?»
 
 - La demo de visitante (PR #55) se mantiene: código, `DEMO_*` y el comportamiento ya documentado. La activación en Vercel Production sigue pendiente.
-- Slice 1, especificado y no implementado: sección pública «Qué es» / «What it is» en el login, junto a «Entrar como visitante». Copia en los dos idiomas, capturas estáticas en `public/what-it-is/` con datos ficticios, sin sesión.
-- Slice 2, después: inglés como idioma secundario de todo el proyecto. Español por defecto. Selector visible y cookie. `next-intl` (o equivalente) queda propuesto, a confirmar al implementar. El idioma del análisis IA sigue abierto.
-- Solo documentación. Specs en `docs/02-roadmap-delivery/what-it-is*.md` e `i18n*.md`.
+- Un solo slice, especificado y no implementado: sección pública «¿Qué es?» (EN: “What is it?”) en el login, junto a «Entrar como visitante». Texto y capturas estáticas en `public/what-it-is/` con datos ficticios, sin sesión.
+- Solo documentación. Spec en `docs/02-roadmap-delivery/what-it-is.md` y `what-it-is.es.md`.

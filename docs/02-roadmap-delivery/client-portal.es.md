@@ -1,7 +1,6 @@
 # Portal De Cliente (Traza Del Proyecto) — Requisito Futuro
 
-> **Estado:** propuesto, no implementado · decisiones de producto aprobadas por Ociel el 26 Sep 2026 · **Actualizado:** 2026-09-27
-> **Idioma:** el slice de i18n ([`i18n.es.md`](./i18n.es.md)) deja el español por defecto y el inglés como secundario, con el mismo selector. Hoy la UI sigue solo en español. La demo de visitante se mantiene; «Qué es» se añade en el login ([`what-it-is.es.md`](./what-it-is.es.md)), junto al botón.
+> **Estado:** propuesto, no implementado · decisiones de producto aprobadas por Ociel el 26 Sep 2026 · **Actualizado:** 2026-09-26
 > **No entra en M2.** No presentar como comportamiento actual: no hay rol `client`, ni tablas de proyecto, ni ruta `/portal`, ni invitación por correo.
 
 ## 1. Contexto y objetivo
@@ -417,7 +416,7 @@ APIs del CRM (`/api/leads`, `/api/settings`, `/api/automations`, `/api/team`, in
 
 ## 7. UI
 
-La regla «la interfaz sigue solo en español» queda sustituida (Ociel, 26-27 Sep 2026). El portal, cuando exista, usa el mismo selector que el resto del workspace: español por defecto, inglés secundario ([`i18n.es.md`](./i18n.es.md)). Hoy la UI sigue solo en español y este slice de idioma no está implementado.
+La interfaz de producto sigue en español, como el resto del workspace.
 
 ### Portal (`/portal`) — PROPOSED
 
@@ -508,7 +507,7 @@ Esto es criterio de producto. No es un dictamen jurídico.
 
 Aprobado por Ociel el 26 Sep 2026. No hay un correo cada vez que se publica una actualización. Una vez por semana, cada cuenta con la preferencia activa y sin revocar recibe un PDF por Resend.
 
-El PDF resume solo lo publicado esa semana: actualizaciones con `visibility = client` y el avance de las fases (`progress_pct` y estado). No incluye notas internas, score, análisis IA ni borradores del CRM. Recomienda descargar los ficheros y lista los que siguen en el bucket con su «disponible hasta …». El PDF va adjunto al correo. No se guarda en `project-files`, así la limpieza de los 14 días no se lo lleva: la copia es la del email. Remitente: `emailFromClients()`. Asunto propuesto, en español (idioma por defecto): `GallaDev — informe semanal de tu proyecto`. La plantilla en inglés entra con el slice de i18n; no es un correo distinto.
+El PDF, en español, resume solo lo publicado esa semana: actualizaciones con `visibility = client` y el avance de las fases (`progress_pct` y estado). No incluye notas internas, score, análisis IA ni borradores del CRM. Recomienda descargar los ficheros y lista los que siguen en el bucket con su «disponible hasta …». El PDF va adjunto al correo. No se guarda en `project-files`, así la limpieza de los 14 días no se lo lleva: la copia es la del email. Remitente: `emailFromClients()`. Asunto propuesto: `GallaDev — informe semanal de tu proyecto`.
 
 Preferencia: `project_members.weekly_report_enabled`, por defecto `false`, por cuenta. Esa persona la enciende o la apaga en `/portal`. Admin y el Seller del lead pueden hacer lo mismo desde el drawer, cuenta por cuenta. Con el proyecto `closed`, o con esa cuenta revocada, no se envía.
 

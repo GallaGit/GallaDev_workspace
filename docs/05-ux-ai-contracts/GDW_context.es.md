@@ -18,8 +18,6 @@ La respuesta se organiza en:
 
 El modelo no debe inventar webs, cifras, software, información de clientes ni otros hechos. Un error de Groq no debe modificar el lead. El análisis existente solo se sobrescribe después de completar correctamente uno nuevo.
 
-El idioma del texto generado queda **abierto** (Ociel, 26-27 Sep 2026). No entra en el slice de i18n salvo que engancharlo sea trivial. Ver [`i18n.es.md`](../02-roadmap-delivery/i18n.es.md).
-
 ## Endpoints y persistencia
 
 - `POST /api/leads/:id/analyze` es el endpoint canónico.

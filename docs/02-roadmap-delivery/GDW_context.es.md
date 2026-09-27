@@ -43,12 +43,11 @@ Producción: `https://workspace.galladev.com`. `GET /api/health` responde `{"ok"
 
 Demo sin contraseña para reclutadores y revisores. Se mantiene. `DEMO_MODE_ENABLED` queda **apagado** si no está definido. Con `true` o `1` y `DEMO_SESSION_SECRET` (al menos 16 caracteres), el login ofrece «Entrar como visitante». Una cookie httpOnly firmada con HMAC (4 horas) se resuelve en servidor, por `getSessionLeadRepository()`, a `DemoLeadRepository` (leads ficticios en memoria). Las peticiones del visitante no construyen el cliente de sesión de Supabase ni el repositorio con service role. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas responden 403 `demo_readonly`. `POST /api/demo/enter` responde 404 `demo_disabled`, 503 `demo_misconfigured` o 429. `GET /api/session` devuelve `visitor: true`. Unos pocos leads traen un análisis de dolores ya escrito. Para apagarla: `DEMO_MODE_ENABLED=false` o borrar la variable (sin cambio de código). La activación en Vercel Production sigue pendiente. Ver la guía de operación.
 
-### Slices siguientes (decisiones de Ociel, 26-27 Sep 2026)
+### Slice siguiente: «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026)
 
-Especificados, no implementados. No son comportamiento actual. Van en este orden. La demo de visitante no entra en estos slices: se queda como está.
+Especificado, no implementado. No es comportamiento actual. La demo de visitante no entra en este slice: se queda como está.
 
-1. **Qué es / What it is** (pequeño). Se añade en el login y convive con «Entrar como visitante». Texto y capturas estáticas con datos ficticios, sin sesión. [`what-it-is.es.md`](./what-it-is.es.md) (EN: [`what-it-is.md`](./what-it-is.md)).
-2. **Inglés como idioma secundario.** El español sigue por defecto. Selector visible, elección persistida, catálogos y plan por fases. [`i18n.es.md`](./i18n.es.md) (EN: [`i18n.md`](./i18n.md)).
+Se añade en el login y convive con «Entrar como visitante». El título visible es «¿Qué es?» (EN: “What is it?”). Texto y capturas estáticas con datos ficticios, sin sesión. [`what-it-is.es.md`](./what-it-is.es.md) (EN: [`what-it-is.md`](./what-it-is.md)).
 
 ### Pendiente de M2
 

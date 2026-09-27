@@ -36,9 +36,9 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests y E2E Tests son obligator
 
 Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defecto). `getSessionLeadRepository()` devuelve `DemoLeadRepository`. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`; las APIs bloqueadas responden 403 `demo_readonly`.
 
-### Decisiones de producto 26-27 Sep 2026 (Ociel)
+### Decisión de producto 26-27 Sep 2026 (Ociel)
 
-Dos slices especificados, sin implementación en esta fecha. La demo de visitante se mantiene; la activación en Vercel Production sigue pendiente. Primero «Qué es» en el login, junto al botón «Entrar como visitante» (copia en español e inglés; capturas estáticas ficticias; sin sesión). Después, inglés como idioma secundario de todo el proyecto (español por defecto, selector visible, cookie, catálogos). Ver `docs/02-roadmap-delivery/`.
+Un slice especificado, sin implementación en esta fecha. La demo de visitante se mantiene; la activación en Vercel Production sigue pendiente. La sección «¿Qué es?» (EN: “What is it?”) se añade en el login, junto al botón «Entrar como visitante»: texto y capturas estáticas ficticias, sin sesión. Ver `docs/02-roadmap-delivery/`.
 
 ## Política de archivo
 
