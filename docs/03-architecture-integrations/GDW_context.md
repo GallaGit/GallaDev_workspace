@@ -14,7 +14,7 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 
 - Leads and activities live in Supabase.
 - `getLeadRepository()` returns `SupabaseLeadRepository` (service role without a client; the session client when one is passed, so RLS applies).
-- `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. That branch is **deprecated** (Ociel, 26-27 Sep 2026; never enabled in production) and the What it is slice removes it; until then the code still does this. `AUTH_DISABLED` (non-production only) uses the service-role repository.
+- `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. `AUTH_DISABLED` (non-production only) uses the service-role repository.
 - `src/proxy.ts` is the session gate (Next.js 16 `proxy`; there is no `src/middleware.ts`). It exempts `/api/health`, `/api/demo/enter`, `/api/demo/exit`, and `/api/ingest/*`.
 - Route handlers add an RBAC layer: `requireApiSession`, `requireApiRole`, `requireAdmin`, and `requireLeadWriter`. Roles are `profiles.role` (`Admin`, `Seller`, `Viewer`).
 - Row-level security is the boundary for user data isolation.
@@ -49,10 +49,10 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 - `POST /api/sync`
 - `GET /api/health` (liveness, no session, no database)
 - `GET /api/db-status` (session; Supabase connectivity)
-- `GET /api/session` (`visitor: true` for a visitor cookie; demo deprecated)
+- `GET /api/session` (`visitor: true` for a visitor cookie)
 - `GET /api/team` (Admin)
-- `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`; deprecated route, removed with What it is)
-- `POST /api/demo/exit` (deprecated, same slice)
+- `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`)
+- `POST /api/demo/exit`
 - `GET/PATCH /api/settings`
 - `GET /api/settings/status`
 - `POST /api/settings/test`

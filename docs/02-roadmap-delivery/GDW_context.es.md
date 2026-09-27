@@ -39,17 +39,15 @@ Producción: `https://workspace.galladev.com`. `GET /api/health` responde `{"ok"
 - `src/app/error.tsx` y `src/app/global-error.tsx` (reintentar / inicio). No hay SDK de Sentry en el repo.
 - Logs estructurados vía `src/lib/route-log.ts` en los catch de ingesta y análisis: campos JSON `route`, `status` cuando se informa, `errorClass`, `requestId` si ya venía un id de cabecera válido.
 
-### Demo de visitante (PR #55, hecha, 2026-09-25) — en desuso
+### Demo de visitante (PR #55, hecha, 2026-09-25)
 
-**En desuso** por decisión de Ociel, 26-27 Sep 2026. Nunca se encendió en producción. No queda tarea abierta de encenderla, de añadir fixtures de visitante ni de alojar el portal de cliente dentro de esa sesión: esas líneas quedan **superseded** por el slice «Qué es». El código sigue en el árbol y apagado hasta ese slice. No tratar la demo como el plan vigente.
-
-Mientras el código exista: demo sin contraseña. `DEMO_MODE_ENABLED` queda **apagado** si no está definido. Con `true` o `1` y `DEMO_SESSION_SECRET` (al menos 16 caracteres), el login ofrece «Entrar como visitante». Una cookie httpOnly firmada con HMAC (4 horas) se resuelve en servidor, por `getSessionLeadRepository()`, a `DemoLeadRepository` (leads ficticios en memoria). Las peticiones del visitante no construyen el cliente de sesión de Supabase ni el repositorio con service role. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas responden 403 `demo_readonly`. `POST /api/demo/enter` responde 404 `demo_disabled`, 503 `demo_misconfigured` o 429. `GET /api/session` devuelve `visitor: true`. Unos pocos leads traen un análisis de dolores ya escrito. No encenderla. Ver la guía de operación.
+Demo sin contraseña para reclutadores y revisores. Se mantiene. `DEMO_MODE_ENABLED` queda **apagado** si no está definido. Con `true` o `1` y `DEMO_SESSION_SECRET` (al menos 16 caracteres), el login ofrece «Entrar como visitante». Una cookie httpOnly firmada con HMAC (4 horas) se resuelve en servidor, por `getSessionLeadRepository()`, a `DemoLeadRepository` (leads ficticios en memoria). Las peticiones del visitante no construyen el cliente de sesión de Supabase ni el repositorio con service role. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas responden 403 `demo_readonly`. `POST /api/demo/enter` responde 404 `demo_disabled`, 503 `demo_misconfigured` o 429. `GET /api/session` devuelve `visitor: true`. Unos pocos leads traen un análisis de dolores ya escrito. Para apagarla: `DEMO_MODE_ENABLED=false` o borrar la variable (sin cambio de código). La activación en Vercel Production sigue pendiente. Ver la guía de operación.
 
 ### Slices siguientes (decisiones de Ociel, 26-27 Sep 2026)
 
-Especificados, no implementados. No son comportamiento actual. Van en este orden:
+Especificados, no implementados. No son comportamiento actual. Van en este orden. La demo de visitante no entra en estos slices: se queda como está.
 
-1. **Qué es / What it is** (pequeño). Sustituye la demo de visitante. Sección pública en el login, copia en los dos idiomas, capturas estáticas con datos ficticios. [`what-it-is.es.md`](./what-it-is.es.md) (EN: [`what-it-is.md`](./what-it-is.md)).
+1. **Qué es / What it is** (pequeño). Se añade en el login y convive con «Entrar como visitante». Texto y capturas estáticas con datos ficticios, sin sesión. [`what-it-is.es.md`](./what-it-is.es.md) (EN: [`what-it-is.md`](./what-it-is.md)).
 2. **Inglés como idioma secundario.** El español sigue por defecto. Selector visible, elección persistida, catálogos y plan por fases. [`i18n.es.md`](./i18n.es.md) (EN: [`i18n.md`](./i18n.md)).
 
 ### Pendiente de M2

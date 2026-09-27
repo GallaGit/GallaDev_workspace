@@ -73,7 +73,7 @@ y documentación endurecida.
 - [x] CI con lint, typecheck, unit, component y e2e (Playwright). M2 Slice 1 (2026-09-24): esos cuatro jobs son gates obligatorios en `master` (estricto, `enforce_admins` activo): Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL no es check requerido; las revisiones requeridas no están por encima de 0.
 - [ ] Ampliar cobertura de tests donde haya huecos reales (no vanity %).
 - [x] Observabilidad parcial (PR #54, M2 Slice 2): `src/app/error.tsx` y `src/app/global-error.tsx`; una línea JSON en los catch de ingesta y análisis (`route`, `status`, `errorClass`, `requestId`) vía `src/lib/route-log.ts`. Sin Sentry ni eventos de producto.
-- [x] Documentación operativa alineada con `master` (Supabase Auth, RBAC, slices M2, demo de visitante). La demo quedó en desuso el 26-27 Sep 2026 (slice «Qué es»); esta casilla registra el alineamiento de esa fecha, no una tarea abierta de mantener la demo.
+- [x] Documentación operativa alineada con `master` (Supabase Auth, RBAC, slices M2, demo de visitante).
 
 ### Enriquecimiento bootcamp
 

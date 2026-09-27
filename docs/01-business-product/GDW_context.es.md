@@ -38,6 +38,6 @@ Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los le
 
 ## Puerta de validación SaaS
 
-No hay alta pública. Un Admin crea cada cuenta en el Dashboard de Supabase (Authentication → Users); `on_auth_user_created` asigna Seller, y el Admin se marca en `profiles.role`. La demo de visitante sin contraseña (PR #55, apagada por defecto) está **en desuso**: nunca se encendió en producción. La sustituye la sección pública «Qué es» del login, especificada y aún no implementada ([`what-it-is.es.md`](../02-roadmap-delivery/what-it-is.es.md)). El código de la demo sigue en el repo hasta ese slice.
+No hay alta pública. Un Admin crea cada cuenta en el Dashboard de Supabase (Authentication → Users); `on_auth_user_created` asigna Seller, y el Admin se marca en `profiles.role`. Una demo de visitante sin contraseña (apagada por defecto) puede mostrar leads ficticios de solo lectura sin sesión de Supabase. Se mantiene; la activación en Vercel Production sigue pendiente. En el mismo login se añade la sección «Qué es», especificada y aún no implementada ([`what-it-is.es.md`](../02-roadmap-delivery/what-it-is.es.md)): explica la herramienta sin sesión y convive con «Entrar como visitante».
 
 El hito SaaS mínimo se valida cuando un segundo usuario puede completar el flujo real `login -> leads -> Kanban -> email -> cambio de estado`, mientras los controles de acceso por fila impiden leer o modificar datos de otros usuarios. Billing y las capacidades de escala vienen después.

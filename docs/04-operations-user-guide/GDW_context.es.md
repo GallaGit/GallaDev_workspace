@@ -22,9 +22,9 @@ Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE
 - `/kanban`: los nueve estados del pipeline. No hay control de “añadir tarjeta”.
 - `/stats`: estadísticas. Selector de tipo de gráfico: Barras, Circular (donut), Área (clave `gdw-stats-chart-type` en `localStorage`).
 - `/duplicates`: grupos de duplicados.
-- `/email`: revisión de borradores y soporte de Gmail Compose. La sesión de visitante (en desuso, aún en el código) redirige a `/leads`.
-- `/automations`: webhooks de automatización. La sesión de visitante (en desuso, aún en el código) redirige a `/leads`.
-- `/settings`: estado de integraciones, seguridad y configuración enmascarada. La sesión de visitante (en desuso, aún en el código) redirige a `/leads`.
+- `/email`: revisión de borradores y soporte de Gmail Compose. El visitante es redirigido a `/leads`.
+- `/automations`: webhooks de automatización. El visitante es redirigido a `/leads`.
+- `/settings`: estado de integraciones, seguridad y configuración enmascarada. El visitante es redirigido a `/leads`.
 
 ## Operación diaria
 
@@ -42,18 +42,18 @@ El análisis IA (`POST /api/leads/:id/analyze` y `POST /api/leads/pain-analysis`
 
 Comprobación de vida para uptime: `GET /api/health` (sin sesión). Responde `{"ok":true}` si el proceso atiende HTTP. No comprueba Supabase.
 
-## Demo de visitante (en desuso)
+## Demo de visitante
 
-**En desuso** (Ociel, 26-27 Sep 2026). Nunca se encendió en producción. No definir `DEMO_MODE_ENABLED` ni `DEMO_SESSION_SECRET` para encenderla: esa instrucción queda **superseded**. La sustituye la sección «Qué es» del login, especificada y no implementada ([`what-it-is.es.md`](../02-roadmap-delivery/what-it-is.es.md)). Hasta ese slice el código sigue en el repo y el comportamiento de abajo es el del árbol actual, no el plan.
+La demo se mantiene. La activación en Vercel Production sigue pendiente. En la misma página de login, el slice «Qué es» (especificado, no implementado) añade texto y capturas que no piden sesión y conviven con el botón. Ver [`what-it-is.es.md`](../02-roadmap-delivery/what-it-is.es.md).
 
-El login puede ofrecer **Entrar como visitante** («Ver demo sin cuenta») solo si alguien enciende el flag a pesar de esta decisión. La sesión es una cookie httpOnly firmada con HMAC-SHA256 (`gdw_visitor`, 4 horas) usando `DEMO_SESSION_SECRET`. No es Admin, Seller ni Viewer, y no abre el repositorio de leads de Supabase ni el cliente service role. `getSessionLeadRepository()` devuelve `DemoLeadRepository`. La UI muestra asesorías españolas ficticias (correos `example.com`). Algunos leads traen un análisis de dolores ya escrito, así el panel lo enseña sin llamar a un modelo. Mover una tarjeta del Kanban muestra un aviso en español y no se guarda. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas (equipo, settings, automatizaciones, db-status, ingesta, escrituras de leads, merge, score y el análisis IA real) responden HTTP 403 con `code: "demo_readonly"`. `GET /api/session` devuelve `visitor: true` y `role: null`. `POST /api/demo/enter` responde 404 `demo_disabled` con el flag apagado, 503 `demo_misconfigured` si el secreto falta o tiene menos de 16 caracteres, y 429 `rate_limited` tras 8 peticiones en 15 minutos por IP. Las respuestas de la demo envían `X-Robots-Tag: noindex, nofollow` (el layout de la app ya es `noindex`).
+El login puede ofrecer **Entrar como visitante** («Ver demo sin cuenta»). La sesión es una cookie httpOnly firmada con HMAC-SHA256 (`gdw_visitor`, 4 horas) usando `DEMO_SESSION_SECRET`. No es Admin, Seller ni Viewer, y no abre el repositorio de leads de Supabase ni el cliente service role. `getSessionLeadRepository()` devuelve `DemoLeadRepository`. La UI muestra asesorías españolas ficticias (correos `example.com`). Algunos leads traen un análisis de dolores ya escrito, así el panel lo enseña sin llamar a un modelo. Mover una tarjeta del Kanban muestra un aviso en español y no se guarda. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas (equipo, settings, automatizaciones, db-status, ingesta, escrituras de leads, merge, score y el análisis IA real) responden HTTP 403 con `code: "demo_readonly"`. `GET /api/session` devuelve `visitor: true` y `role: null`. `POST /api/demo/enter` responde 404 `demo_disabled` con el flag apagado, 503 `demo_misconfigured` si el secreto falta o tiene menos de 16 caracteres, y 429 `rate_limited` tras 8 peticiones en 15 minutos por IP. Las respuestas de la demo envían `X-Robots-Tag: noindex, nofollow` (el layout de la app ya es `noindex`).
 
 | Variable | Papel |
 | --- | --- |
 | `DEMO_MODE_ENABLED` | `true` o `1` enciende la demo. **Si no está, está vacía o es otro valor, queda apagada.** |
 | `DEMO_SESSION_SECRET` | Secreto HMAC, al menos 16 caracteres. Obligatorio con el flag encendido. Generar con `openssl rand -hex 32`. |
 
-Producción no debe encenderla. Si en algún entorno el flag llegó a `true` o `1`, volver a `DEMO_MODE_ENABLED=false` o borrar la variable, y reiniciar o redesplegar para que el proceso lea el entorno. La entrada está limitada (8 peticiones / 15 minutos / IP). El servidor de Playwright enciende el flag solo para el E2E de la demo; ese spec se sustituye en el slice «Qué es».
+Para desactivarla en producción sin cambiar código: `DEMO_MODE_ENABLED=false` o borrar la variable, y reiniciar o redesplegar para que el proceso lea el entorno. La entrada está limitada (8 peticiones / 15 minutos / IP). El servidor de Playwright enciende el flag solo para el E2E; producción sigue apagada hasta que definas las variables.
 
 ## Errores y logs
 
