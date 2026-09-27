@@ -1,7 +1,7 @@
 # “What is it?” Section — Alongside The Visitor Demo
 
 > **Status:** specified, not implemented · decision by Ociel, 26-27 Sep 2026; adjusted 27 Sep 2026 · **Updated:** 2026-09-27
-> The only new slice. ES: [`what-it-is.es.md`](./what-it-is.es.md).
+> ES: [`what-it-is.es.md`](./what-it-is.es.md). The urgent priority for 28 Sep 2026 is company email ([`company-email.md`](./company-email.md)); this section comes after it.
 > Do not present this as current behavior. Login is still the form in `src/app/login/page.tsx`. The visitor demo (PR #55) stays as it is: code, `DEMO_*` variables, and the docs that describe how it behaves. Activation in Vercel Production is still pending.
 
 ## 1. Decision

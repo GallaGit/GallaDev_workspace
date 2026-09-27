@@ -43,6 +43,12 @@ Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":t
 
 Passwordless demo for recruiters and reviewers. It stays. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). Activation in Vercel Production is still pending. See the operations guide.
 
+### Urgent priority — Monday 28 Sep 2026
+
+**Company email (`galladev.com`).** Receive and reply as `@galladev.com` without breaking Resend. There is no mailbox today: replies to `hola@galladev.com` reach nobody. Spec: [`company-email.md`](./company-email.md) (ES: [`company-email.es.md`](./company-email.es.md)). Recommendation A (Cloudflare Email Routing), pending Ociel’s decision.
+
+This is item 1. It comes before implementing “What is it?” and before pending M2 work: CodeQL, Viewer E2E 403 tests, distributed rate limiting, the audit trail, and the Notion mock cleanup (`tests/mocks/handlers.ts`, follow-up in `TESTING.md`).
+
 ### Next slice: «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026)
 
 Specified, not implemented. Not current behavior. The visitor demo is not part of this slice: it stays as it is.

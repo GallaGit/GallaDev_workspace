@@ -1,7 +1,7 @@
 # Sección «¿Qué es?» — Junto A La Demo De Visitante
 
 > **Estado:** especificado, no implementado · decisión de Ociel, 26-27 Sep 2026; matizada el 27 Sep 2026 · **Actualizado:** 2026-09-27
-> Único slice nuevo. EN: [`what-it-is.md`](./what-it-is.md).
+> EN: [`what-it-is.md`](./what-it-is.md). La prioridad urgente del 28 Sep 2026 es el email de empresa ([`company-email.es.md`](./company-email.es.md)); esta sección va después.
 > No presentar como comportamiento actual. El login sigue siendo el formulario de `src/app/login/page.tsx`. La demo de visitante (PR #55) se mantiene tal cual: código, variables `DEMO_*` y documentación de su comportamiento. Su activación en Vercel Production sigue pendiente.
 
 ## 1. Decisión

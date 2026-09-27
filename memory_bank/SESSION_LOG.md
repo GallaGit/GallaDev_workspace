@@ -147,3 +147,10 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - La demo de visitante (PR #55) se mantiene: código, `DEMO_*` y el comportamiento ya documentado. La activación en Vercel Production sigue pendiente.
 - Un solo slice, especificado y no implementado: sección pública «¿Qué es?» (EN: “What is it?”) en el login, junto a «Entrar como visitante». Texto y capturas estáticas en `public/what-it-is/` con datos ficticios, sin sesión.
 - Solo documentación. Spec en `docs/02-roadmap-delivery/what-it-is.md` y `what-it-is.es.md`.
+
+## 2026-09-27 — Ociel marca email de empresa como siguiente paso urgente
+
+- Prioridad urgente para el lunes 28 Sep 2026: poder recibir y responder como `@galladev.com` (`hola@`, y `ociel@` si se quiere), sin romper Resend. Hoy no hay buzón; las respuestas al acuse no llegan a nadie.
+- Recomendación A (Cloudflare Email Routing + «Enviar como» en Gmail por SMTP de Resend), pendiente de decisión de Ociel. B (Google Workspace) cuando haya clientes o equipo.
+- Spec: `docs/02-roadmap-delivery/company-email.es.md` y `company-email.md`. Va por delante de «¿Qué es?» y de los pendientes de M2.
+- Solo documentación. Sin claves en el repo.
