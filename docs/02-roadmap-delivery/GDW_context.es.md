@@ -1,5 +1,11 @@
 # Roadmap Y Entrega
 
+## Prioridad urgente — lunes 28 sep 2026
+
+1. **Configuración de email de empresa (`galladev.com`).** Recibir y responder como `@galladev.com` (`hola@`, y `ociel@` si Ociel lo quiere) y mantener el envío transaccional de Resend. Hoy no hay buzón: las respuestas a `hola@` no llegan a nadie. Spec: [`company-email.es.md`](./company-email.es.md) (EN: [`company-email.md`](./company-email.md)). Recomendación: opción A (Cloudflare Email Routing, coste 0). **Recomendación, pendiente de decisión de Ociel.**
+
+Este ítem es el primero. Después van los pendientes de M2: CodeQL, tests E2E de Viewer (403), rate limiting distribuido, historial de auditoría y limpieza de mocks de Notion (`tests/mocks/handlers.ts`). Después va implementar la sección de login «¿Qué es?».
+
 ## Secuencia de entrega
 
 - **M1 Seguro:** autenticación, invalidación de sesiones, límites de tasa, límites de cuerpo, cabeceras de seguridad y aislamiento por filas.

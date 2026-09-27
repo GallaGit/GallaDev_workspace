@@ -1,5 +1,11 @@
 # Roadmap And Delivery
 
+## Urgent priority — Monday 28 Sep 2026
+
+1. **Company email setup (`galladev.com`).** Receive and reply as `@galladev.com` (`hola@`, and `ociel@` if Ociel wants it) while Resend keeps sending transactional mail. There is no mailbox today, so replies to `hola@` reach nobody. Spec: [`company-email.md`](./company-email.md) (ES: [`company-email.es.md`](./company-email.es.md)). Recommendation: option A (Cloudflare Email Routing, cost 0). **Recommendation, pending Ociel’s decision.**
+
+This is the first item. After it: the pending M2 work — CodeQL, Viewer E2E 403 tests, distributed rate limiting, audit trail, and Notion mocks cleanup (`tests/mocks/handlers.ts`). After that: implementing the login “What is it?” / «¿Qué es?» section.
+
 ## Delivery sequence
 
 - **M1 Secure:** authentication, session invalidation, rate limits, body caps, security headers, and row-level isolation.

@@ -21,11 +21,12 @@ Flower “porque el hito lo pide”: se toma la **idea**, no la herramienta.
 
 ## Orden sugerido post go-live
 
-1. [ ] Cerrar pendientes canónicos que siguen abiertos (CodeQL, audit trail). Secret scanning y push protection están activados. LICENSE, Dependabot y la validación zod de PATCH de leads ya están hechos.
-2. [ ] Observabilidad mínima de producto (eventos). Los errores de UI y los logs JSON de ingesta/análisis ya cubren una parte (PR #54).
-3. [ ] Jobs en background para sync / analyze IA.
-4. [ ] Reporting de negocio (KPIs CRM) si Stats se queda corto.
-5. [ ] Cola/offload (`202` + `job_id`) solo si los requests empiezan a bloquearse.
+1. [ ] **Prioridad urgente — lunes 28 sep 2026.** Email de empresa en `galladev.com`: recibir y responder como `@galladev.com` y mantener Resend. Spec: [`company-email.es.md`](./company-email.es.md) (EN: [`company-email.md`](./company-email.md)). Va antes que el resto de esta lista, antes que los pendientes de M2 y antes de implementar la sección de login «¿Qué es?».
+2. [ ] Cerrar pendientes canónicos que siguen abiertos (CodeQL, audit trail). Secret scanning y push protection están activados. LICENSE, Dependabot y la validación zod de PATCH de leads ya están hechos.
+3. [ ] Observabilidad mínima de producto (eventos). Los errores de UI y los logs JSON de ingesta/análisis ya cubren una parte (PR #54).
+4. [ ] Jobs en background para sync / analyze IA.
+5. [ ] Reporting de negocio (KPIs CRM) si Stats se queda corto.
+6. [ ] Cola/offload (`202` + `job_id`) solo si los requests empiezan a bloquearse.
 
 ---
 

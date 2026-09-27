@@ -5,6 +5,12 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 
 ---
 
+## 2026-09-27 — Email de empresa, siguiente paso urgente
+
+- 27 Sep 2026: Ociel marca email de empresa como siguiente paso urgente (lunes 28 sep 2026).
+- Recibir y responder como `@galladev.com` (`hola@`) y mantener el envío de Resend. Recomendación A (Cloudflare Email Routing hacia `ociel.galla@gmail.com`), pendiente de decisión de Ociel.
+- Solo documentación. Spec: `docs/02-roadmap-delivery/company-email.es.md` (EN: `company-email.md`).
+
 ## 2026-09-22 — Cutover Auth / SaaS slice
 
 - Persistencia: Supabase como fuente de verdad de leads.
