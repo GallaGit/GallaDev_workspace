@@ -34,7 +34,11 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests y E2E Tests son obligator
 
 ### Demo de visitante (PR #55)
 
-Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defecto). `getSessionLeadRepository()` devuelve `DemoLeadRepository`. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`; las APIs bloqueadas responden 403 `demo_readonly`.
+Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defecto). `getSessionLeadRepository()` devuelve `DemoLeadRepository`. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`; las APIs bloqueadas responden 403 `demo_readonly`. Decisión posterior (26-27 Sep 2026): en desuso. El código seguía en el repo en la fecha de esta nota de decisión.
+
+### Decisiones de producto 26-27 Sep 2026 (Ociel)
+
+Dos slices especificados, sin implementación en esta fecha. Primero «Qué es» en el login (sustituye la demo; copia en español e inglés; capturas estáticas ficticias). Después, inglés como idioma secundario de todo el proyecto (español por defecto, selector visible, cookie, catálogos). No había issue abierto de la demo: encenderla en producción, los fixtures de visitante que no existían y «portal dentro de la demo» quedan superseded. Ver `docs/02-roadmap-delivery/`.
 
 ## Política de archivo
 

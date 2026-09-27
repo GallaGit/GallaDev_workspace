@@ -14,7 +14,7 @@ Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
 
 - Los leads y las actividades viven en Supabase.
 - `getLeadRepository()` devuelve `SupabaseLeadRepository` (service role sin cliente; el cliente de sesión si se le pasa, y entonces aplica RLS).
-- `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. `AUTH_DISABLED` (solo fuera de producción) usa el repositorio service role.
+- `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. Esa rama está **en desuso** (Ociel, 26-27 Sep 2026; nunca en producción) y el slice «Qué es» la retira; hasta entonces el código sigue así. `AUTH_DISABLED` (solo fuera de producción) usa el repositorio service role.
 - `src/proxy.ts` es la puerta de sesión (convención `proxy` de Next.js 16; no hay `src/middleware.ts`). Exime `/api/health`, `/api/demo/enter`, `/api/demo/exit` y `/api/ingest/*`.
 - Los route handlers añaden una capa RBAC: `requireApiSession`, `requireApiRole`, `requireAdmin` y `requireLeadWriter`. Los roles son `profiles.role` (`Admin`, `Seller`, `Viewer`).
 - RLS es la frontera de aislamiento de datos entre usuarios.
@@ -49,10 +49,10 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 - `POST /api/sync`
 - `GET /api/health` (liveness, sin sesión ni base de datos)
 - `GET /api/db-status` (sesión; conectividad con Supabase)
-- `GET /api/session` (`visitor: true` con cookie de visitante)
+- `GET /api/session` (`visitor: true` con cookie de visitante; demo en desuso)
 - `GET /api/team` (Admin)
-- `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`)
-- `POST /api/demo/exit`
+- `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`; ruta en desuso, se retira con «Qué es»)
+- `POST /api/demo/exit` (en desuso, mismo slice)
 - `GET/PATCH /api/settings`
 - `GET /api/settings/status`
 - `POST /api/settings/test`

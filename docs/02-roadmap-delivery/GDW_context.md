@@ -39,9 +39,18 @@ Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":t
 - `src/app/error.tsx` and `src/app/global-error.tsx` (retry / home). No Sentry SDK in the repo.
 - Structured logs via `src/lib/route-log.ts` on ingest and analyze catches: JSON fields `route`, `status` when set, `errorClass`, `requestId` when a safe header id is already present.
 
-### Visitor demo (PR #55, done, 2026-09-25)
+### Visitor demo (PR #55, done, 2026-09-25) — deprecated
 
-Passwordless demo for recruiters and reviewers. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). See the operations guide.
+**Deprecated** by Ociel’s decision, 26-27 Sep 2026. It was never enabled in production. There is no open task to turn it on, to add visitor fixtures, or to host the client portal inside that session: those lines are **superseded** by the What it is slice. The code remains in the tree and off until that slice. Do not treat the demo as the current plan.
+
+While the code is still there: passwordless demo. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Do not enable it. See the operations guide.
+
+### Next slices (Ociel’s decisions, 26-27 Sep 2026)
+
+Specified, not implemented. Not current behavior. In this order:
+
+1. **Qué es / What it is** (small). Replaces the visitor demo. Public section on the login page, copy in both languages, static screenshots with fictional data. [`what-it-is.md`](./what-it-is.md) (ES: [`what-it-is.es.md`](./what-it-is.es.md)).
+2. **English as the secondary language.** Spanish stays the default. Visible switcher, persisted choice, catalogs, and a phased plan. [`i18n.md`](./i18n.md) (ES: [`i18n.es.md`](./i18n.es.md)).
 
 ### M2 pending
 

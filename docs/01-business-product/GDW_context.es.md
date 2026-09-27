@@ -32,12 +32,12 @@ Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los le
 - Los favoritos se persisten con el lead.
 - Borrar significa archivar, no eliminar de forma destructiva.
 - El merge solo rellena campos vacíos del lead conservado y archiva el otro.
-- La interfaz de usuario permanece en español.
+- El español es el idioma por defecto de la interfaz. El inglés es el idioma secundario de todo el producto (decisión de Ociel, 26-27 Sep 2026). El slice está especificado y no implementado: hoy la UI sigue solo en español. La regla anterior «la interfaz permanece en español» queda sustituida. Ver [`i18n.es.md`](../02-roadmap-delivery/i18n.es.md).
 - El análisis IA se guarda en `Análisis IA` y distingue evidencia, inferencia y especulación.
 - El ICP estratégico es de 5–30 empleados; el filtro operativo actual de n8n es de 3–10.
 
 ## Puerta de validación SaaS
 
-No hay alta pública. Un Admin crea cada cuenta en el Dashboard de Supabase (Authentication → Users); `on_auth_user_created` asigna Seller, y el Admin se marca en `profiles.role`. Una demo de visitante sin contraseña (apagada por defecto) puede mostrar leads ficticios de solo lectura sin sesión de Supabase.
+No hay alta pública. Un Admin crea cada cuenta en el Dashboard de Supabase (Authentication → Users); `on_auth_user_created` asigna Seller, y el Admin se marca en `profiles.role`. La demo de visitante sin contraseña (PR #55, apagada por defecto) está **en desuso**: nunca se encendió en producción. La sustituye la sección pública «Qué es» del login, especificada y aún no implementada ([`what-it-is.es.md`](../02-roadmap-delivery/what-it-is.es.md)). El código de la demo sigue en el repo hasta ese slice.
 
 El hito SaaS mínimo se valida cuando un segundo usuario puede completar el flujo real `login -> leads -> Kanban -> email -> cambio de estado`, mientras los controles de acceso por fila impiden leer o modificar datos de otros usuarios. Billing y las capacidades de escala vienen después.

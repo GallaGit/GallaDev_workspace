@@ -1,6 +1,8 @@
 # Portal De Cliente (Traza Del Proyecto) — Requisito Futuro
 
-> **Estado:** propuesto, no implementado · decisiones de producto aprobadas por Ociel el 26 Sep 2026 · **Actualizado:** 2026-09-26
+> **Estado:** propuesto, no implementado · decisiones de producto aprobadas por Ociel el 26 Sep 2026 · **Actualizado:** 2026-09-27
+> **Demo de visitante:** en desuso (Ociel, 26-27 Sep 2026). «Portal dentro de la demo» queda **superseded**. El login público pasa a la sección «Qué es» ([`what-it-is.es.md`](./what-it-is.es.md)), aún no implementada. Mientras el código de la demo siga en el repo, un visitante no entra al portal.
+> **Idioma:** «la interfaz sigue en español» queda sustituido por el slice de i18n ([`i18n.es.md`](./i18n.es.md)): español por defecto, inglés secundario, el mismo selector. Hoy la UI sigue solo en español.
 > **No entra en M2.** No presentar como comportamiento actual: no hay rol `client`, ni tablas de proyecto, ni ruta `/portal`, ni invitación por correo.
 
 ## 1. Contexto y objetivo
@@ -26,8 +28,8 @@ Hechos del código y del esquema. Lo que no está en esta tabla es **PROPOSED**.
 | Correo saliente | Resend, solo para la ingesta web: `src/lib/email/resend-client.ts` y `src/lib/email/send-ingest-emails.ts`. Remitente `emailFromClients()` (`EMAIL_FROM_CLIENTS` o `GallaDev <hola@galladev.com>`). Reply-To opcional `EMAIL_REPLY_TO`. Aviso interno `EMAIL_NOTIFY_TO`. Si falta `RESEND_API_KEY`, el envío se omite (fail-open) y el lead se guarda igual. No hay `inviteUserByEmail` ni `generateLink`. |
 | Storage | El repo no usa Supabase Storage. No hay buckets. |
 | Shell | `src/app/layout.tsx` envuelve todas las páginas en `AppShell`. El menú interno está en `src/components/layout/app-sidebar.tsx` (Dashboard, Daily Work, Leads, Kanban, Statistics, Email, Automations, Duplicados, Settings). |
-| Login | `src/app/login/login-form.tsx` llama a `signInWithPassword` y redirige a `from` o a `/`. Puede ofrecer «Entrar como visitante». No hay pantalla de restablecer contraseña. |
-| Demo de visitante | Cookie httpOnly `gdw_visitor` (HMAC, 4 horas). No es Admin, Seller ni Viewer. `GET /api/session` devuelve `visitor: true` y `role: null`. Las APIs bloqueadas responden 403 `demo_readonly`. |
+| Login | `src/app/login/login-form.tsx` llama a `signInWithPassword` y redirige a `from` o a `/`. Puede ofrecer «Entrar como visitante» mientras el código en desuso siga en el repo. No hay pantalla de restablecer contraseña. |
+| Demo de visitante | **En desuso.** Cookie httpOnly `gdw_visitor` (HMAC, 4 horas) si el flag está encendido. No es Admin, Seller ni Viewer. `GET /api/session` devuelve `visitor: true` y `role: null`. Las APIs bloqueadas responden 403 `demo_readonly`. El slice «Qué es» retira esta fila. |
 | Auditoría | Especificada en [`audit-trail.es.md`](./audit-trail.es.md). La tabla `audit_log` no existe. |
 | Cliente admin | `createSupabaseAdminClient()` (`src/lib/supabase/admin.ts`) usa la service role y solo vive en servidor. Hoy el equipo se lista con `sb.auth.admin.listUsers()` en `GET /api/team` (solo Admin). |
 
@@ -83,7 +85,7 @@ La invitación no hereda el fail-open de `sendIngestEmails`. Si el correo no sal
 | Seller | Escribe leads propios o sin asignar (`responsable`). No toca settings ni `GET /api/team`. | Igual en el CRM. En los leads que puede escribir: confirma la conversión, publica, envía restablecimiento, descarga ficheros y lanza el informe semanal. No revoca, no cierra el proyecto y no ejecuta la supresión. |
 | Viewer | Lectura del CRM. Las escrituras responden 403. | Sigue en el CRM, en lectura. Puede leer la traza interna del proyecto. No invita, no sube, no descarga, no abre `/portal`. |
 | `client` | No existe. | **PROPOSED.** Solo `/portal` y las APIs de esa área, en solo lectura. Sin CRM. Hasta tres cuentas ven el mismo proyecto. |
-| Visitante demo | Cookie `gdw_visitor`, datos ficticios, sin Supabase. | Sigue igual. `/portal` le redirige a `/leads`, como `/settings`, `/automations` y `/email`. No hay demo del portal en v1. |
+| Visitante demo | Cookie `gdw_visitor`, datos ficticios, sin Supabase. **En desuso.** | **Superseded.** No se mantiene la demo ni se mete el portal dentro. Mientras el código siga, `/portal` le redirige a `/leads`. |
 
 El rol sale de `profiles.role`. El email de login vive en `auth.users`, no en `profiles` (`profiles` hoy solo tiene `id`, `role`, `created_at`).
 
@@ -416,7 +418,7 @@ APIs del CRM (`/api/leads`, `/api/settings`, `/api/automations`, `/api/team`, in
 
 ## 7. UI
 
-La interfaz de producto sigue en español, como el resto del workspace.
+La regla «la interfaz sigue solo en español» queda sustituida (Ociel, 26-27 Sep 2026). El portal, cuando exista, usa el mismo selector que el resto del workspace: español por defecto, inglés secundario ([`i18n.es.md`](./i18n.es.md)). Hoy la UI sigue solo en español y este slice de idioma no está implementado.
 
 ### Portal (`/portal`) — PROPOSED
 
@@ -500,14 +502,14 @@ Esto es criterio de producto. No es un dictamen jurídico.
 - **Cierre.** `closed` significa acuerdo de las dos partes. Un Admin deja `closed_at` / `closed_by` y revoca todas las cuentas. El portal deja de resolverse para ellas. No hay acceso de solo lectura después del cierre.
 - **Revocación.** Solo Admin. Puede ser una cuenta o todas. La cuenta revocada deja de pasar la policy de `project_members` y su invitación pasa a `revoked`. Las demás, si no se eligió revocar el proyecto, siguen. El Seller recibe 403 si lo intenta.
 - **Supresión.** Bajo petición, solo Admin, y distinta de archivar. Orden: borrar objetos del bucket de ese proyecto; insertar `client.erased` solo con la fecha; `DELETE` de la fila `leads` (el proyecto, las fases, las actualizaciones, los ficheros, los miembros y las invitaciones caen en cascada); borrar cada usuario Auth de esas cuentas (`profiles.id` ya tiene `ON DELETE CASCADE`). El archivado (`leads.archived`) sigue siendo el borrado normal del CRM en el resto de la app. La fila de prueba se conserva: es la decisión, no una opción legal pendiente.
-- **Demo y `AUTH_DISABLED`.** El visitante no entra. `AUTH_DISABLED` sigue fail-closed en producción y, fuera de producción, no debe fabricar un rol `client`.
+- **Demo y `AUTH_DISABLED`.** El visitante no entra mientras esa sesión siga en el código. La demo está en desuso y el slice «Qué es» la retira (**superseded**: no hay tarea de darle el portal). `AUTH_DISABLED` sigue fail-closed en producción y, fuera de producción, no debe fabricar un rol `client`.
 - **Rate limit.** El reenvío de invitación usa el limitador en memoria ya existente (`src/lib/rate-limit.ts`), con un tope propuesto de 5 envíos por hora y proyecto. Sigue siendo por instancia, como el resto de M2.
 
 ## 10. Informe semanal en PDF
 
 Aprobado por Ociel el 26 Sep 2026. No hay un correo cada vez que se publica una actualización. Una vez por semana, cada cuenta con la preferencia activa y sin revocar recibe un PDF por Resend.
 
-El PDF, en español, resume solo lo publicado esa semana: actualizaciones con `visibility = client` y el avance de las fases (`progress_pct` y estado). No incluye notas internas, score, análisis IA ni borradores del CRM. Recomienda descargar los ficheros y lista los que siguen en el bucket con su «disponible hasta …». El PDF va adjunto al correo. No se guarda en `project-files`, así la limpieza de los 14 días no se lo lleva: la copia es la del email. Remitente: `emailFromClients()`. Asunto propuesto: `GallaDev — informe semanal de tu proyecto`.
+El PDF resume solo lo publicado esa semana: actualizaciones con `visibility = client` y el avance de las fases (`progress_pct` y estado). No incluye notas internas, score, análisis IA ni borradores del CRM. Recomienda descargar los ficheros y lista los que siguen en el bucket con su «disponible hasta …». El PDF va adjunto al correo. No se guarda en `project-files`, así la limpieza de los 14 días no se lo lleva: la copia es la del email. Remitente: `emailFromClients()`. Asunto propuesto, en español (idioma por defecto): `GallaDev — informe semanal de tu proyecto`. La plantilla en inglés entra con el slice de i18n; no es un correo distinto.
 
 Preferencia: `project_members.weekly_report_enabled`, por defecto `false`, por cuenta. Esa persona la enciende o la apaga en `/portal`. Admin y el Seller del lead pueden hacer lo mismo desde el drawer, cuenta por cuenta. Con el proyecto `closed`, o con esa cuenta revocada, no se envía.
 
@@ -523,7 +525,7 @@ El botón no responde éxito si Resend rechaza el mensaje. El job anota `report.
 Comprobables cuando exista implementación. Hoy ninguno se cumple, y no debe darse por hecho.
 
 1. El enum `app_role` acepta `client`. Un alta normal del Dashboard sigue creando `Seller`. Una invitación con la marca de cliente crea `client` en la misma transacción. No hay ventana en la que ese usuario sea Seller.
-2. `isAppRole('client')` es verdadero. Un `client` que llama a `GET /api/leads`, `PATCH /api/leads/:id`, `GET /api/team` o `GET /api/settings` recibe 403 `forbidden`. Un visitante sobre `/portal` es redirigido a `/leads`.
+2. `isAppRole('client')` es verdadero. Un `client` que llama a `GET /api/leads`, `PATCH /api/leads/:id`, `GET /api/team` o `GET /api/settings` recibe 403 `forbidden`. La cláusula «un visitante sobre `/portal` es redirigido a `/leads`» queda **superseded** con la retirada de la demo. Mientras ese código siga en el repo, el redirect se mantiene.
 3. Tras login, `client` acaba en `/portal`. Admin, Seller y Viewer que piden `/portal` acaban en `/`. La vista previa de Admin muestra solo filas `visibility = client` y un banner.
 4. Arrastrar a `Cliente` o elegirlo en el drawer abre la confirmación y no envía `PATCH` todavía. `PATCH` directo a `Cliente` desde otro estado responde 409 `client_conversion_required`.
 5. Confirmar con uno, dos o tres emails deja el lead en `Cliente`, un solo `projects` para ese `lead_id`, y una invitación por email confirmado, con `invited_by` y `confirmed_at`. Cada correo de Resend no contiene contraseña. El enlace lo acuña `generateLink` tipo `invite`, caduca (ajuste de 48 horas) y no se reutiliza. `leads.email` no sale en ningún mensaje si no se escribió en un campo. Cero emails no convierte. Una cuarta cuenta, o una cuarta invitación vigente, responde error y el trigger `project_member_limit` también la rechaza.
@@ -547,7 +549,7 @@ Comprobables cuando exista implementación. Hoy ninguno se cumple, y no debe dar
 - Dejar al cliente dentro del portal después de cerrar el proyecto.
 - Abrir otro bucket, u otro proyecto Supabase, cuando se llene el almacenamiento.
 - Gestión de emails dentro de la plataforma GDW (placeholder en el roadmap, sin spec).
-- Portal dentro de la demo de visitante.
+- Portal dentro de la demo de visitante. **Superseded (26-27 Sep 2026):** la demo está en desuso y se retira. No hay tarea abierta de meter el portal en esa sesión.
 - Facturación, realtime, app móvil, editor de documentos en el navegador.
 - Sustituir el correo de ingesta o cambiar su fail-open.
 - Implementar el `audit_log` general. v1 solo escribe `client_access_events`.

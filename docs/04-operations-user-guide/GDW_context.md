@@ -22,9 +22,9 @@ Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` 
 - `/kanban`: the nine pipeline states. There is no inline “add card” control.
 - `/stats`: statistics. Chart type selector: Barras, Circular (donut), Área (`localStorage` key `gdw-stats-chart-type`).
 - `/duplicates`: duplicate groups.
-- `/email`: draft review and Gmail Compose support. Visitors are redirected to `/leads`.
-- `/automations`: automation webhooks. Visitors are redirected to `/leads`.
-- `/settings`: integration status, security, and masked configuration. Visitors are redirected to `/leads`.
+- `/email`: draft review and Gmail Compose support. The visitor session (deprecated, still in the code) redirects to `/leads`.
+- `/automations`: automation webhooks. The visitor session (deprecated, still in the code) redirects to `/leads`.
+- `/settings`: integration status, security, and masked configuration. The visitor session (deprecated, still in the code) redirects to `/leads`.
 
 ## Daily operation
 
@@ -42,16 +42,18 @@ AI analysis (`POST /api/leads/:id/analyze` and `POST /api/leads/pain-analysis`) 
 
 Uptime check: `GET /api/health` (no session). It returns `{"ok":true}` when the process answers HTTP. It does not check Supabase.
 
-## Visitor demo
+## Visitor demo (deprecated)
 
-The login page can offer **Entrar como visitante** / “Ver demo sin cuenta”. The session is an HMAC-SHA256 httpOnly cookie (`gdw_visitor`, 4 hours) signed with `DEMO_SESSION_SECRET`. It is not an Admin, Seller, or Viewer, and it never opens the Supabase lead repository or the service-role client. `getSessionLeadRepository()` returns `DemoLeadRepository`. The UI shows fictional Spanish asesorías (`example.com` emails). A few leads include a pre-written pain analysis so the drawer can show it without calling a model. Kanban moves show a Spanish toast and are not saved. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs (team, settings, automations, db-status, ingest, lead writes, merge, score, and live AI) return HTTP 403 with `code: "demo_readonly"`. `GET /api/session` returns `visitor: true` and `role: null`. `POST /api/demo/enter` returns 404 `demo_disabled` when the flag is off, 503 `demo_misconfigured` when the secret is missing or shorter than 16 characters, and 429 `rate_limited` after 8 requests in 15 minutes per IP. Demo responses send `X-Robots-Tag: noindex, nofollow` (the app layout is already `noindex`).
+**Deprecated** (Ociel, 26-27 Sep 2026). It was never enabled in production. Do not set `DEMO_MODE_ENABLED` or `DEMO_SESSION_SECRET` to turn it on: that instruction is **superseded**. The public “What it is” login section replaces it, specified and not implemented ([`what-it-is.md`](../02-roadmap-delivery/what-it-is.md)). Until that slice the code remains in the repo, and the behavior below is the current tree, not the plan.
+
+The login page can offer **Entrar como visitante** / “Ver demo sin cuenta” only if someone turns the flag on despite this decision. The session is an HMAC-SHA256 httpOnly cookie (`gdw_visitor`, 4 hours) signed with `DEMO_SESSION_SECRET`. It is not an Admin, Seller, or Viewer, and it never opens the Supabase lead repository or the service-role client. `getSessionLeadRepository()` returns `DemoLeadRepository`. The UI shows fictional Spanish asesorías (`example.com` emails). A few leads include a pre-written pain analysis so the drawer can show it without calling a model. Kanban moves show a Spanish toast and are not saved. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs (team, settings, automations, db-status, ingest, lead writes, merge, score, and live AI) return HTTP 403 with `code: "demo_readonly"`. `GET /api/session` returns `visitor: true` and `role: null`. `POST /api/demo/enter` returns 404 `demo_disabled` when the flag is off, 503 `demo_misconfigured` when the secret is missing or shorter than 16 characters, and 429 `rate_limited` after 8 requests in 15 minutes per IP. Demo responses send `X-Robots-Tag: noindex, nofollow` (the app layout is already `noindex`).
 
 | Variable | Role |
 | --- | --- |
 | `DEMO_MODE_ENABLED` | `true` or `1` turns the demo on. **Unset, empty, or anything else is off.** |
 | `DEMO_SESSION_SECRET` | HMAC secret, at least 16 characters. Required while the flag is on. Generate with `openssl rand -hex 32`. |
 
-To disable in production without a code change, set `DEMO_MODE_ENABLED=false` or remove it, then redeploy/restart so the process picks up the env. Entry is rate-limited (8 requests / 15 minutes / IP). The Playwright server sets the flag only for E2E; production stays off until you set the variables.
+Production must not enable it. If some environment already has the flag at `true` or `1`, set `DEMO_MODE_ENABLED=false` or remove it, then redeploy/restart so the process picks up the env. Entry is rate-limited (8 requests / 15 minutes / IP). The Playwright server sets the flag only for the demo E2E; that spec is replaced in the What it is slice.
 
 ## Errors and logs
 

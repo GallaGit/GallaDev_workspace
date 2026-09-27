@@ -34,7 +34,11 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests, and E2E Tests are requir
 
 ### Visitor demo (PR #55)
 
-Passwordless read-only session (HMAC httpOnly cookie, off by default). `getSessionLeadRepository()` returns `DemoLeadRepository`. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`; blocked APIs return 403 `demo_readonly`.
+Passwordless read-only session (HMAC httpOnly cookie, off by default). `getSessionLeadRepository()` returns `DemoLeadRepository`. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`; blocked APIs return 403 `demo_readonly`. Later decision (26-27 Sep 2026): deprecated. The code was still in the repo on the date of that decision note.
+
+### Product decisions 26-27 Sep 2026 (Ociel)
+
+Two slices specified, with no implementation on this date. First, “What it is” on the login page (replaces the demo; copy in Spanish and English; static fictional screenshots). Then English as the secondary language for the whole project (Spanish default, visible switcher, cookie, catalogs). There was no open demo issue: turning it on in production, visitor fixtures that did not exist, and “portal inside the demo” are superseded. See `docs/02-roadmap-delivery/`.
 
 ## Archive policy
 
