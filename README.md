@@ -17,7 +17,7 @@ Open [http://localhost:3000/leads](http://localhost:3000/leads). The app syncs o
 
 ## Demo
 
-A passwordless visitor session shows the real UI with fictional leads only. It is **off unless** `DEMO_MODE_ENABLED` is `true` or `1`, and it also needs `DEMO_SESSION_SECRET` (16+ characters). Then the login page shows **Entrar como visitante**. The signed cookie lasts 4 hours, never reads or writes Supabase, and blocks settings, automations, team, ingest, email, and live AI. Set `DEMO_MODE_ENABLED=false` (or unset it) to turn the button off without a code change. Details: [operations guide](./docs/04-operations-user-guide/GDW_context.md).
+A passwordless visitor session shows the real UI with fictional leads only. It is **off unless** `DEMO_MODE_ENABLED` is `true` or `1`, and it also needs `DEMO_SESSION_SECRET` (16+ characters). Then the login page shows **Entrar como visitante**. The signed cookie lasts 4 hours, never reads or writes Supabase, and blocks settings, automations, team, ingest, email, and live AI. Set `DEMO_MODE_ENABLED=false` (or unset it) to turn the button off without a code change. Activation in Vercel Production is still pending. The same page will also show a public **¿Qué es? / What is it?** section (specified, not built yet): text and screenshots, no session, alongside the visitor button. Details: [operations guide](./docs/04-operations-user-guide/GDW_context.md) and [what-it-is.md](./docs/02-roadmap-delivery/what-it-is.md).
 
 Minimal config:
 
@@ -39,6 +39,7 @@ Sign-in is Supabase Auth (email + password). There is no self-signup: an Admin c
 - [Documentation overview](./docs/00-overview/GDW_context.md) ([español](./docs/00-overview/GDW_context.es.md))
 - [Business and product context](./docs/01-business-product/GDW_context.md) ([español](./docs/01-business-product/GDW_context.es.md))
 - [Roadmap and delivery](./docs/02-roadmap-delivery/GDW_context.md) ([español](./docs/02-roadmap-delivery/GDW_context.es.md))
+- [Company email — urgent, 28 Sep 2026](./docs/02-roadmap-delivery/company-email.md) ([español](./docs/02-roadmap-delivery/company-email.es.md))
 - [Architecture and integrations](./docs/03-architecture-integrations/GDW_context.md) ([español](./docs/03-architecture-integrations/GDW_context.es.md))
 - [Operations and user guide](./docs/04-operations-user-guide/GDW_context.md) ([español](./docs/04-operations-user-guide/GDW_context.es.md))
 - [UX and AI contracts](./docs/05-ux-ai-contracts/GDW_context.md) ([español](./docs/05-ux-ai-contracts/GDW_context.es.md))

@@ -36,6 +36,10 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests, and E2E Tests are requir
 
 Passwordless read-only session (HMAC httpOnly cookie, off by default). `getSessionLeadRepository()` returns `DemoLeadRepository`. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`; blocked APIs return 403 `demo_readonly`.
 
+### Product decision 26-27 Sep 2026 (Ociel)
+
+One slice specified, with no implementation on this date. The visitor demo stays; activation in Vercel Production is still pending. The “What is it?” section (ES: «¿Qué es?») is added on the login page, alongside “Entrar como visitante”: text and static fictional screenshots, no session. See `docs/02-roadmap-delivery/`.
+
 ## Archive policy
 
 Historical scripts are retained only when they help explain a migration or recovery path. `docs/archive/migrate-notion-to-supabase.mts` is not part of the runtime and must not be wired into package scripts without a deliberate review.

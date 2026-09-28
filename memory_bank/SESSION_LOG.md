@@ -141,3 +141,16 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Puerta en `src/proxy.ts` (no hay `src/middleware.ts`).
 - Secret scanning y push protection: activados. CodeQL sigue pendiente; al ser el repo público, el default setup no requiere Advanced Security.
 - Pendiente de M2 además de CodeQL: tests E2E de Viewer (403; CI solo tiene credenciales Admin/Seller), rate limit distribuido (el limitador es en memoria por instancia) y audit trail (la identidad por usuario ya existe; el log no).
+
+## 2026-09-27 — Decisión de Ociel (docs): sección «¿Qué es?»
+
+- La demo de visitante (PR #55) se mantiene: código, `DEMO_*` y el comportamiento ya documentado. La activación en Vercel Production sigue pendiente.
+- Un solo slice, especificado y no implementado: sección pública «¿Qué es?» (EN: “What is it?”) en el login, junto a «Entrar como visitante». Texto y capturas estáticas en `public/what-it-is/` con datos ficticios, sin sesión.
+- Solo documentación. Spec en `docs/02-roadmap-delivery/what-it-is.md` y `what-it-is.es.md`.
+
+## 2026-09-27 — Ociel marca email de empresa como siguiente paso urgente
+
+- Prioridad urgente para el lunes 28 Sep 2026: poder recibir y responder como `@galladev.com` (`hola@`, y `ociel@` si se quiere), sin romper Resend. Hoy no hay buzón; las respuestas al acuse no llegan a nadie.
+- Recomendación A (Cloudflare Email Routing + «Enviar como» en Gmail por SMTP de Resend), pendiente de decisión de Ociel. B (Google Workspace) cuando haya clientes o equipo.
+- Spec: `docs/02-roadmap-delivery/company-email.es.md` y `company-email.md`. Va por delante de «¿Qué es?» y de los pendientes de M2.
+- Solo documentación. Sin claves en el repo.

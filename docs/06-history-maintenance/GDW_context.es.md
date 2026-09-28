@@ -36,6 +36,10 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests y E2E Tests son obligator
 
 Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defecto). `getSessionLeadRepository()` devuelve `DemoLeadRepository`. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`; las APIs bloqueadas responden 403 `demo_readonly`.
 
+### Decisión de producto 26-27 Sep 2026 (Ociel)
+
+Un slice especificado, sin implementación en esta fecha. La demo de visitante se mantiene; la activación en Vercel Production sigue pendiente. La sección «¿Qué es?» (EN: “What is it?”) se añade en el login, junto al botón «Entrar como visitante»: texto y capturas estáticas ficticias, sin sesión. Ver `docs/02-roadmap-delivery/`.
+
 ## Política de archivo
 
 Los scripts históricos se conservan solo cuando ayudan a explicar una migración o recuperación. `docs/archive/migrate-notion-to-supabase.mts` no forma parte del runtime y no debe conectarse a scripts de package sin una revisión deliberada.

@@ -44,6 +44,8 @@ Uptime check: `GET /api/health` (no session). It returns `{"ok":true}` when the 
 
 ## Visitor demo
 
+The demo stays. Activation in Vercel Production is still pending. On the same login page, the “What is it?” slice (ES: «¿Qué es?»; specified, not implemented) adds text and screenshots that need no session and sit alongside the button. See [`what-it-is.md`](../02-roadmap-delivery/what-it-is.md).
+
 The login page can offer **Entrar como visitante** / “Ver demo sin cuenta”. The session is an HMAC-SHA256 httpOnly cookie (`gdw_visitor`, 4 hours) signed with `DEMO_SESSION_SECRET`. It is not an Admin, Seller, or Viewer, and it never opens the Supabase lead repository or the service-role client. `getSessionLeadRepository()` returns `DemoLeadRepository`. The UI shows fictional Spanish asesorías (`example.com` emails). A few leads include a pre-written pain analysis so the drawer can show it without calling a model. Kanban moves show a Spanish toast and are not saved. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs (team, settings, automations, db-status, ingest, lead writes, merge, score, and live AI) return HTTP 403 with `code: "demo_readonly"`. `GET /api/session` returns `visitor: true` and `role: null`. `POST /api/demo/enter` returns 404 `demo_disabled` when the flag is off, 503 `demo_misconfigured` when the secret is missing or shorter than 16 characters, and 429 `rate_limited` after 8 requests in 15 minutes per IP. Demo responses send `X-Robots-Tag: noindex, nofollow` (the app layout is already `noindex`).
 
 | Variable | Role |
