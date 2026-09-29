@@ -43,6 +43,7 @@ export async function storeInboundEmail(
   const fromName = extractName(data.from);
 
   const threadId = await findOrCreateThread(admin, {
+    emailId: data.email_id,
     messageId: data.message_id,
     subject: data.subject ?? "(sin asunto)",
     fromAddress,
@@ -55,6 +56,8 @@ export async function storeInboundEmail(
 
   let bodyHtml: string | null = null;
   let bodyText: string | null = null;
+  let inReplyTo: string | null = null;
+  let references: string | null = null;
 
   try {
     const resend = getResendClient();
@@ -63,6 +66,8 @@ export async function storeInboundEmail(
       if (full?.data) {
         bodyHtml = full.data.html ?? null;
         bodyText = full.data.text ?? null;
+        inReplyTo = full.data.in_reply_to ?? null;
+        references = full.data.references ?? null;
       }
     }
   } catch (e) {
@@ -75,6 +80,8 @@ export async function storeInboundEmail(
       thread_id: threadId,
       resend_email_id: data.email_id,
       message_id: data.message_id ?? null,
+      in_reply_to: inReplyTo,
+      references,
       direction: "inbound",
       from_address: fromAddress,
       from_name: fromName,
@@ -131,17 +138,47 @@ export async function storeInboundEmail(
 async function findOrCreateThread(
   admin: SupabaseClient,
   opts: {
+    emailId: string;
     messageId?: string;
     subject: string;
     fromAddress: string;
     fromName?: string | null;
   },
 ): Promise<string | null> {
-  if (opts.messageId) {
+  // Try to fetch in_reply_to/references from the full message for threading.
+  let inReplyTo: string | null = null;
+  let referencesHeader: string | null = null;
+  try {
+    const resend = getResendClient();
+    if (resend) {
+      const full = await (resend as any).emails.receiving.get(opts.emailId);
+      if (full?.data) {
+        inReplyTo = full.data.in_reply_to ?? null;
+        referencesHeader = full.data.references ?? null;
+      }
+    }
+  } catch {
+    // Non-critical: we'll create a new thread if we can't match.
+  }
+
+  // Collect all message_ids to search for an existing thread.
+  const searchIds: string[] = [];
+  if (inReplyTo) searchIds.push(inReplyTo);
+  if (referencesHeader) {
+    for (const ref of referencesHeader.split(/\s+/)) {
+      if (ref && !searchIds.includes(ref)) searchIds.push(ref);
+    }
+  }
+  if (opts.messageId && !searchIds.includes(opts.messageId)) {
+    searchIds.push(opts.messageId);
+  }
+
+  // Search for any existing message that has one of these message_ids.
+  for (const searchId of searchIds) {
     const { data: existingByRef } = await admin
       .from("email_messages")
       .select("thread_id")
-      .or(`message_id.eq.${opts.messageId},"references".cs.{${opts.messageId}}`)
+      .eq("message_id", searchId)
       .limit(1)
       .maybeSingle();
 

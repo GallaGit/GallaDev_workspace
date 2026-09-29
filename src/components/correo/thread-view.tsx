@@ -6,6 +6,7 @@ import { ArrowLeft, Link2, Paperclip, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LinkLeadDialog } from "@/components/correo/link-lead-dialog";
+import { ReplyForm } from "@/components/correo/reply-form";
 import { cn } from "@/lib/utils";
 import type { EmailThread, EmailMessage, EmailAttachment } from "./inbox-page";
 
@@ -120,6 +121,8 @@ export function ThreadView({
           ))
         )}
       </div>
+
+      <ReplyForm threadId={thread.id} onSent={fetchThread} />
 
       <LinkLeadDialog
         open={linkOpen}
