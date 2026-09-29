@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetRateLimits } from "@/lib/rate-limit";
+import type { VerifyError } from "@/lib/email/inbound-verify";
 
 /**
  * Contratos de POST /api/email/inbound (webhook Resend).
@@ -117,7 +118,7 @@ describe("POST /api/email/inbound", () => {
     verifyInboundWebhook.mockReturnValue({
       ok: false,
       reason: "bad-signature",
-    } as any);
+    } satisfies VerifyError);
     const { POST } = await import("@/app/api/email/inbound/route");
     const res = await POST(webhookRequest());
     expect(res.status).toBe(401);
@@ -127,7 +128,7 @@ describe("POST /api/email/inbound", () => {
     verifyInboundWebhook.mockReturnValue({
       ok: false,
       reason: "not-our-recipient",
-    } as any);
+    } satisfies VerifyError);
     const { POST } = await import("@/app/api/email/inbound/route");
     const res = await POST(webhookRequest());
     expect(res.status).toBe(200);

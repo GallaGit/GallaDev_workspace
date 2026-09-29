@@ -1,8 +1,30 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Resend } from "resend";
 import type { InboundEmailEvent } from "./inbound-verify";
 import { getResendClient } from "./resend-client";
+
+/** Resend Receiving API shape (not fully typed in the SDK). */
+interface ReceivingGetResponse {
+  data?: {
+    html?: string;
+    text?: string;
+    in_reply_to?: string;
+    references?: string;
+  };
+}
+
+/** Access the Receiving API on a Resend client. */
+function receivingGet(
+  client: Resend,
+  emailId: string,
+): Promise<ReceivingGetResponse> {
+  const r = client as unknown as {
+    emails: { receiving: { get: (id: string) => Promise<ReceivingGetResponse> } };
+  };
+  return r.emails.receiving.get(emailId);
+}
 
 /**
  * Persiste un email inbound verificado en Supabase (email_threads + email_messages).
@@ -17,7 +39,8 @@ import { getResendClient } from "./resend-client";
  * vía la Receiving API de Resend.
  */
 
-const MAX_ATTACHMENT_BYTES = 52_428_800; // 50 MB
+// 50 MB cap per attachment — enforced when Storage bucket exists.
+// const MAX_ATTACHMENT_BYTES = 52_428_800;
 
 export type StoreResult =
   | { stored: true; threadId: string; messageId: string }
@@ -62,7 +85,7 @@ export async function storeInboundEmail(
   try {
     const resend = getResendClient();
     if (resend) {
-      const full = await (resend as any).emails.receiving.get(data.email_id);
+      const full = await receivingGet(resend, data.email_id);
       if (full?.data) {
         bodyHtml = full.data.html ?? null;
         bodyText = full.data.text ?? null;
@@ -151,7 +174,7 @@ async function findOrCreateThread(
   try {
     const resend = getResendClient();
     if (resend) {
-      const full = await (resend as any).emails.receiving.get(opts.emailId);
+      const full = await receivingGet(resend, opts.emailId);
       if (full?.data) {
         inReplyTo = full.data.in_reply_to ?? null;
         referencesHeader = full.data.references ?? null;

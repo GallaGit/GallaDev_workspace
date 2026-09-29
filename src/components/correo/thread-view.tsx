@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Link2, Paperclip, Shield } from "lucide-react";
+import { Link2, Paperclip, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LinkLeadDialog } from "@/components/correo/link-lead-dialog";
@@ -68,9 +68,27 @@ export function ThreadView({
   }, [thread.id]);
 
   useEffect(() => {
-    void fetchThread();
+    let cancelled = false;
     markedRef.current = false;
-  }, [fetchThread]);
+    async function load() {
+      try {
+        const res = await fetch(`/api/email/threads/${thread.id}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.error ?? "Error al cargar hilo");
+        setMessages(data.messages ?? []);
+        setAttachments(data.attachments ?? []);
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e instanceof Error ? e.message : "Error al cargar hilo");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [thread.id]);
 
   useEffect(() => {
     if (!loading && !thread.is_read && !markedRef.current) {
@@ -125,6 +143,7 @@ export function ThreadView({
       <ReplyForm threadId={thread.id} onSent={fetchThread} />
 
       <LinkLeadDialog
+        key={linkOpen ? "open" : "closed"}
         open={linkOpen}
         onOpenChange={setLinkOpen}
         threadId={thread.id}

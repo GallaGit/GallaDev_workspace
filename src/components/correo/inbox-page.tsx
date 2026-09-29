@@ -49,22 +49,26 @@ export function InboxPage() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const fetchThreads = useCallback(async () => {
-    try {
-      const res = await fetch("/api/email/threads");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al cargar hilos");
-      setThreads(data.threads ?? []);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al cargar el buzón");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void fetchThreads();
-  }, [fetchThreads]);
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/email/threads");
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.error ?? "Error al cargar hilos");
+        setThreads(data.threads ?? []);
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e instanceof Error ? e.message : "Error al cargar el buzón");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleMarkRead = useCallback(
     (threadId: string) => {

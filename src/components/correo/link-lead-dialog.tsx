@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -33,13 +33,6 @@ export function LinkLeadDialog({
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(
     currentLeadId,
   );
-
-  useEffect(() => {
-    if (open) {
-      setSelectedLeadId(currentLeadId);
-      setSearch("");
-    }
-  }, [open, currentLeadId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return leads.slice(0, 20);

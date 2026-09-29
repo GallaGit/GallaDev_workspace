@@ -65,7 +65,7 @@ function mockAdmin(overrides: {
       }
       return {};
     }),
-  } as any;
+  } as unknown as Parameters<typeof sendReply>[0];
 }
 
 describe("sendReply", () => {
