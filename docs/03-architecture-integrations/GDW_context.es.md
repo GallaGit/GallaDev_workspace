@@ -15,7 +15,7 @@ Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
 - Los leads y las actividades viven en Supabase.
 - `getLeadRepository()` devuelve `SupabaseLeadRepository` (service role sin cliente; el cliente de sesión si se le pasa, y entonces aplica RLS).
 - `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. `AUTH_DISABLED` (solo fuera de producción) usa el repositorio service role.
-- `src/proxy.ts` es la puerta de sesión (convención `proxy` de Next.js 16; no hay `src/middleware.ts`). Exime `/api/health`, `/api/demo/enter`, `/api/demo/exit` y `/api/ingest/*`.
+- `src/proxy.ts` es la puerta de sesión (convención `proxy` de Next.js 16; no hay `src/middleware.ts`). Exime `/api/health`, `/api/demo/enter`, `/api/demo/exit`, `/api/ingest/*` y `/api/email/inbound` (webhook Resend; se autentica por firma Svix, no por sesión).
 - Los route handlers añaden una capa RBAC: `requireApiSession`, `requireApiRole`, `requireAdmin` y `requireLeadWriter`. Los roles son `profiles.role` (`Admin`, `Seller`, `Viewer`).
 - RLS es la frontera de aislamiento de datos entre usuarios.
 - Settings muestra previews enmascarados y nunca devuelve secretos completos.
@@ -27,7 +27,7 @@ Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
 - **n8n:** proveedor opcional de prospección y automatización.
 - **SerpAPI:** búsqueda externa usada por el workflow de prospección.
 - **Groq:** extracción web, generación de emails y análisis de dolores.
-- **Resend:** notificaciones transaccionales de la ingesta web.
+- **Resend:** notificaciones transaccionales de la ingesta web e inbox de empresa (`hola@galladev.com`). Recepción vía Resend Inbound (webhook `POST /api/email/inbound`, firma Svix); envío de respuestas desde `/correo`.
 
 ## Contrato de ingesta
 
@@ -60,3 +60,7 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 - `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
 - `POST /api/ingest/n8n`
+- `POST /api/email/inbound` (webhook Resend; sin sesión, firma Svix)
+- `GET /api/email/threads` (Admin, sesión + RLS)
+- `GET/PATCH /api/email/threads/:id` (Admin, sesión + RLS)
+- `POST /api/email/threads/:id/reply` (Admin, sesión + RLS)

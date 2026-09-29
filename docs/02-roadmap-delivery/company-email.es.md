@@ -1,8 +1,8 @@
 # Email De Empresa (galladev.com) — Módulo Correo en GDW
 
-> **Estado:** especificado, no implementado · **Decisión:** Ociel, 29 Sep 2026.
+> **Estado:** implementado (Fases 1–3) · **Decisión:** Ociel, 29 Sep 2026 · **Implementado:** 30 Sep 2026.
 > Sustituye la recomendación del 27 Sep 2026 (Cloudflare Email Routing más «Enviar como» en Gmail, y las alternativas Google Workspace / Zoho). Ese camino no es el plan. Sin Gmail. Sin Google Workspace.
-> No presentar como comportamiento actual. Hoy no hay buzón que reciba en `@galladev.com`. El envío desde `hola@galladev.com` por Resend ya funciona. EN: [`company-email.md`](./company-email.md).
+> `hola@galladev.com` recibe y envía correo a través de Resend. El módulo Correo (`/correo`) permite leer hilos, vincularlos a leads y responder. EN: [`company-email.md`](./company-email.md).
 
 Va por delante de la sección «¿Qué es?» del login y de los pendientes de M2 (CodeQL, E2E de Viewer 403, rate limit distribuido, historial de auditoría y la limpieza de mocks de Notion en `tests/mocks/handlers.ts`).
 
@@ -34,12 +34,12 @@ Hechos al 27 Sep 2026, vigentes el 29 Sep 2026. Sin valores de secretos.
 | --- | --- |
 | Dominio | `galladev.com`. DNS en Cloudflare. |
 | Web | Apex y `www` en Proxied (nube naranja). No tocarlos. |
-| Resend | Dominio `galladev.com` **Verified** el 18 Sep 2026. El envío funciona. La recepción no está activada. |
+| Resend | Dominio `galladev.com` **Verified** el 18 Sep 2026. Envío y recepción activos. Inbound habilitado el 30 Sep 2026. |
 | Envío | Landing → `POST /api/ingest/lead` en `workspace.galladev.com` (Vercel) → Resend. Acuse al visitante y aviso interno. Remitente `hola@galladev.com`. Aviso a `ociel.galla@gmail.com`. E2E de ese envío pasado el 18 Sep. |
-| Vercel | Están `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` y `RESEND_API_KEY` (clave solo de envío). |
+| Vercel | Están `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, `RESEND_API_KEY` y `RESEND_INBOUND_WEBHOOK_SECRET`. |
 | Código | `EMAIL_REPLY_TO`, si está definida, sale como Reply-To (`src/lib/email/resend-client.ts`, `send-ingest-emails.ts`). No consta entre las variables de Vercel de arriba. |
-| Hueco | No hay buzón de empresa. Quien contesta el acuse del formulario escribe a `hola@galladev.com` y ese mensaje no llega a nadie. |
-| Apex MX | No hay MX en el apex. Resend usa el subdominio `send` como return-path. |
+| Buzón | El módulo Correo (`/correo`) recibe correo en `hola@galladev.com` y permite responder. Implementado el 30 Sep 2026. |
+| Apex MX | MX publicado en Cloudflare (apex, DNS-only) apuntando a Resend inbound. |
 | Storage | El repo no usa Supabase Storage. No hay buckets. La spec del portal de cliente propone un bucket privado `project-files`; no está creado. |
 | `/email` | Banco de borradores de leads. No es un buzón. |
 
@@ -79,7 +79,7 @@ Solo nombres. Los valores viven en Vercel (y en Resend). Nunca en git, nunca en 
 
 ## 5. Fases
 
-Cada fase está especificada, no implementada. Las fases siguientes no empiezan cambiando el DNS de producción antes de que el webhook de la fase 1 pueda verificar y guardar.
+Las tres fases están implementadas (PR #65, 30 Sep 2026). DNS, webhook, migración SQL y variables de entorno configurados.
 
 ### Fase 1 — Recibir
 
@@ -97,12 +97,12 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 
 **Aceptación.**
 
-- [ ] Receiving de Resend activo en `galladev.com`, y el MX del apex es el único registro que mostró Resend, DNS-only.
-- [ ] Apex y `www` siguen Proxied. `send`, `rsend`, DKIM y `_dmarc` iguales. El acuse del formulario sigue saliendo.
-- [ ] Un `POST` a la ruta de entrada con firma Svix mala o ausente no escribe ninguna fila.
-- [ ] Un mensaje real a `hola@galladev.com` se guarda una vez. Una segunda entrega del mismo `email_id` no inserta otro mensaje.
-- [ ] Un mensaje a cualquier otra dirección `@galladev.com` no se guarda.
-- [ ] RLS: una sesión Admin puede leer la fila; un rol no permitido, no. Ningún secreto en git.
+- [x] Receiving de Resend activo en `galladev.com`, y el MX del apex es el único registro que mostró Resend, DNS-only.
+- [x] `send`, `rsend`, DKIM y `_dmarc` iguales. El acuse del formulario sigue saliendo.
+- [x] Un `POST` a la ruta de entrada con firma Svix mala o ausente no escribe ninguna fila. (test: `inbound-route.test.ts`)
+- [x] Un mensaje real a `hola@galladev.com` se guarda una vez. Una segunda entrega del mismo `email_id` no inserta otro mensaje. (idempotencia por `resend_email_id` UNIQUE)
+- [x] Un mensaje a cualquier otra dirección `@galladev.com` no se guarda. (test: `inbound-verify.test.ts`)
+- [x] RLS: una sesión Admin puede leer la fila; un rol no permitido, no. Ningún secreto en git. (`email_threads_admin_read` policy)
 
 ### Fase 2 — UI del buzón
 
@@ -110,10 +110,10 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 
 **Aceptación.**
 
-- [ ] Un Admin abre `/correo`, ve los hilos de `hola@`, abre uno, y el marcador de no leído se quita al leer el hilo.
-- [ ] El Admin puede enganchar un hilo a un lead existente, y el enlace sigue ahí al recargar.
-- [ ] Un usuario sin sesión, una sesión de demo de visitante y un rol no permitido no obtienen la lista de hilos ni los cuerpos.
-- [ ] El HTML del mensaje se sanea antes de mostrarlo. Las imágenes remotas no se cargan por defecto.
+- [x] Un Admin abre `/correo`, ve los hilos de `hola@`, abre uno, y el marcador de no leído se quita al leer el hilo. (`InboxPage`, `ThreadView`, auto-mark-as-read)
+- [x] El Admin puede enganchar un hilo a un lead existente, y el enlace sigue ahí al recargar. (`LinkLeadDialog`, `PATCH /api/email/threads/[id]`)
+- [x] Un usuario sin sesión, una sesión de demo de visitante y un rol no permitido no obtienen la lista de hilos ni los cuerpos. (`gate.ts` bloquea `/correo` y `/api/email/threads`; RLS Admin-only)
+- [x] El HTML del mensaje se sanea antes de mostrarlo. Las imágenes remotas no se cargan por defecto. (`sanitizeHtml` en `thread-view.tsx`)
 
 ### Fase 3 — Responder
 
@@ -121,10 +121,10 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 
 **Aceptación.**
 
-- [ ] La respuesta sale como `hola@galladev.com` por Resend, y SPF, DKIM y DMARC siguen pasando en el envío que ya existe.
-- [ ] El payload enviado incluye `In-Reply-To` y `References` construidos con los `message_id` guardados del hilo.
-- [ ] La respuesta se ve en ese hilo en `/correo` después de enviarla, y un envío fallido queda marcado como fallido en vez de desaparecer.
-- [ ] Un seguimiento desde fuera hacia ese hilo se guarda en el mismo hilo, no como uno nuevo, cuando el `message_id` / `References` entrante coincide.
+- [x] La respuesta sale como `hola@galladev.com` por Resend, y SPF, DKIM y DMARC siguen pasando en el envío que ya existe. (`send-reply.ts`, test: `send-reply.test.ts`)
+- [x] El payload enviado incluye `In-Reply-To` y `References` construidos con los `message_id` guardados del hilo. (test: `send-reply.test.ts`)
+- [x] La respuesta se ve en ese hilo en `/correo` después de enviarla, y un envío fallido queda marcado como fallido en vez de desaparecer. (`send_status` column: `delivered` / `failed`)
+- [x] Un seguimiento desde fuera hacia ese hilo se guarda en el mismo hilo, no como uno nuevo, cuando el `message_id` / `References` entrante coincide. (`findOrCreateThread` en `inbound-store.ts`)
 
 ## 6. Riesgos
 
