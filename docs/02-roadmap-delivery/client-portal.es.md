@@ -546,7 +546,7 @@ Comprobables cuando exista implementación. Hoy ninguno se cumple, y no debe dar
 - Una cuarta cuenta con acceso en el mismo proyecto, o varios proyectos por lead.
 - Dejar al cliente dentro del portal después de cerrar el proyecto.
 - Abrir otro bucket, u otro proyecto Supabase, cuando se llene el almacenamiento.
-- Gestión de emails dentro de la plataforma GDW (placeholder en el roadmap, sin spec).
+- Gestión de emails dentro de la plataforma GDW. Ya tiene spec propia (módulo Correo, decisión del 29 Sep 2026): [`company-email.es.md`](./company-email.es.md). No entra en el portal de cliente.
 - Portal dentro de la demo de visitante.
 - Facturación, realtime, app móvil, editor de documentos en el navegador.
 - Sustituir el correo de ingesta o cambiar su fail-open.
