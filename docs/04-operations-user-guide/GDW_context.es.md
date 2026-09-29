@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY`, más `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (la misma URL pública y la clave publishable; Next las incrusta en el build). Usa `AUTH_DISABLED=true` solo en desarrollo local. Nunca subas credenciales al repositorio. No hay alta pública: un Admin crea las cuentas en el Dashboard de Supabase (Authentication → Users). El trigger `on_auth_user_created` asigna Seller.
+Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY`, más `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (la misma URL pública y la clave publishable; Next las incrusta en el build). Para el módulo Correo, añade `RESEND_API_KEY` y `RESEND_INBOUND_WEBHOOK_SECRET` (secreto de firma Svix del webhook de Resend). Usa `AUTH_DISABLED=true` solo en desarrollo local. Nunca subas credenciales al repositorio. No hay alta pública: un Admin crea las cuentas en el Dashboard de Supabase (Authentication → Users). El trigger `on_auth_user_created` asigna Seller.
 
 ## Rutas principales
 
@@ -22,6 +22,7 @@ Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE
 - `/kanban`: los nueve estados del pipeline. No hay control de “añadir tarjeta”.
 - `/stats`: estadísticas. Selector de tipo de gráfico: Barras, Circular (donut), Área (clave `gdw-stats-chart-type` en `localStorage`).
 - `/duplicates`: grupos de duplicados.
+- `/correo`: buzón de empresa (`hola@galladev.com`). Hilos de correo, leer/responder, vincular a lead. Solo Admin.
 - `/email`: revisión de borradores y soporte de Gmail Compose. El visitante es redirigido a `/leads`.
 - `/automations`: webhooks de automatización. El visitante es redirigido a `/leads`.
 - `/settings`: estado de integraciones, seguridad y configuración enmascarada. El visitante es redirigido a `/leads`.
@@ -64,7 +65,7 @@ Para desactivarla en producción sin cambiar código: `DEMO_MODE_ENABLED=false` 
 - Si el login falla o el navegador muestra un error de red, revisa `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY`, y confirma que `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` estaban presentes en el **build**. Next no inyecta esas variables públicas en el cliente salvo con un acceso estático `process.env.NEXT_PUBLIC_*`, y hace falta reconstruir después de cambiarlas.
 - Si un usuario autenticado recibe HTTP 401 con `code: "no_profile"`, ese usuario de Auth no tiene fila en `profiles`, o `profiles.role` no es `Admin`, `Seller` ni `Viewer`. El trigger debería insertar Seller; el Admin se marca con `UPDATE public.profiles SET role = 'Admin' WHERE id = '<user id>'`.
 - **Cerrar todas las sesiones** llama a `supabase.auth.signOut({ scope: "global" })`. La app no tiene `POST /api/auth/logout-all` y no consulta `app_session_epoch`. Un 503 en `POST /api/demo/enter` significa que el flag de la demo está encendido y `DEMO_SESSION_SECRET` falta o es corto (`demo_misconfigured`), no un fallo del epoch de sesiones.
-- Las páginas de visitante `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs correspondientes responden 403 `demo_readonly`. `GET /api/session` incluye `visitor: true` con esa cookie.
+- Las páginas de visitante `/settings`, `/automations`, `/email` y `/correo` redirigen a `/leads`. Las APIs correspondientes responden 403 `demo_readonly`. `GET /api/session` incluye `visitor: true` con esa cookie.
 - Si falla una integración, revisa el estado de Settings y los logs del servidor sin exponer credenciales.
 - Si fallan TypeScript o el build, resuelve la discrepancia entre código y esquema antes de considerar completado un hito.
 

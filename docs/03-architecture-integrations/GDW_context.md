@@ -15,7 +15,7 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 - Leads and activities live in Supabase.
 - `getLeadRepository()` returns `SupabaseLeadRepository` (service role without a client; the session client when one is passed, so RLS applies).
 - `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. `AUTH_DISABLED` (non-production only) uses the service-role repository.
-- `src/proxy.ts` is the session gate (Next.js 16 `proxy`; there is no `src/middleware.ts`). It exempts `/api/health`, `/api/demo/enter`, `/api/demo/exit`, and `/api/ingest/*`.
+- `src/proxy.ts` is the session gate (Next.js 16 `proxy`; there is no `src/middleware.ts`). It exempts `/api/health`, `/api/demo/enter`, `/api/demo/exit`, `/api/ingest/*`, and `/api/email/inbound` (Resend webhook; authenticated by Svix signature, not by session).
 - Route handlers add an RBAC layer: `requireApiSession`, `requireApiRole`, `requireAdmin`, and `requireLeadWriter`. Roles are `profiles.role` (`Admin`, `Seller`, `Viewer`).
 - Row-level security is the boundary for user data isolation.
 - Settings expose masked previews and never return complete secrets.
@@ -27,7 +27,7 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 - **n8n:** optional prospecting and automation provider.
 - **SerpAPI:** external search used by the prospecting workflow.
 - **Groq:** web extraction, email generation, and lead pain analysis.
-- **Resend:** transactional notifications for web ingestion.
+- **Resend:** transactional notifications for web ingestion and company inbox (`hola@galladev.com`). Receiving via Resend Inbound (webhook `POST /api/email/inbound`, Svix signature); outbound replies from `/correo`.
 
 ## Ingestion contract
 
@@ -60,3 +60,7 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 - `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
 - `POST /api/ingest/n8n`
+- `POST /api/email/inbound` (Resend webhook; no session, Svix signature)
+- `GET /api/email/threads` (Admin, session + RLS)
+- `GET/PATCH /api/email/threads/:id` (Admin, session + RLS)
+- `POST /api/email/threads/:id/reply` (Admin, session + RLS)
