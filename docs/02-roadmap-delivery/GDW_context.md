@@ -43,9 +43,9 @@ Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":t
 
 Passwordless demo for recruiters and reviewers. It stays. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). Activation in Vercel Production is still pending. See the operations guide.
 
-### Urgent priority — Monday 28 Sep 2026
+### Urgent priority — company email (decision 29 Sep 2026)
 
-**Company email (`galladev.com`).** Receive and reply as `@galladev.com` without breaking Resend. There is no mailbox today: replies to `hola@galladev.com` reach nobody. Spec: [`company-email.md`](./company-email.md) (ES: [`company-email.es.md`](./company-email.es.md)). Recommendation A (Cloudflare Email Routing), pending Ociel’s decision.
+**Company email (`galladev.com`).** Ociel’s decision, 29 Sep 2026: only `hola@galladev.com` receives mail. No catch-all, no Gmail, no Google Workspace. Inbound and outbound both go through Resend (outbound from `hola@` already works). The inbox is a Correo module inside GDW (`/correo`), reusing auth, RBAC, and Supabase. Specified, not implemented. Nothing receives at `@galladev.com` today. Spec: [`company-email.md`](./company-email.md) (ES: [`company-email.es.md`](./company-email.es.md)). This replaces the 27 Sep recommendation (Cloudflare Email Routing).
 
 This is item 1. It comes before implementing “What is it?” and before pending M2 work: CodeQL, Viewer E2E 403 tests, distributed rate limiting, the audit trail, and the Notion mock cleanup (`tests/mocks/handlers.ts`, follow-up in `TESTING.md`).
 
@@ -71,7 +71,7 @@ Per-user identity (Supabase Auth + `profiles.role`) is in place. The audit log i
 ### Proposed — pending validation
 
 - **Client portal (project trace).** Specified, not implemented, and not part of M2. Spanish spec: [`client-portal.es.md`](./client-portal.es.md). When a lead becomes `Cliente`, a new `client` role (today `app_role` is only Admin, Seller, and Viewer) would see their project at `/portal`. Product decisions approved by Ociel on 26 Sep 2026.
-- **Email management inside GDW** («Gestión de emails en la plataforma GDW»). Placeholder. Not specified. Not part of M2.
+- **Email management inside GDW** («Correo», `/correo`). Specified, not implemented. Not part of M2. Same spec as company email: [`company-email.md`](./company-email.md) (ES: [`company-email.es.md`](./company-email.es.md)). The old placeholder (no spec) is closed by the 29 Sep 2026 decision.
 
 ## Delivery rules
 

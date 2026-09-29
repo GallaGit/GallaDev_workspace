@@ -1,33 +1,47 @@
-# Company Email (galladev.com) — Urgent Priority
+# Company Email (galladev.com) — Correo Module in GDW
 
-> **Status:** specified, not implemented · Ociel marked this the urgent next step on 27 Sep 2026 · **For:** Monday 28 Sep 2026
-> **Recommendation, pending Ociel’s decision:** option A (Cloudflare Email Routing).
-> Do not present this as current behavior. Nothing receives mail at `@galladev.com` today. ES: [`company-email.es.md`](./company-email.es.md).
+> **Status:** specified, not implemented · **Decision:** Ociel, 29 Sep 2026.
+> This replaces the 27 Sep 2026 recommendation (Cloudflare Email Routing plus Gmail “Send mail as”, and the Google Workspace / Zoho alternatives). That path is not the plan. No Gmail. No Google Workspace.
+> Do not present this as current behavior. Nothing receives mail at `@galladev.com` today. Outbound from `hola@galladev.com` through Resend already works. ES: [`company-email.es.md`](./company-email.es.md).
 
 This comes before the login “What is it?” section and before pending M2 work (CodeQL, Viewer E2E 403, distributed rate limiting, audit trail, and the Notion mock cleanup in `tests/mocks/handlers.ts`).
 
-## 1. Problem and goal
+## 1. Decision
 
-Receive and reply as `@galladev.com` (`hola@`, and `ociel@` if Ociel wants it) without breaking Resend.
+Only `hola@galladev.com` receives mail. No catch-all. No other local-part (`ociel@`, `contacto@`, `facturas@`) is a mailbox.
 
-The domain sends. It does not receive. A reply to the form acknowledgement goes to `hola@galladev.com` and reaches nobody.
+Inbound and outbound both go through Resend. Outbound already sends from `hola@galladev.com`. Inbound is [Resend Inbound](https://resend.com/docs/dashboard/receiving/introduction) (receiving): an MX record on `galladev.com` pointing at Resend, set in Cloudflare DNS by Ociel from his EU PC, and Resend sends one webhook per received email.
 
-Out of this step: the client-portal weekly PDF (still in [`client-portal.es.md`](./client-portal.es.md), not implemented) and in-platform email management inside GDW (roadmap placeholder, no spec).
+The inbox is a new **Correo** module inside GDW. It reuses GDW auth, RBAC, and Supabase. It is not a separate app. The page is `/correo`. That route is not the existing `/email` workbench (lead drafts). `/email` stays as it is.
+
+Checked against Resend’s docs on 29 Sep 2026. Inbound receiving is available, so Cloudflare Email Workers is not the fallback.
+
+| Topic | Decision |
+| --- | --- |
+| Address | Only `hola@galladev.com`. |
+| Catch-all | No. |
+| Providers dropped | Gmail, Google Workspace, Cloudflare Email Routing, Zoho. |
+| Transport | Resend for inbound and outbound. |
+| Product | Correo module in GDW (`/correo`). |
+
+Resend’s receiving MX accepts every local-part on the domain it is attached to ([custom domains](https://resend.com/docs/dashboard/receiving/custom-domains)). The product rule is still one address. The webhook stores a message only when `to`, `cc`, or `bcc` includes `hola@galladev.com`. Any other recipient is not stored and does not open a thread. The handler still returns success after a valid signature so Resend does not retry a message GDW chose not to keep.
 
 ## 2. Current state
 
-Facts as of 27 Sep 2026. No secret values.
+Facts as of 27 Sep 2026, still true on 29 Sep 2026. No secret values.
 
 | Piece | Fact |
 | --- | --- |
 | Domain | `galladev.com`. DNS on Cloudflare. |
 | Web | Apex and `www` are Proxied (orange cloud). Leave them. |
-| Resend | Domain `galladev.com` **Verified** on 18 Sep 2026. |
+| Resend | Domain `galladev.com` **Verified** on 18 Sep 2026. Sending works. Receiving is not enabled. |
 | Sending | Landing form → `POST /api/ingest/lead` on `workspace.galladev.com` (Vercel) → Resend. Visitor ack and internal notice. From `hola@galladev.com`. Notice to `ociel.galla@gmail.com`. That send E2E passed on 18 Sep. |
 | Vercel | `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, and `RESEND_API_KEY` (sending-only key) are set. |
 | Code | `EMAIL_REPLY_TO`, when set, is sent as Reply-To (`src/lib/email/resend-client.ts`, `send-ingest-emails.ts`). It is not in the Vercel list above. |
-| Gap | There is no real company mailbox. Nobody can receive at `hola@galladev.com` or reply from it as a person. |
+| Gap | There is no company mailbox. A reply to the form acknowledgement goes to `hola@galladev.com` and reaches nobody. |
 | Apex MX | The apex has no MX yet. Resend uses the `send` subdomain as its return-path. |
+| Storage | The repo does not use Supabase Storage. No bucket exists. The client-portal spec proposes a private bucket `project-files`; it is not created. |
+| `/email` | Lead-draft workbench. Not an inbox. |
 
 Mail DNS to leave alone (DNS-only, not Proxied):
 
@@ -38,53 +52,93 @@ Mail DNS to leave alone (DNS-only, not Proxied):
 | CNAME | `send` | `send.forge.rmta.net` | Resend return-path |
 | TXT | `_dmarc` | `v=DMARC1; p=none;` | DMARC, policy `none` |
 
-Resend’s SPF lives on `send`, not on the apex.
+Resend’s SPF lives on `send`, not on the apex. Do not add a second SPF record on the apex. Do not delete `resend._domainkey`, `send`, `rsend`, or `_dmarc`: the acknowledgement and the internal notice would stop authenticating.
 
-## 3. Options
+## 3. Inbound on Resend (docs checked 29 Sep 2026)
 
-| | A. Cloudflare Email Routing | B. Google Workspace | C. Zoho Mail |
-| --- | --- | --- | --- |
-| Cost | 0 | Paid per user per month. Business Starter, Google’s table checked 27 Sep 2026: flexible 8.40 USD / 8.10 EUR; annual 7 USD / 6.80 EUR. [Plan comparison](https://knowledge.workspace.google.com/admin/billing/compare-flexible-and-annual-fixed-term-payment-plans). Tax and country can change the figure. | Free plan in selected data centers: up to 5 users, one domain, 5 GB per user, web access (no IMAP/POP/ActiveSync). [Subscription](https://www.zoho.com/mail/help/adminconsole/subscription.html), [pricing](https://www.zoho.com/mail/zohomail-pricing.html) (27 Sep 2026). Paid Mail Lite (5 GB / 10 GB): **see the current price** on that page; it depends on region and billing cycle. |
-| Effort | Low. Forward to the Gmail account that already exists, plus Gmail “Send mail as”. | Medium. User signup, apex MX, admin console. | Medium. Same as B, plus whether the free plan exists in that account’s data center. |
-| Pros | Cost 0. Fits this stage. Mail lands in `ociel.galla@gmail.com`. Reply as `hola@` through Resend SMTP. Does not move the website or Resend DKIM. | A real mailbox, calendar, and more users when there are clients or a team. | A real mailbox, cheaper than Workspace if the current price stays low. The free plan avoids a fee at the start. |
-| Cons | Not a mailbox with its own storage: it is forwarding. “Send mail as” depends on Resend and Gmail. Resend’s free or paid sending limits apply; figures are not copied here. | A monthly fee from day one. The apex MX has to change. | The free plan has no IMAP/POP and is not in every region. The paid plan adds another vendor. It also wants MX on the apex. |
-| DNS risk | Low if the apex ends with **one** SPF record (`include:_spf.mx.cloudflare.net`) and DKIM, `_dmarc`, `send`, `rsend`, and the Proxied web records stay untouched. | New MX on the apex. Do not combine it with Email Routing’s MX. Do not touch Proxied web records or Resend’s records. | Same as B. |
+Sources: [Receiving](https://resend.com/docs/dashboard/receiving/introduction), [custom domains](https://resend.com/docs/dashboard/receiving/custom-domains), [Cloudflare DNS](https://resend.com/docs/dashboard/domains/cloudflare), [`email.received`](https://resend.com/docs/webhooks/emails/received), [verify webhooks](https://resend.com/docs/webhooks/verify-webhooks-requests), [get email content](https://resend.com/docs/dashboard/receiving/get-email-content), [attachments](https://resend.com/docs/dashboard/receiving/attachments), [reply in thread](https://resend.com/docs/dashboard/receiving/reply-to-emails).
 
-**Recommendation, pending Ociel’s decision:** A for now (cost 0, fits the current stage). B when there are clients or a team.
+**MX.** On the verified domain, turn receiving on. Resend shows the MX host and priority to publish. Ociel adds that record in Cloudflare DNS from his EU PC. The apex has no MX today, so the record goes on `galladev.com` (apex), DNS-only (grey cloud), not Proxied. Resend’s Cloudflare guide (same date) shows the shape: type `MX`, priority `10`, mail server copied from the dashboard (the guide’s example is `inbound-smtp.us-east-1.amazonaws.com`). The dashboard value is the one to publish; do not guess a region. One MX only. Do not combine it with Cloudflare Email Routing or any other provider’s MX.
 
-## 4. Monday 28 Sep 2026 plan (option A)
+**Webhook event.** `email.received`. Resend `POST`s once per received email. The body is metadata: `data.email_id` (Resend’s id for that email), `data.message_id` (the RFC `Message-ID`), `from`, `to`, `cc`, `bcc`, `subject`, and attachment metadata (`id`, `filename`, `content_type`). It does not include the HTML body, the plain-text body, the headers, or the attachment bytes.
 
-Cloudflare and Resend panel steps happen on Ociel’s EU PC.
+**Signature.** Svix. Read the raw request body before any JSON parse. Verify with `resend.webhooks.verify`, passing that raw string, the headers `svix-id`, `svix-timestamp`, and `svix-signature`, and the signing secret. A bad or missing signature is rejected (do not store). The secret is never committed.
 
-1. **Turn on Email Routing.** Owner: Ociel. Cloudflare → Email → Email Routing. Enabling it adds MX `route1.mx.cloudflare.net`, `route2.mx.cloudflare.net`, and `route3.mx.cloudflare.net`, plus an SPF TXT on the apex. Check: the apex ends with **one** SPF record, including `include:_spf.mx.cloudflare.net`. Resend’s SPF stays on `send`. DKIM (`resend._domainkey`) and `_dmarc` stay as they are. Proxied web records stay.
-2. **Destination and rules.** Owner: Ociel. Verify destination `ociel.galla@gmail.com`. Rule `hola@galladev.com` → that Gmail. `ociel@` and a catch-all are open questions; do not create them until Ociel says so. Check: the rule shows as active and the destination shows as verified.
-3. **Send as `hola@` from Gmail.** Owner: Ociel. Gmail → “Send mail as” → `hola@galladev.com` via Resend SMTP: host `smtp.resend.com`, port 465 or 587, username `resend`, password = a **new** Resend sending-only key. Do not reuse the Vercel key. Ociel pastes it only in Gmail; it does not go into the repo or the chat. Resend’s sending limits apply. Check: Gmail shows the address as added, and the key is not pasted into any document.
-4. **Reply-To on transactional mail.** Owner: agent, in a later code change. Not in this PR. The code sends Reply-To only when `EMAIL_REPLY_TO` is set. Once `hola@` can receive, replies to the From address `hola@galladev.com` may arrive on their own. Still to decide: whether Reply-To must be set in Vercel or in code.
-5. **Tests.** Owner: Ociel (sends). The agent can read the result if Ociel pastes headers, with no secrets. From an external mailbox, write to `hola@galladev.com` and see it in Gmail. Reply from Gmail as `hola@` and check SPF, DKIM, and DMARC in “Show original” or on [mail-tester](https://www.mail-tester.com/).
-6. **DMARC later.** Owner: Ociel. After 2–4 weeks of clean reports, move `p=none` to `quarantine`. An `rua` report address is optional. Not Monday’s work.
+**Body and files.** After a verified `email.received`, load the message with the Receiving API (`resend.emails.receiving.get(email_id)`) and attachment bytes with the Attachments API. `download_url` expires (about one hour; honor `expires_at`). Idempotency key is the provider message id `data.email_id`. Store `message_id` as well: replies need it for threading.
 
-## 5. Risks and rollback
+## 4. Environment variables
 
-- Turning Email Routing off removes the MX records Cloudflare added. Forwarding stops. Web records (Proxied apex and `www`) stay.
-- Do not delete `resend._domainkey`, `send`, `rsend`, or `_dmarc`: the acknowledgement and the internal notice would stop authenticating.
-- A second SPF record on the apex (instead of one merged record) breaks SPF. Resend’s SPF does not belong on the apex.
-- Do not turn on Email Routing’s MX and a Google or Zoho MX at the same time.
-- The new Resend key lives only in Gmail. If it leaks, rotate it in Resend; do not commit it.
+Names only. Values stay in Vercel (and in Resend). Never in git, never in this doc.
 
-## 6. Acceptance criteria
+| Name | Use |
+| --- | --- |
+| `RESEND_INBOUND_WEBHOOK_SECRET` | Signing secret for the inbound webhook. Resend’s own samples call the same kind of secret `RESEND_WEBHOOK_SECRET`. This spec uses `RESEND_INBOUND_WEBHOOK_SECRET` so it is not mixed up with a later sending-events webhook. |
+| `RESEND_API_KEY` | Already set. Reuse it for outbound replies and for the Receiving API (get message, list attachments) when that key is allowed to call them. A dedicated Resend key may be used instead of reusing this one. The dedicated key is also only a Vercel secret; it is not a second name this spec requires, and it is not committed. |
 
-- [ ] Email Routing is on. Apex MX is `route1` / `route2` / `route3.mx.cloudflare.net`.
-- [ ] One SPF record on the apex, with `include:_spf.mx.cloudflare.net`. Resend DKIM and `_dmarc` unchanged.
-- [ ] Apex and `www` still Proxied. `send` and `rsend` still DNS-only.
-- [ ] External mail to `hola@galladev.com` arrives at `ociel.galla@gmail.com`.
-- [ ] A Gmail reply as `hola@galladev.com` goes out through Resend, and SPF, DKIM, and DMARC pass.
-- [ ] The Gmail key is not the Vercel key and is not in git.
-- [ ] The form acknowledgement still sends (Resend sending intact).
+`EMAIL_FROM_CLIENTS` and `EMAIL_NOTIFY_TO` stay as they are. They are the existing transactional send, not the inbox.
 
-## 7. Open questions for Ociel
+## 5. Phases
 
-1. Which addresses? `hola@` is clear. Also `ociel@`, `contacto@`, `facturas@`?
-2. Catch-all yes or no?
-3. Confirm option A, or move to B (Workspace) now?
+Each phase is specified, not implemented. Later phases do not start by changing production DNS before phase 1’s webhook can verify and store.
 
-Until Ociel answers, Monday’s plan prepares `hola@` only and does not create a catch-all.
+### Phase 1 — Receive
+
+**Scope.** Enable Resend inbound for `hola@galladev.com`. Ociel publishes the MX in Cloudflare. A Next.js route verifies the webhook and stores the message.
+
+Route: `src/app/api/email/inbound/route.ts` (the App Router lives under `src/app`; the shape is `app/api/email/inbound/route.ts`).
+
+- Reject anything that is not a verified `email.received` event.
+- Keep only mail for `hola@galladev.com`. No catch-all row.
+- Idempotent on `data.email_id`. A repeat delivery updates nothing and returns success.
+- Persist threads and messages in Supabase, for example tables `email_threads` and `email_messages`.
+- Attachments: metadata always. Bytes go in a private Storage bucket when one exists. None exists in the repo today (the client-portal spec’s `project-files` is not created). Until a bucket exists, store metadata only. Do not invent a public bucket. Cap each file at 50 MB (52 428 800 bytes), the same cap as the client-portal spec.
+- The webhook has no user session. The route writes with the server credential after the signature check. Reads go through the signed-in user and RLS. Only allowed roles can read. Admin is the allowed role until the open question in section 7 is answered.
+- Rate-limit the route. The app’s limiter today is in-memory and per instance; this route still needs a limit so a flood cannot fill the table.
+
+**Acceptance.**
+
+- [ ] Resend receiving is enabled on `galladev.com`, and the apex MX is the single record Resend showed, DNS-only.
+- [ ] Apex and `www` still Proxied. `send`, `rsend`, DKIM, and `_dmarc` unchanged. The form acknowledgement still sends.
+- [ ] `POST` to the inbound route with a bad or missing Svix signature does not write a row.
+- [ ] A real message to `hola@galladev.com` is stored once. A second delivery of the same `email_id` does not insert a second message.
+- [ ] A message to any other `@galladev.com` address is not stored.
+- [ ] RLS: an Admin session can read the row; a role that is not allowed cannot. No secret is in git.
+
+### Phase 2 — Inbox UI
+
+**Scope.** `/correo` inside GDW: a thread list, a thread view, read and unread, and a way to link a thread to a lead. It uses the existing session and RBAC. Access is Admin by default. Which other roles can open it is an open question (section 7); until that is answered, Seller, Viewer, and the visitor demo do not see the inbox (same idea as other Admin-only areas: the demo already redirects `/email`).
+
+**Acceptance.**
+
+- [ ] An Admin opens `/correo`, sees threads for `hola@`, opens one, and the unread marker clears when the thread is read.
+- [ ] The Admin can attach a thread to an existing lead, and the link is still there on reload.
+- [ ] A signed-out user, a visitor demo session, and a role that is not allowed do not get the thread list or the message bodies.
+- [ ] HTML from the message is sanitized before it is shown. Remote images are not loaded by default.
+
+### Phase 3 — Reply
+
+**Scope.** From the open thread, an allowed user replies through Resend as `hola@galladev.com`. Threading follows Resend’s reply guide: set `In-Reply-To` to the `message_id` being answered, and set `References` to the earlier `message_id` values in the thread plus that one, separated by spaces. The subject keeps the thread (`Re:` plus the subject). The outbound message is stored on the same `email_threads` row, with its Resend id, so a later inbound reply joins the same thread.
+
+**Acceptance.**
+
+- [ ] The reply leaves as `hola@galladev.com` through Resend, and SPF, DKIM, and DMARC still pass on the existing sending setup.
+- [ ] The sent payload includes `In-Reply-To` and `References` built from the thread’s stored `message_id` values.
+- [ ] The reply is visible in that thread in `/correo` after send, including a failed send marked as failed rather than dropped.
+- [ ] A follow-up from the outside to that thread is stored on the same thread, not as a new one, when the incoming `message_id` / `References` match.
+
+## 6. Risks
+
+- **Spam and abuse.** The MX will attract mail that is not a customer. Enforce a body size limit on the webhook, rate-limit the route, and drop recipients other than `hola@`. Sanitize HTML before rendering. Do not load remote images by default (tracking pixels and mixed-content surprises).
+- **Attachments.** 50 MB per file (52 428 800 bytes), consistent with the client-portal spec. Reject larger files. Attachment `download_url` values expire; fetch during the webhook handling, or store metadata only and accept that the bytes may need a fresh API call. Retention of stored bytes is an open question (section 7).
+- **Webhook flood.** Rate-limit `POST` on the inbound route. A failed signature is not a reason to parse or store the body.
+- **DNS.** A second MX, or proxying the MX (orange cloud), breaks receiving. Deleting `send`, `rsend`, DKIM, or `_dmarc` breaks the mail that already sends.
+- **Secrets.** `RESEND_INBOUND_WEBHOOK_SECRET` and any Resend API key live only in Vercel. If one leaks, rotate it in Resend. Do not commit it.
+- **Replay.** Svix verification covers timestamped signatures. Still dedupe on `email_id`.
+
+## 7. Open questions
+
+1. Which roles besides Admin can see the inbox? (Seller, Viewer, neither.)
+2. How long are attachment bytes kept, if they are stored at all?
+3. Who is notified when new mail arrives, and by what channel?
+
+Until those are answered: Admin only, metadata-only attachments if no bucket exists, and no new-mail notification.
