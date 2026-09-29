@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetRateLimits } from "@/lib/rate-limit";
-import type { VerifyError } from "@/lib/email/inbound-verify";
+import type {
+  VerifyError,
+  VerifyResult,
+} from "@/lib/email/inbound-verify";
+import type { StoreResult } from "@/lib/email/inbound-store";
 
 /**
  * Contratos de POST /api/email/inbound (webhook Resend).
@@ -8,7 +12,7 @@ import type { VerifyError } from "@/lib/email/inbound-verify";
  */
 
 const storeInboundEmail = vi.hoisted(() =>
-  vi.fn(async () => ({
+  vi.fn<() => Promise<StoreResult>>(async () => ({
     stored: true as const,
     threadId: "thread-1",
     messageId: "msg-1",
@@ -16,7 +20,7 @@ const storeInboundEmail = vi.hoisted(() =>
 );
 
 const verifyInboundWebhook = vi.hoisted(() =>
-  vi.fn(() => ({
+  vi.fn<() => VerifyResult | VerifyError>(() => ({
     ok: true as const,
     event: {
       type: "email.received" as const,
