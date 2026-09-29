@@ -30,9 +30,10 @@ const BLOCKED_API_PREFIXES = [
   "/api/leads/score",
   "/api/leads/merge",
   "/api/leads/pain-analysis",
+  "/api/email/threads",
 ];
 
-const BLOCKED_PAGES = ["/settings", "/automations", "/email"];
+const BLOCKED_PAGES = ["/settings", "/automations", "/email", "/correo"];
 
 /** APIs que un visitante no debe ejecutar (ni leer configuración). */
 export function isVisitorBlockedApi(pathname: string, method: string): boolean {

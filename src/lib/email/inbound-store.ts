@@ -1,0 +1,190 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { InboundEmailEvent } from "./inbound-verify";
+import { getResendClient } from "./resend-client";
+
+/**
+ * Persiste un email inbound verificado en Supabase (email_threads + email_messages).
+ *
+ * Idempotente por resend_email_id: un duplicado no inserta y devuelve
+ * { stored: false, reason: "duplicate" }.
+ *
+ * Escribe con el cliente service_role (bypass RLS). Las lecturas pasan por
+ * sesión y RLS (solo Admin).
+ *
+ * Tras guardar metadatos, intenta cargar el cuerpo completo del mensaje
+ * vía la Receiving API de Resend.
+ */
+
+const MAX_ATTACHMENT_BYTES = 52_428_800; // 50 MB
+
+export type StoreResult =
+  | { stored: true; threadId: string; messageId: string }
+  | { stored: false; reason: "duplicate" | "db-error"; detail?: string };
+
+export async function storeInboundEmail(
+  admin: SupabaseClient,
+  event: InboundEmailEvent,
+): Promise<StoreResult> {
+  const { data } = event;
+
+  const existingMsg = await admin
+    .from("email_messages")
+    .select("id")
+    .eq("resend_email_id", data.email_id)
+    .maybeSingle();
+
+  if (existingMsg.data) {
+    return { stored: false, reason: "duplicate" };
+  }
+
+  const fromAddress = extractEmail(data.from);
+  const fromName = extractName(data.from);
+
+  const threadId = await findOrCreateThread(admin, {
+    messageId: data.message_id,
+    subject: data.subject ?? "(sin asunto)",
+    fromAddress,
+    fromName,
+  });
+
+  if (!threadId) {
+    return { stored: false, reason: "db-error", detail: "thread creation failed" };
+  }
+
+  let bodyHtml: string | null = null;
+  let bodyText: string | null = null;
+
+  try {
+    const resend = getResendClient();
+    if (resend) {
+      const full = await (resend as any).emails.receiving.get(data.email_id);
+      if (full?.data) {
+        bodyHtml = full.data.html ?? null;
+        bodyText = full.data.text ?? null;
+      }
+    }
+  } catch (e) {
+    console.warn("[inbound-store] Could not fetch full message body", data.email_id, e);
+  }
+
+  const { data: msg, error: msgErr } = await admin
+    .from("email_messages")
+    .insert({
+      thread_id: threadId,
+      resend_email_id: data.email_id,
+      message_id: data.message_id ?? null,
+      direction: "inbound",
+      from_address: fromAddress,
+      from_name: fromName,
+      to_addresses: (data.to ?? []).map(extractEmail),
+      cc_addresses: (data.cc ?? []).map(extractEmail),
+      bcc_addresses: (data.bcc ?? []).map(extractEmail),
+      subject: data.subject ?? null,
+      body_html: bodyHtml,
+      body_text: bodyText,
+      received_at: data.created_at ?? new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (msgErr || !msg) {
+    if (msgErr?.code === "23505") {
+      return { stored: false, reason: "duplicate" };
+    }
+    return { stored: false, reason: "db-error", detail: msgErr?.message };
+  }
+
+  if (data.attachments?.length) {
+    const attachmentRows = data.attachments
+      .filter((a) => a.id && a.filename)
+      .map((a) => ({
+        message_id: msg.id,
+        resend_attachment_id: a.id,
+        filename: a.filename,
+        content_type: a.content_type || "application/octet-stream",
+      }));
+
+    if (attachmentRows.length > 0) {
+      const { error: attErr } = await admin
+        .from("email_attachments")
+        .insert(attachmentRows);
+      if (attErr) {
+        console.warn("[inbound-store] Failed to insert attachments", attErr.message);
+      }
+    }
+  }
+
+  await admin
+    .from("email_threads")
+    .update({
+      last_message_at: data.created_at ?? new Date().toISOString(),
+      message_count: await countMessages(admin, threadId),
+      is_read: false,
+    })
+    .eq("id", threadId);
+
+  return { stored: true, threadId, messageId: msg.id };
+}
+
+async function findOrCreateThread(
+  admin: SupabaseClient,
+  opts: {
+    messageId?: string;
+    subject: string;
+    fromAddress: string;
+    fromName?: string | null;
+  },
+): Promise<string | null> {
+  if (opts.messageId) {
+    const { data: existingByRef } = await admin
+      .from("email_messages")
+      .select("thread_id")
+      .or(`message_id.eq.${opts.messageId},"references".cs.{${opts.messageId}}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingByRef?.thread_id) {
+      return existingByRef.thread_id;
+    }
+  }
+
+  const { data: thread, error } = await admin
+    .from("email_threads")
+    .insert({
+      subject: opts.subject,
+      from_address: opts.fromAddress,
+      from_name: opts.fromName ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !thread) {
+    console.error("[inbound-store] Failed to create thread", error?.message);
+    return null;
+  }
+
+  return thread.id;
+}
+
+async function countMessages(
+  admin: SupabaseClient,
+  threadId: string,
+): Promise<number> {
+  const { count } = await admin
+    .from("email_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("thread_id", threadId);
+  return count ?? 1;
+}
+
+function extractEmail(address: string): string {
+  const match = /<([^>]+)>/.exec(address);
+  return (match?.[1] ?? address).trim().toLowerCase();
+}
+
+function extractName(address: string): string | null {
+  const match = /^"?([^"<]+)"?\s*</.exec(address);
+  return match?.[1]?.trim() ?? null;
+}
