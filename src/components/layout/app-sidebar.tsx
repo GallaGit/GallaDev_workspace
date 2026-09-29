@@ -10,6 +10,7 @@ import {
   Columns3,
   BarChart3,
   Mail,
+  MailCheck,
   Workflow,
   Settings,
   Copy,
@@ -28,12 +29,13 @@ const NAV = [
   { href: "/kanban", label: "Kanban", icon: Columns3 },
   { href: "/stats", label: "Statistics", icon: BarChart3 },
   { href: "/email", label: "Email", icon: Mail },
+  { href: "/correo", label: "Correo", icon: MailCheck },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/duplicates", label: "Duplicados", icon: Copy },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const HIDDEN_FOR_VISITOR = new Set(["/email", "/automations", "/settings"]);
+const HIDDEN_FOR_VISITOR = new Set(["/email", "/correo", "/automations", "/settings"]);
 
 export function AppSidebar() {
   const pathname = usePathname();
