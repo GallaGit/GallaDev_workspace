@@ -60,6 +60,10 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/ingest/")) {
     return NextResponse.next();
   }
+  // Webhook de Resend inbound: auth por firma Svix, no por sesión.
+  if (pathname === "/api/email/inbound") {
+    return NextResponse.next();
+  }
   if (pathname.startsWith("/login")) {
     return NextResponse.next();
   }
