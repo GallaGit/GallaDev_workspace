@@ -31,6 +31,8 @@ const BLOCKED_API_PREFIXES = [
   "/api/leads/merge",
   "/api/leads/pain-analysis",
   "/api/email/threads",
+  "/api/email/drafts",
+  "/api/email/compose",
 ];
 
 const BLOCKED_PAGES = ["/settings", "/automations", "/email", "/correo"];
