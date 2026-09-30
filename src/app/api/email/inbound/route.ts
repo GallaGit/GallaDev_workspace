@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * POST /api/email/inbound — Resend inbound webhook.
  *
  * Auth: firma Svix (no sesión de usuario).
- * Flujo: verificar firma → filtrar solo hola@galladev.com → deduplicar →
+ * Flujo: verificar firma → filtrar allowlist (hola@ u ociel@) → deduplicar →
  *        guardar hilo/mensaje en Supabase con service_role.
  *
  * Rate-limit en memoria best-effort (misma estrategia que /api/ingest/lead).

@@ -106,6 +106,8 @@ export function ThreadView({
           </h2>
           <p className="text-[12px] text-gris-500 dark:text-gris-400">
             De: {thread.from_name ?? thread.from_address}
+            {" · "}
+            Para: {thread.mailbox_address || "hola@galladev.com"}
             {thread.lead_id && (
               <span className="ml-2 inline-flex items-center gap-1 rounded bg-rojo/10 px-1.5 text-[11px] text-rojo">
                 <Link2 className="h-3 w-3" /> Lead vinculado

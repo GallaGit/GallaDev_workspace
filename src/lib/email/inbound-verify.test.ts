@@ -104,10 +104,24 @@ describe("verifyInboundWebhook", () => {
     expect(result).toEqual({ ok: false, reason: "not-email-received" });
   });
 
-  it("rejects recipients that are not hola@galladev.com", () => {
+  it("rejects recipients that are not company mailboxes", () => {
     const body = JSON.stringify(makePayload({ to: ["otro@galladev.com"] }));
     const result = verifyInboundWebhook(body, VALID_HEADERS, SECRET);
     expect(result).toEqual({ ok: false, reason: "not-our-recipient" });
+  });
+
+  it("accepts ociel@galladev.com", () => {
+    const body = JSON.stringify(makePayload({ to: ["ociel@galladev.com"] }));
+    const result = verifyInboundWebhook(body, VALID_HEADERS, SECRET);
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts ociel@galladev.com in angle-bracket format", () => {
+    const body = JSON.stringify(
+      makePayload({ to: ["Ociel <ociel@galladev.com>"] }),
+    );
+    const result = verifyInboundWebhook(body, VALID_HEADERS, SECRET);
+    expect(result.ok).toBe(true);
   });
 
   it("accepts hola@galladev.com in cc", () => {

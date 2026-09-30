@@ -3,6 +3,12 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Resend } from "resend";
 import type { InboundEmailEvent } from "./inbound-verify";
+import {
+  defaultMailbox,
+  extractEmailAddress,
+  resolveMailbox,
+  type CompanyMailbox,
+} from "./mailboxes";
 import { getResendClient } from "./resend-client";
 
 /** Resend Receiving API shape (not fully typed in the SDK). */
@@ -62,8 +68,11 @@ export async function storeInboundEmail(
     return { stored: false, reason: "duplicate" };
   }
 
-  const fromAddress = extractEmail(data.from);
+  const fromAddress = extractEmailAddress(data.from);
   const fromName = extractName(data.from);
+  const mailboxAddress =
+    resolveMailbox(data.to ?? [], data.cc ?? [], data.bcc ?? []) ??
+    defaultMailbox();
 
   const threadId = await findOrCreateThread(admin, {
     emailId: data.email_id,
@@ -71,6 +80,7 @@ export async function storeInboundEmail(
     subject: data.subject ?? "(sin asunto)",
     fromAddress,
     fromName,
+    mailboxAddress,
   });
 
   if (!threadId) {
@@ -108,9 +118,9 @@ export async function storeInboundEmail(
       direction: "inbound",
       from_address: fromAddress,
       from_name: fromName,
-      to_addresses: (data.to ?? []).map(extractEmail),
-      cc_addresses: (data.cc ?? []).map(extractEmail),
-      bcc_addresses: (data.bcc ?? []).map(extractEmail),
+      to_addresses: (data.to ?? []).map(extractEmailAddress),
+      cc_addresses: (data.cc ?? []).map(extractEmailAddress),
+      bcc_addresses: (data.bcc ?? []).map(extractEmailAddress),
       subject: data.subject ?? null,
       body_html: bodyHtml,
       body_text: bodyText,
@@ -166,6 +176,7 @@ async function findOrCreateThread(
     subject: string;
     fromAddress: string;
     fromName?: string | null;
+    mailboxAddress: CompanyMailbox;
   },
 ): Promise<string | null> {
   // Try to fetch in_reply_to/references from the full message for threading.
@@ -216,6 +227,7 @@ async function findOrCreateThread(
       subject: opts.subject,
       from_address: opts.fromAddress,
       from_name: opts.fromName ?? null,
+      mailbox_address: opts.mailboxAddress,
     })
     .select("id")
     .single();
@@ -237,11 +249,6 @@ async function countMessages(
     .select("id", { count: "exact", head: true })
     .eq("thread_id", threadId);
   return count ?? 1;
-}
-
-function extractEmail(address: string): string {
-  const match = /<([^>]+)>/.exec(address);
-  return (match?.[1] ?? address).trim().toLowerCase();
 }
 
 function extractName(address: string): string | null {
