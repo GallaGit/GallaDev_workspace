@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Send, Save } from "lucide-react";
 import {
@@ -31,6 +31,22 @@ export interface EmailDraft {
   updated_at: string;
 }
 
+function resolveMailbox(
+  defaultMailboxAddress?: CompanyMailbox | "all" | string,
+  draft?: EmailDraft | null,
+): CompanyMailbox {
+  if (draft && isCompanyMailbox(draft.mailbox_address)) {
+    return draft.mailbox_address;
+  }
+  if (
+    typeof defaultMailboxAddress === "string" &&
+    isCompanyMailbox(defaultMailboxAddress)
+  ) {
+    return defaultMailboxAddress;
+  }
+  return defaultMailbox();
+}
+
 export function ComposeDialog({
   open,
   onOpenChange,
@@ -46,44 +62,17 @@ export function ComposeDialog({
   onSent: (threadId: string) => void;
   onDraftSaved: (draft: EmailDraft) => void;
 }) {
-  const resolveDefaultMailbox = (): CompanyMailbox => {
-    if (
-      typeof defaultMailboxAddress === "string" &&
-      isCompanyMailbox(defaultMailboxAddress)
-    ) {
-      return defaultMailboxAddress;
-    }
-    return defaultMailbox();
-  };
-
-  const [mailbox, setMailbox] = useState<CompanyMailbox>(resolveDefaultMailbox);
-  const [to, setTo] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [draftId, setDraftId] = useState<string | null>(null);
+  // Parent remounts with key when draft/open changes — no sync effect.
+  const [mailbox, setMailbox] = useState<CompanyMailbox>(() =>
+    resolveMailbox(defaultMailboxAddress, initialDraft),
+  );
+  const [to, setTo] = useState(() => initialDraft?.to_address ?? "");
+  const [subject, setSubject] = useState(() => initialDraft?.subject ?? "");
+  const [body, setBody] = useState(() => initialDraft?.body_text ?? "");
+  const [draftId, setDraftId] = useState<string | null>(
+    () => initialDraft?.id ?? null,
+  );
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    if (initialDraft) {
-      setMailbox(
-        isCompanyMailbox(initialDraft.mailbox_address)
-          ? initialDraft.mailbox_address
-          : defaultMailbox(),
-      );
-      setTo(initialDraft.to_address);
-      setSubject(initialDraft.subject);
-      setBody(initialDraft.body_text);
-      setDraftId(initialDraft.id);
-    } else {
-      setMailbox(resolveDefaultMailbox());
-      setTo("");
-      setSubject("");
-      setBody("");
-      setDraftId(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when opening / draft changes
-  }, [open, initialDraft?.id]);
 
   const handleSaveDraft = useCallback(async () => {
     setBusy(true);
