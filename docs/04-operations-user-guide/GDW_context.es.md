@@ -22,7 +22,7 @@ Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE
 - `/kanban`: los nueve estados del pipeline. No hay control de “añadir tarjeta”.
 - `/stats`: estadísticas. Selector de tipo de gráfico: Barras, Circular (donut), Área (clave `gdw-stats-chart-type` en `localStorage`).
 - `/duplicates`: grupos de duplicados.
-- `/correo`: buzón de empresa (`hola@galladev.com`). Hilos de correo, leer/responder, vincular a lead. Solo Admin.
+- `/correo`: buzón de empresa (`hola@` y `ociel@`). Inbox unificado con filtro por buzón, chip, leer/responder, vincular a lead. Solo Admin. Sin carpetas Entrada/Enviados/Spam (ver spec company-email).
 - `/email`: revisión de borradores y soporte de Gmail Compose. El visitante es redirigido a `/leads`.
 - `/automations`: webhooks de automatización. El visitante es redirigido a `/leads`.
 - `/settings`: estado de integraciones, seguridad y configuración enmascarada. El visitante es redirigido a `/leads`.

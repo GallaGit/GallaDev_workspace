@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Mail, MailOpen } from "lucide-react";
+import { mailboxChipLabel } from "@/lib/email/mailboxes";
 import type { EmailThread } from "./inbox-page";
 
 function formatDate(iso: string): string {
@@ -80,11 +81,16 @@ export function ThreadList({
                   >
                     {thread.subject}
                   </p>
-                  {thread.message_count > 1 && (
-                    <span className="mt-0.5 inline-block rounded-full bg-gris-100 dark:bg-gris-800 px-1.5 text-[10px] text-gris-500 dark:text-gris-400">
-                      {thread.message_count} mensajes
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                    <span className="inline-block rounded bg-gris-100 dark:bg-gris-800 px-1.5 text-[10px] font-medium text-gris-600 dark:text-gris-300">
+                      {mailboxChipLabel(thread.mailbox_address || "hola@galladev.com")}
                     </span>
-                  )}
+                    {thread.message_count > 1 && (
+                      <span className="inline-block rounded-full bg-gris-100 dark:bg-gris-800 px-1.5 text-[10px] text-gris-500 dark:text-gris-400">
+                        {thread.message_count} mensajes
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </button>

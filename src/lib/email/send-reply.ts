@@ -1,6 +1,11 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  defaultMailbox,
+  displayFrom,
+  isCompanyMailbox,
+} from "./mailboxes";
 import { getResendClient } from "./resend-client";
 
 /**
@@ -10,10 +15,8 @@ import { getResendClient } from "./resend-client";
  *  - In-Reply-To: message_id del último mensaje al que se contesta.
  *  - References: todos los message_id del hilo + el de arriba, separados por espacio.
  *  - Subject: "Re: <asunto original>" (sin apilar Re:).
+ *  - From: el mailbox_address del hilo (hola@ u ociel@).
  */
-
-const FROM_ADDRESS = "hola@galladev.com";
-const FROM_DISPLAY = "GallaDev <hola@galladev.com>";
 
 export interface ReplyInput {
   threadId: string;
@@ -36,13 +39,17 @@ export async function sendReply(
 
   const { data: thread } = await admin
     .from("email_threads")
-    .select("id, subject, from_address")
+    .select("id, subject, from_address, mailbox_address")
     .eq("id", input.threadId)
     .single();
 
   if (!thread) {
     return { sent: false, reason: "no-thread" };
   }
+
+  const rawMailbox = String(thread.mailbox_address ?? "");
+  const mailbox = isCompanyMailbox(rawMailbox) ? rawMailbox : defaultMailbox();
+  const fromMeta = displayFrom(mailbox);
 
   const { data: messages } = await admin
     .from("email_messages")
@@ -74,7 +81,7 @@ export async function sendReply(
 
   try {
     const result = await client.emails.send({
-      from: FROM_DISPLAY,
+      from: fromMeta.from,
       to: replyTo,
       subject,
       text: input.bodyText,
@@ -112,8 +119,8 @@ export async function sendReply(
       in_reply_to: inReplyTo ?? null,
       references: references ?? null,
       direction: "outbound",
-      from_address: FROM_ADDRESS,
-      from_name: "GallaDev",
+      from_address: fromMeta.address,
+      from_name: fromMeta.name,
       to_addresses: [replyTo],
       cc_addresses: [],
       bcc_addresses: [],

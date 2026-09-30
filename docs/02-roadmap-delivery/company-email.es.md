@@ -1,30 +1,30 @@
 # Email De Empresa (galladev.com) — Módulo Correo en GDW
 
-> **Estado:** implementado (Fases 1–3) · **Decisión:** Ociel, 29 Sep 2026 · **Implementado:** 30 Sep 2026.
+> **Estado:** implementado (Fases 1–3 + dual mailbox V1) · **Decisión:** Ociel, 29 Sep 2026 · **Implementado:** 30 Sep 2026 · **Dual mailbox:** 30 Sep 2026.
 > Sustituye la recomendación del 27 Sep 2026 (Cloudflare Email Routing más «Enviar como» en Gmail, y las alternativas Google Workspace / Zoho). Ese camino no es el plan. Sin Gmail. Sin Google Workspace.
-> `hola@galladev.com` recibe y envía correo a través de Resend. El módulo Correo (`/correo`) permite leer hilos, vincularlos a leads y responder. EN: [`company-email.md`](./company-email.md).
+> `hola@galladev.com` y `ociel@galladev.com` reciben y envían correo a través de Resend. El módulo Correo (`/correo`) es un inbox unificado con filtro por buzón. EN: [`company-email.md`](./company-email.md).
 
 Va por delante de la sección «¿Qué es?» del login y de los pendientes de M2 (CodeQL, E2E de Viewer 403, rate limit distribuido, historial de auditoría y la limpieza de mocks de Notion en `tests/mocks/handlers.ts`).
 
 ## 1. Decisión
 
-Solo `hola@galladev.com` recibe correo. No hay catch-all. Ningún otro local-part (`ociel@`, `contacto@`, `facturas@`) es un buzón.
+Allowlist de producto: `hola@galladev.com` (empresa) y `ociel@galladev.com` (personal). No hay catch-all. Ningún otro local-part (`contacto@`, `facturas@`, etc.) es un buzón.
 
-La entrada y la salida pasan por Resend. La salida ya sale de `hola@galladev.com`. La entrada es [Resend Inbound](https://resend.com/docs/dashboard/receiving/introduction) (receiving): un registro MX en `galladev.com` que apunta a Resend, puesto en el DNS de Cloudflare por Ociel desde su PC en la UE, y Resend manda un webhook por cada correo recibido.
+La entrada y la salida pasan por Resend. La entrada es [Resend Inbound](https://resend.com/docs/dashboard/receiving/introduction) (receiving): un registro MX en `galladev.com` que apunta a Resend, y Resend manda un webhook por cada correo recibido.
 
-El buzón es un módulo nuevo, **Correo**, dentro de GDW. Reutiliza la auth, el RBAC y Supabase de GDW. No es una app aparte. La página es `/correo`. Esa ruta no es el banco de trabajo `/email` (borradores de leads). `/email` se queda como está.
+El buzón es el módulo **Correo** dentro de GDW (`/correo`). Reutiliza auth, RBAC y Supabase. No es una app aparte. Esa ruta no es el banco de trabajo `/email` (borradores de leads). `/email` se queda como está.
 
-Comprobado contra la documentación de Resend el 29 Sep 2026. La recepción inbound está disponible, así que Cloudflare Email Workers no es el plan alternativo.
+V1 UI: un solo inbox unificado, filtro `Todos | hola@ | ociel@`, chip por hilo, reply From = `mailbox_address` del hilo. Sin carpetas Entrada/Enviados/Spam/Borradores (ver sección 8).
 
 | Tema | Decisión |
 | --- | --- |
-| Dirección | Solo `hola@galladev.com`. |
+| Direcciones | `hola@galladev.com` y `ociel@galladev.com`. |
 | Catch-all | No. |
 | Proveedores descartados | Gmail, Google Workspace, Cloudflare Email Routing, Zoho. |
 | Transporte | Resend para entrada y salida. |
-| Producto | Módulo Correo en GDW (`/correo`). |
+| Producto | Módulo Correo en GDW (`/correo`), inbox unificado + filtro. |
 
-El MX de recepción de Resend acepta cualquier local-part del dominio al que se engancha ([dominios propios](https://resend.com/docs/dashboard/receiving/custom-domains)). La regla de producto sigue siendo una sola dirección. El webhook guarda un mensaje solo cuando `to`, `cc` o `bcc` incluye `hola@galladev.com`. Cualquier otro destinatario no se guarda y no abre un hilo. El manejador igual responde éxito tras una firma válida, para que Resend no reintente un mensaje que GDW decidió no conservar.
+El MX de recepción de Resend acepta cualquier local-part del dominio ([dominios propios](https://resend.com/docs/dashboard/receiving/custom-domains)). La regla de producto es la allowlist. El webhook guarda un mensaje solo cuando `to`, `cc` o `bcc` incluye `hola@` u `ociel@`. Cualquier otro destinatario no se guarda. El manejador igual responde éxito tras una firma válida.
 
 ## 2. Estado actual
 
@@ -38,7 +38,7 @@ Hechos al 27 Sep 2026, vigentes el 29 Sep 2026. Sin valores de secretos.
 | Envío | Landing → `POST /api/ingest/lead` en `workspace.galladev.com` (Vercel) → Resend. Acuse al visitante y aviso interno. Remitente `hola@galladev.com`. Aviso a `ociel.galla@gmail.com`. E2E de ese envío pasado el 18 Sep. |
 | Vercel | Están `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, `RESEND_API_KEY` y `RESEND_INBOUND_WEBHOOK_SECRET`. |
 | Código | `EMAIL_REPLY_TO`, si está definida, sale como Reply-To (`src/lib/email/resend-client.ts`, `send-ingest-emails.ts`). No consta entre las variables de Vercel de arriba. |
-| Buzón | El módulo Correo (`/correo`) recibe correo en `hola@galladev.com` y permite responder. Implementado el 30 Sep 2026. |
+| Buzón | `/correo` recibe en `hola@` y `ociel@` (allowlist). Columna `email_threads.mailbox_address`. Filtro UI + chip. Reply From = buzón del hilo. Dual mailbox V1, 30 Sep 2026. |
 | Apex MX | MX publicado en Cloudflare (apex, DNS-only) apuntando a Resend inbound. |
 | Storage | El repo no usa Supabase Storage. No hay buckets. La spec del portal de cliente propone un bucket privado `project-files`; no está creado. |
 | `/email` | Banco de borradores de leads. No es un buzón. |
@@ -88,7 +88,7 @@ Las tres fases están implementadas (PR #65, 30 Sep 2026). DNS, webhook, migraci
 Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; la forma es `app/api/email/inbound/route.ts`).
 
 - Rechazar lo que no sea un evento `email.received` verificado.
-- Conservar solo el correo para `hola@galladev.com`. Ninguna fila de catch-all.
+- Conservar solo el correo para la allowlist (`hola@` u `ociel@`). Ninguna fila de catch-all. Persistencia de `mailbox_address` en el hilo (`src/lib/email/mailboxes.ts`).
 - Idempotente por `data.email_id`. Una entrega repetida no cambia nada y responde éxito.
 - Persistir hilos y mensajes en Supabase, por ejemplo las tablas `email_threads` y `email_messages`.
 - Adjuntos: metadatos siempre. Los bytes van a un bucket privado de Storage cuando exista uno. En el repo hoy no hay ninguno (el `project-files` de la spec del portal de cliente no está creado). Hasta que haya bucket, solo metadatos. No inventar un bucket público. Tope de 50 MB por fichero (52 428 800 bytes), el mismo tope que la spec del portal de cliente.
@@ -101,7 +101,8 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 - [x] `send`, `rsend`, DKIM y `_dmarc` iguales. El acuse del formulario sigue saliendo.
 - [x] Un `POST` a la ruta de entrada con firma Svix mala o ausente no escribe ninguna fila. (test: `inbound-route.test.ts`)
 - [x] Un mensaje real a `hola@galladev.com` se guarda una vez. Una segunda entrega del mismo `email_id` no inserta otro mensaje. (idempotencia por `resend_email_id` UNIQUE)
-- [x] Un mensaje a cualquier otra dirección `@galladev.com` no se guarda. (test: `inbound-verify.test.ts`)
+- [x] Un mensaje a cualquier otra dirección `@galladev.com` (fuera de la allowlist) no se guarda. (test: `inbound-verify.test.ts`)
+- [x] Un mensaje a `ociel@galladev.com` se guarda con `mailbox_address = ociel@…`. (allowlist dual; tests `mailboxes.test.ts`, `inbound-verify.test.ts`)
 - [x] RLS: una sesión Admin puede leer la fila; un rol no permitido, no. Ningún secreto en git. (`email_threads_admin_read` policy)
 
 ### Fase 2 — UI del buzón
@@ -110,25 +111,25 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 
 **Aceptación.**
 
-- [x] Un Admin abre `/correo`, ve los hilos de `hola@`, abre uno, y el marcador de no leído se quita al leer el hilo. (`InboxPage`, `ThreadView`, auto-mark-as-read)
+- [x] Un Admin abre `/correo`, ve los hilos (filtro Todos / hola@ / ociel@), abre uno, y el marcador de no leído se quita al leer el hilo. (`InboxPage`, chip, `ThreadView`)
 - [x] El Admin puede enganchar un hilo a un lead existente, y el enlace sigue ahí al recargar. (`LinkLeadDialog`, `PATCH /api/email/threads/[id]`)
 - [x] Un usuario sin sesión, una sesión de demo de visitante y un rol no permitido no obtienen la lista de hilos ni los cuerpos. (`gate.ts` bloquea `/correo` y `/api/email/threads`; RLS Admin-only)
 - [x] El HTML del mensaje se sanea antes de mostrarlo. Las imágenes remotas no se cargan por defecto. (`sanitizeHtml` en `thread-view.tsx`)
 
 ### Fase 3 — Responder
 
-**Alcance.** Desde el hilo abierto, un usuario permitido responde por Resend como `hola@galladev.com`. El hilo sigue la guía de respuesta de Resend: `In-Reply-To` es el `message_id` al que se contesta, y `References` son los `message_id` anteriores del hilo más ese, separados por espacios. El asunto mantiene el hilo (`Re:` más el asunto). El mensaje saliente se guarda en la misma fila de `email_threads`, con su id de Resend, para que una respuesta entrante posterior se una al mismo hilo.
+**Alcance.** Desde el hilo abierto, un usuario permitido responde por Resend como el `mailbox_address` del hilo (`hola@` u `ociel@`). El hilo sigue la guía de respuesta de Resend: `In-Reply-To` es el `message_id` al que se contesta, y `References` son los `message_id` anteriores del hilo más ese, separados por espacios. El asunto mantiene el hilo (`Re:` más el asunto). El mensaje saliente se guarda en la misma fila de `email_threads`, con su id de Resend, para que una respuesta entrante posterior se una al mismo hilo.
 
 **Aceptación.**
 
-- [x] La respuesta sale como `hola@galladev.com` por Resend, y SPF, DKIM y DMARC siguen pasando en el envío que ya existe. (`send-reply.ts`, test: `send-reply.test.ts`)
+- [x] La respuesta sale como el mailbox del hilo por Resend (`GallaDev <hola@…>` u `Ociel <ociel@…>`), y SPF, DKIM y DMARC siguen pasando. (`send-reply.ts`, test: `send-reply.test.ts`)
 - [x] El payload enviado incluye `In-Reply-To` y `References` construidos con los `message_id` guardados del hilo. (test: `send-reply.test.ts`)
 - [x] La respuesta se ve en ese hilo en `/correo` después de enviarla, y un envío fallido queda marcado como fallido en vez de desaparecer. (`send_status` column: `delivered` / `failed`)
 - [x] Un seguimiento desde fuera hacia ese hilo se guarda en el mismo hilo, no como uno nuevo, cuando el `message_id` / `References` entrante coincide. (`findOrCreateThread` en `inbound-store.ts`)
 
 ## 6. Riesgos
 
-- **Spam y abuso.** El MX va a atraer correo que no es de un cliente. Hay que imponer un tope de tamaño al cuerpo del webhook, limitar la tasa de la ruta y descartar destinatarios distintos de `hola@`. Sanear el HTML antes de pintarlo. No cargar imágenes remotas por defecto (píxeles de seguimiento y sorpresas de contenido mixto).
+- **Spam y abuso.** El MX va a atraer correo que no es de un cliente. Hay que imponer un tope de tamaño al cuerpo del webhook, limitar la tasa de la ruta y descartar destinatarios fuera de la allowlist (`hola@`, `ociel@`). Sanear el HTML antes de pintarlo. No cargar imágenes remotas por defecto (píxeles de seguimiento y sorpresas de contenido mixto).
 - **Adjuntos.** 50 MB por fichero (52 428 800 bytes), igual que la spec del portal de cliente. Rechazar los que pasen de ahí. Las `download_url` de los adjuntos caducan; hay que bajarlas al atender el webhook, o guardar solo metadatos y aceptar que los bytes pueden exigir otra llamada a la API. Cuánto tiempo se conservan los bytes, si se guardan, es una pregunta abierta (sección 7).
 - **Ráfaga al webhook.** Rate limit en el `POST` de la ruta de entrada. Una firma fallida no es motivo para parsear ni guardar el cuerpo.
 - **DNS.** Un segundo MX, o poner el MX en Proxied (nube naranja), rompe la recepción. Borrar `send`, `rsend`, el DKIM o `_dmarc` rompe el correo que ya se envía.
@@ -142,3 +143,24 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 3. ¿A quién se avisa cuando llega correo nuevo, y por qué canal?
 
 Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket, y sin aviso de correo nuevo.
+
+## 8. Futuro: bandejas (no implementado)
+
+**Hoy.** Correo es un **timeline por hilo**: una lista unificada (filtrable por `mailbox_address`), leído/no leído, y mensajes inbound/outbound dentro del mismo hilo. No hay carpetas Entrada / Enviados / Spam / Borradores.
+
+**Camino de diseño (cuando se aborde).** Vocabulario propuesto:
+
+| Bandeja | Idea | Notas de diseño |
+| --- | --- | --- |
+| Entrada | Hilos con al menos un inbound reciente / no archivados | Vista por defecto; no confundir con el filtro por dirección (`hola@` / `ociel@`). |
+| Enviados | Mensajes o hilos con outbound | Puede ser filtro/vista sobre `email_messages.direction = outbound`, no necesariamente otra tabla. |
+| Spam | Correo no deseado | Requiere fuente: marca manual y/o señal del proveedor. Hoy solo se descarta fuera de allowlist. |
+| Borradores | Respuestas no enviadas | Estado distinto de `/email` (borradores de leads). No mezclar los dos productos. |
+| Archivo (opcional) | Hilos fuera de Entrada sin borrar | Columna o flag en `email_threads`, no carpeta física. |
+
+**Restricciones.**
+
+- No reutilizar `/email` ni su modelo de borradores de leads para borradores de respuesta del buzón.
+- El filtro por `mailbox_address` (allowlist) es ortogonal a las bandejas: un hilo de `ociel@` puede estar en Entrada o Enviados.
+- Spam y retención de adjuntos siguen abiertos (sección 7).
+- Criterio de arranque: solo tras validar dual mailbox V1 en uso real.

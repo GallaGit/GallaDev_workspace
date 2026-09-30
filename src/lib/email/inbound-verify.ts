@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { isAllowedRecipient } from "./mailboxes";
 
 /**
  * Verifica la firma Svix de un webhook de Resend inbound.
@@ -9,10 +10,9 @@ import { Resend } from "resend";
  * svix-id, svix-timestamp, svix-signature. El secreto es
  * RESEND_INBOUND_WEBHOOK_SECRET (nunca en git).
  *
- * Devuelve el payload parseado si la firma es válida, null si no.
+ * Solo guarda si to/cc/bcc incluye un buzón de COMPANY_MAILBOXES
+ * (hola@ u ociel@). Sin catch-all.
  */
-
-const ALLOWED_RECIPIENT = "hola@galladev.com";
 
 export interface InboundEmailEvent {
   type: string;
@@ -111,9 +111,9 @@ export function verifyInboundWebhook(
     ...(data.to ?? []),
     ...(data.cc ?? []),
     ...(data.bcc ?? []),
-  ].map((addr) => extractEmail(addr));
+  ];
 
-  if (!allRecipients.includes(ALLOWED_RECIPIENT)) {
+  if (!isAllowedRecipient(allRecipients)) {
     return { ok: false, reason: "not-our-recipient" };
   }
 
@@ -123,10 +123,6 @@ export function verifyInboundWebhook(
   };
 }
 
-function extractEmail(address: string): string {
-  const match = /<([^>]+)>/.exec(address);
-  return (match?.[1] ?? address).trim().toLowerCase();
-}
 
 /** Solo tests: resetear instancia cacheada. */
 export function __resetResendInstanceForTests(): void {

@@ -27,7 +27,7 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 - **n8n:** optional prospecting and automation provider.
 - **SerpAPI:** external search used by the prospecting workflow.
 - **Groq:** web extraction, email generation, and lead pain analysis.
-- **Resend:** transactional notifications for web ingestion and company inbox (`hola@galladev.com`). Receiving via Resend Inbound (webhook `POST /api/email/inbound`, Svix signature); outbound replies from `/correo`.
+- **Resend:** transactional notifications for web ingestion and company inbox (`hola@` and `ociel@galladev.com`). Receiving via Resend Inbound (webhook `POST /api/email/inbound`, Svix signature); threads with `mailbox_address`; outbound replies from `/correo` using the thread mailbox as From.
 
 ## Ingestion contract
 

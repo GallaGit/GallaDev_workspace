@@ -17,7 +17,13 @@ function mockAdmin(overrides: {
   insertError?: { code: string; message: string } | null;
   countResult?: number;
 } = {}) {
-  const thread = overrides.thread ?? { id: "t-1", subject: "Test Subject", from_address: "sender@example.com" };
+  const thread =
+    overrides.thread ?? {
+      id: "t-1",
+      subject: "Test Subject",
+      from_address: "sender@example.com",
+      mailbox_address: "hola@galladev.com",
+    };
   const messages = overrides.messages ?? [
     { message_id: "<msg-1@example.com>", direction: "inbound", from_address: "sender@example.com", to_addresses: ["hola@galladev.com"] },
   ];
@@ -93,9 +99,36 @@ describe("sendReply", () => {
     expect(call.headers.References).toBe("<msg-1@example.com>");
   });
 
+  it("sends from ociel@ when thread mailbox is ociel@", async () => {
+    const admin = mockAdmin({
+      thread: {
+        id: "t-2",
+        subject: "Personal note",
+        from_address: "friend@example.com",
+        mailbox_address: "ociel@galladev.com",
+      },
+      messages: [
+        {
+          message_id: "<msg-p@example.com>",
+          direction: "inbound",
+          from_address: "friend@example.com",
+          to_addresses: ["ociel@galladev.com"],
+        },
+      ],
+    });
+    await sendReply(admin, { threadId: "t-2", bodyText: "Got it" });
+    const call = sendMock.mock.calls[0][0];
+    expect(call.from).toBe("Ociel <ociel@galladev.com>");
+  });
+
   it("does not double Re: prefix", async () => {
     const admin = mockAdmin({
-      thread: { id: "t-1", subject: "Re: Already replied", from_address: "sender@example.com" },
+      thread: {
+        id: "t-1",
+        subject: "Re: Already replied",
+        from_address: "sender@example.com",
+        mailbox_address: "hola@galladev.com",
+      },
     });
     await sendReply(admin, { threadId: "t-1", bodyText: "Another reply" });
 

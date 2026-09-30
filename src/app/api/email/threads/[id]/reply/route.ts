@@ -15,7 +15,7 @@ const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 10;
 
 /**
- * POST /api/email/threads/[id]/reply — enviar respuesta como hola@galladev.com.
+ * POST /api/email/threads/[id]/reply — enviar respuesta desde el mailbox_address del hilo.
  *
  * Auth: sesión + RLS (verificamos que el usuario puede ver el hilo).
  * Body: { text: string, html?: string }
