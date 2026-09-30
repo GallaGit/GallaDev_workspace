@@ -27,7 +27,7 @@ Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
 - **n8n:** proveedor opcional de prospección y automatización.
 - **SerpAPI:** búsqueda externa usada por el workflow de prospección.
 - **Groq:** extracción web, generación de emails y análisis de dolores.
-- **Resend:** notificaciones transaccionales de la ingesta web e inbox de empresa (`hola@` y `ociel@galladev.com`). Recepción vía Resend Inbound (webhook `POST /api/email/inbound`, firma Svix); hilos con `mailbox_address`; envío de respuestas desde `/correo` con From del buzón del hilo.
+- **Resend:** notificaciones transaccionales de la ingesta web e inbox de empresa (`hola@` y `ociel@galladev.com`). Recepción vía Resend Inbound (webhook `POST /api/email/inbound`, firma Svix); hilos con `mailbox_address`; compose y reply desde `/correo` (`POST /api/email/compose`, borradores en `email_drafts`).
 
 ## Contrato de ingesta
 
@@ -64,3 +64,6 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 - `GET /api/email/threads` (Admin, sesión + RLS)
 - `GET/PATCH /api/email/threads/:id` (Admin, sesión + RLS)
 - `POST /api/email/threads/:id/reply` (Admin, sesión + RLS)
+- `GET/POST /api/email/drafts` (Admin)
+- `DELETE /api/email/drafts/:id` (Admin)
+- `POST /api/email/compose` (Admin)

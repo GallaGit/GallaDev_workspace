@@ -27,7 +27,7 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 - **n8n:** optional prospecting and automation provider.
 - **SerpAPI:** external search used by the prospecting workflow.
 - **Groq:** web extraction, email generation, and lead pain analysis.
-- **Resend:** transactional notifications for web ingestion and company inbox (`hola@` and `ociel@galladev.com`). Receiving via Resend Inbound (webhook `POST /api/email/inbound`, Svix signature); threads with `mailbox_address`; outbound replies from `/correo` using the thread mailbox as From.
+- **Resend:** transactional notifications for web ingestion and company inbox (`hola@` and `ociel@galladev.com`). Receiving via Resend Inbound (webhook `POST /api/email/inbound`, Svix signature); threads with `mailbox_address`; compose and reply from `/correo` (`POST /api/email/compose`, drafts in `email_drafts`).
 
 ## Ingestion contract
 
@@ -64,3 +64,6 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 - `GET /api/email/threads` (Admin, session + RLS)
 - `GET/PATCH /api/email/threads/:id` (Admin, session + RLS)
 - `POST /api/email/threads/:id/reply` (Admin, session + RLS)
+- `GET/POST /api/email/drafts` (Admin)
+- `DELETE /api/email/drafts/:id` (Admin)
+- `POST /api/email/compose` (Admin)

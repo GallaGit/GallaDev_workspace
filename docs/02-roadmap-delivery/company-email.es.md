@@ -14,7 +14,7 @@ La entrada y la salida pasan por Resend. La entrada es [Resend Inbound](https://
 
 El buzón es el módulo **Correo** dentro de GDW (`/correo`). Reutiliza auth, RBAC y Supabase. No es una app aparte. Esa ruta no es el banco de trabajo `/email` (borradores de leads). `/email` se queda como está.
 
-V1 UI: un solo inbox unificado, filtro `Todos | hola@ | ociel@`, chip por hilo, reply From = `mailbox_address` del hilo. Sin carpetas Entrada/Enviados/Spam/Borradores (ver sección 8).
+V1 UI: un solo inbox unificado, filtro `Todos | hola@ | ociel@`, chip por hilo, reply From = `mailbox_address` del hilo, botón **Nuevo** (compose vía Resend) y pill **Borradores** (`email_drafts`). Sin carpetas Entrada/Enviados/Spam. Sin Gmail.
 
 | Tema | Decisión |
 | --- | --- |
@@ -38,7 +38,7 @@ Hechos al 27 Sep 2026, vigentes el 29 Sep 2026. Sin valores de secretos.
 | Envío | Landing → `POST /api/ingest/lead` en `workspace.galladev.com` (Vercel) → Resend. Acuse al visitante y aviso interno. Remitente `hola@galladev.com`. Aviso a `ociel.galla@gmail.com`. E2E de ese envío pasado el 18 Sep. |
 | Vercel | Están `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, `RESEND_API_KEY` y `RESEND_INBOUND_WEBHOOK_SECRET`. |
 | Código | `EMAIL_REPLY_TO`, si está definida, sale como Reply-To (`src/lib/email/resend-client.ts`, `send-ingest-emails.ts`). No consta entre las variables de Vercel de arriba. |
-| Buzón | `/correo` recibe en `hola@` y `ociel@` (allowlist). Columna `email_threads.mailbox_address`. Filtro UI + chip. Reply From = buzón del hilo. Dual mailbox V1, 30 Sep 2026. |
+| Buzón | `/correo` recibe en `hola@` y `ociel@` (allowlist). Columna `email_threads.mailbox_address`. Filtro UI + chip. Reply From = buzón del hilo. Dual mailbox V1, 30 Sep 2026. Compose + borradores de mensajes nuevos (`email_drafts`, botón Nuevo), 30 Sep 2026. |
 | Apex MX | MX publicado en Cloudflare (apex, DNS-only) apuntando a Resend inbound. |
 | Storage | El repo no usa Supabase Storage. No hay buckets. La spec del portal de cliente propone un bucket privado `project-files`; no está creado. |
 | `/email` | Banco de borradores de leads. No es un buzón. |
@@ -144,9 +144,9 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 
 Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket, y sin aviso de correo nuevo.
 
-## 8. Futuro: bandejas (no implementado)
+## 8. Futuro: bandejas (parcial)
 
-**Hoy.** Correo es un **timeline por hilo**: una lista unificada (filtrable por `mailbox_address`), leído/no leído, y mensajes inbound/outbound dentro del mismo hilo. No hay carpetas Entrada / Enviados / Spam / Borradores.
+**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Un lista unificada (filtrable por `mailbox_address`), leído/no leído, compose/reply vía Resend. No hay carpetas Entrada / Enviados / Spam. Los borradores de **respuesta** en un hilo abierto aún no existen (solo enviar).
 
 **Camino de diseño (cuando se aborde).** Vocabulario propuesto:
 
@@ -155,7 +155,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 | Entrada | Hilos con al menos un inbound reciente / no archivados | Vista por defecto; no confundir con el filtro por dirección (`hola@` / `ociel@`). |
 | Enviados | Mensajes o hilos con outbound | Puede ser filtro/vista sobre `email_messages.direction = outbound`, no necesariamente otra tabla. |
 | Spam | Correo no deseado | Requiere fuente: marca manual y/o señal del proveedor. Hoy solo se descarta fuera de allowlist. |
-| Borradores | Respuestas no enviadas | Estado distinto de `/email` (borradores de leads). No mezclar los dos productos. |
+| Borradores | Respuestas o mensajes no enviados | **Parcial:** mensajes nuevos en `email_drafts`. Reply-drafts y no mezclar con `/email` (borradores de leads). |
 | Archivo (opcional) | Hilos fuera de Entrada sin borrar | Columna o flag en `email_threads`, no carpeta física. |
 
 **Restricciones.**
