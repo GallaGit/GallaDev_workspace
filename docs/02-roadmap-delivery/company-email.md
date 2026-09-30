@@ -14,7 +14,7 @@ Inbound and outbound both go through Resend. Inbound is [Resend Inbound](https:/
 
 The inbox is the **Correo** module inside GDW (`/correo`). It reuses auth, RBAC, and Supabase. It is not a separate app. That route is not the `/email` workbench (lead drafts). `/email` stays as it is.
 
-V1 UI: one unified inbox, filter `All | hola@ | ociel@`, per-thread chip, reply From = thread `mailbox_address`. No Inbox/Sent/Spam/Drafts folders (see section 8).
+V1 UI: one unified inbox, filter `All | hola@ | ociel@`, per-thread chip, reply From = thread `mailbox_address`, **Nuevo** (compose via Resend) and **Borradores** pill (`email_drafts`). No Inbox/Sent/Spam folders. No Gmail.
 
 | Topic | Decision |
 | --- | --- |
@@ -38,7 +38,7 @@ Facts as of 27 Sep 2026, still true on 29 Sep 2026. No secret values.
 | Sending | Landing form → `POST /api/ingest/lead` on `workspace.galladev.com` (Vercel) → Resend. Visitor ack and internal notice. From `hola@galladev.com`. Notice to `ociel.galla@gmail.com`. That send E2E passed on 18 Sep. |
 | Vercel | `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, `RESEND_API_KEY`, and `RESEND_INBOUND_WEBHOOK_SECRET` are set. |
 | Code | `EMAIL_REPLY_TO`, when set, is sent as Reply-To (`src/lib/email/resend-client.ts`, `send-ingest-emails.ts`). It is not in the Vercel list above. |
-| Mailbox | `/correo` receives at `hola@` and `ociel@` (allowlist). Column `email_threads.mailbox_address`. UI filter + chip. Reply From = thread mailbox. Dual mailbox V1, 30 Sep 2026. |
+| Mailbox | `/correo` receives at `hola@` and `ociel@` (allowlist). Column `email_threads.mailbox_address`. UI filter + chip. Reply From = thread mailbox. Dual mailbox V1, 30 Sep 2026. Compose + new-message drafts (`email_drafts`, Nuevo button), 30 Sep 2026. |
 | Apex MX | MX published in Cloudflare (apex, DNS-only) pointing to Resend inbound. |
 | Storage | The repo does not use Supabase Storage. No bucket exists. The client-portal spec proposes a private bucket `project-files`; it is not created. |
 | `/email` | Lead-draft workbench. Not an inbox. |
@@ -144,9 +144,9 @@ Route: `src/app/api/email/inbound/route.ts` (the App Router lives under `src/app
 
 Until those are answered: Admin only, metadata-only attachments if no bucket exists, and no new-mail notification.
 
-## 8. Future: folders (not implemented)
+## 8. Future: folders (partial)
 
-**Today.** Correo is a **per-thread timeline**: one unified list (filterable by `mailbox_address`), read/unread, and inbound/outbound messages inside the same thread. There are no Inbox / Sent / Spam / Drafts folders.
+**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). One unified list (filterable by `mailbox_address`), read/unread, compose/reply via Resend. No Inbox / Sent / Spam folders. **Reply drafts** on an open thread are not implemented yet (send only).
 
 **Design path (when taken up).** Proposed vocabulary:
 
@@ -155,7 +155,7 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 | Inbox | Threads with recent inbound / not archived | Default view; do not confuse with the address filter (`hola@` / `ociel@`). |
 | Sent | Messages or threads with outbound | May be a filter/view on `email_messages.direction = outbound`, not necessarily another table. |
 | Spam | Unwanted mail | Needs a source: manual mark and/or provider signal. Today only off-allowlist is dropped. |
-| Drafts | Unsent replies | Distinct from `/email` (lead drafts). Do not mix the two products. |
+| Drafts | Unsent replies or messages | **Partial:** new messages in `email_drafts`. Reply-drafts still future; do not mix with `/email` (lead drafts). |
 | Archive (optional) | Threads out of Inbox without delete | Column or flag on `email_threads`, not a physical folder. |
 
 **Constraints.**
