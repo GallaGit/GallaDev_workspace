@@ -9,6 +9,7 @@ import { LinkLeadDialog } from "@/components/correo/link-lead-dialog";
 import { ReplyForm } from "@/components/correo/reply-form";
 import { cn } from "@/lib/utils";
 import { emailHtmlSrcDoc } from "@/lib/email/email-srcdoc";
+import { readJsonResponse } from "@/lib/http/read-json";
 import type { EmailThread, EmailMessage, EmailAttachment } from "./inbox-page";
 
 /**
@@ -53,8 +54,10 @@ export function ThreadView({
     setLoading(true);
     try {
       const res = await fetch(`/api/email/threads/${thread.id}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al cargar hilo");
+      const data = await readJsonResponse<{
+        messages?: EmailMessage[];
+        attachments?: EmailAttachment[];
+      }>(res, "Error al cargar hilo");
       setMessages(data.messages ?? []);
       setAttachments(data.attachments ?? []);
     } catch (e) {
@@ -70,9 +73,11 @@ export function ThreadView({
     async function load() {
       try {
         const res = await fetch(`/api/email/threads/${thread.id}`);
-        const data = await res.json();
+        const data = await readJsonResponse<{
+          messages?: EmailMessage[];
+          attachments?: EmailAttachment[];
+        }>(res, "Error al cargar hilo");
         if (cancelled) return;
-        if (!res.ok) throw new Error(data.error ?? "Error al cargar hilo");
         setMessages(data.messages ?? []);
         setAttachments(data.attachments ?? []);
       } catch (e) {
@@ -245,11 +250,12 @@ async function markAsRead(
   onMarkRead: (id: string) => void,
 ): Promise<void> {
   try {
-    await fetch(`/api/email/threads/${threadId}`, {
+    const res = await fetch(`/api/email/threads/${threadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_read: true }),
     });
+    await readJsonResponse(res, "No se pudo marcar como leído");
     onMarkRead(threadId);
   } catch {
     // No es crítico; al recargar se volverá a intentar.

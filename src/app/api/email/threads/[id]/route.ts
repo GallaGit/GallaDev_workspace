@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { prepareEmailHtml, capEmailText } from "@/lib/email/sanitize-email-html";
 import { threadUpdateFromBody } from "@/lib/email/thread-patch";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 import { readCappedJson } from "@/lib/rate-limit";
@@ -15,7 +15,7 @@ type Ctx = { params: Promise<{ id: string }> };
  * GET /api/email/threads/[id] — hilo con sus mensajes y adjuntos.
  * Auth: requireAdmin y RLS.
  */
-export async function GET(request: Request, ctx: Ctx) {
+async function getThread(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -25,6 +25,11 @@ export async function GET(request: Request, ctx: Ctx) {
   }
 
   try {
+    // Import perezoso: si sanitize-html no carga, el catch responde JSON
+    // en vez de tumbar el módulo (500 con cuerpo vacío).
+    const { prepareEmailHtml, capEmailText } = await import(
+      "@/lib/email/sanitize-email-html"
+    );
     const supabase = await createSupabaseServerClient();
 
     const { data: thread, error: threadErr } = await supabase
@@ -85,7 +90,7 @@ export async function GET(request: Request, ctx: Ctx) {
  * Auth: requireAdmin y RLS.
  * Body: { is_read?: boolean, lead_id?: string | null }
  */
-export async function PATCH(request: Request, ctx: Ctx) {
+async function patchThread(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -135,3 +140,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withJsonErrors("GET /api/email/threads/[id]", getThread);
+export const PATCH = withJsonErrors(
+  "PATCH /api/email/threads/[id]",
+  patchThread,
+);

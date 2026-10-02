@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
+import { useSessionAccess } from "@/components/session-access";
 import { Topbar } from "@/components/layout/topbar";
 import { EmailEditor } from "@/components/leads/email-editor";
 import { useEnsureLeadsSynced } from "@/hooks/use-ensure-leads-synced";
+import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
+import { readJsonResponse } from "@/lib/http/read-json";
 import { outreachV1 } from "@/lib/templates/outreach-v1";
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
 import { useUiStore } from "@/store/ui-store";
-import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
-import { useSessionAccess } from "@/components/session-access";
 
 function hasDraft(lead: Lead): boolean {
   return (
@@ -113,8 +115,10 @@ function EmailDraftPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al guardar");
+      const data = await readJsonResponse<{
+        lead: Lead;
+        automation?: AutomationDispatchResult;
+      }>(res, "Error al guardar");
       upsertLead(data.lead);
       toast.success("Guardado");
       toastAutomationDispatch(data.automation);

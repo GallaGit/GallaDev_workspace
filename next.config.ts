@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // sanitize-html es CJS y carga htmlparser2 (ESM). Node sí puede
-  // requerirlo; el bundler de Next no. Se deja fuera del bundle.
+  // sanitize-html se deja fuera del bundle para que el runtime lo cargue
+  // con require(), igual que el test de regresión. Va fijado en 2.17.5:
+  // 2.17.6+ arrastra htmlparser2 ESM-only y ese require lanza
+  // ERR_REQUIRE_ESM en Vercel (la ruta responde 500 con cuerpo vacío).
   serverExternalPackages: ["sanitize-html"],
 
   // Standalone solo para Docker/self-host (lo exige el Dockerfile).

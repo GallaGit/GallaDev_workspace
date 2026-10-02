@@ -1,5 +1,7 @@
 import "server-only";
 
+// Fijado en package.json a 2.17.5. Desde 2.17.6 htmlparser2 es ESM-only
+// y require() falla en el runtime de Vercel.
 import sanitizeHtml from "sanitize-html";
 import { MAX_EMAIL_BODY_CHARS } from "./limits";
 

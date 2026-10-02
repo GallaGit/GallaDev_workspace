@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { withJsonErrors } from "@/lib/api-handler";
 import { parseDraftBody } from "@/lib/email/email-payload";
 import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
@@ -15,7 +16,7 @@ const RATE_MAX = 30;
  * GET /api/email/drafts — lista de borradores (Admin).
  * POST /api/email/drafts — crear o actualizar borrador.
  */
-export async function GET(request: Request) {
+async function listDrafts(request: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function saveDraft(request: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -159,3 +160,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withJsonErrors("GET /api/email/drafts", listDrafts);
+export const POST = withJsonErrors("POST /api/email/drafts", saveDraft);
