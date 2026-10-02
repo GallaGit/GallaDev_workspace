@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clientIp,
+  consumeRateLimit,
   isRateLimited,
   readCappedJson,
   resetRateLimits,
@@ -22,10 +23,27 @@ afterEach(() => {
 });
 
 describe("clientIp", () => {
-  it("usa el primer valor de x-forwarded-for", () => {
+  it("prefiere x-vercel-forwarded-for al primer tramo reenviado", () => {
+    expect(
+      clientIp(
+        requestWith({
+          "x-forwarded-for": "1.2.3.4, 5.6.7.8",
+          "x-vercel-forwarded-for": "203.0.113.8",
+        }),
+      ),
+    ).toBe("203.0.113.8");
+  });
+
+  it("sin cabecera de Vercel usa el último salto de x-forwarded-for", () => {
     expect(
       clientIp(requestWith({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" })),
-    ).toBe("1.2.3.4");
+    ).toBe("5.6.7.8");
+  });
+
+  it("usa request.ip si no hay cabeceras", () => {
+    const request = requestWith();
+    Object.defineProperty(request, "ip", { value: "203.0.113.50" });
+    expect(clientIp(request)).toBe("203.0.113.50");
   });
 
   it("unknown sin cabecera o vacía", () => {
@@ -60,6 +78,38 @@ describe("isRateLimited", () => {
     expect(isRateLimited("a", "ip", { max: 1 }, 0)).toBe(false);
     expect(isRateLimited("b", "ip", { max: 1 }, 0)).toBe(false);
     expect(isRateLimited("a", "otra-ip", { max: 1 }, 0)).toBe(false);
+  });
+});
+
+describe("consumeRateLimit", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("sin Upstash usa el contador de esta instancia", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await consumeRateLimit("ns", "1.1.1.1", { max: 1 }, 0)).toBe(false);
+    expect(await consumeRateLimit("ns", "1.1.1.1", { max: 1 }, 1)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("con Upstash cuenta en Redis y no abre otro cupo por cabecera", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
+    const fetchMock = vi.fn(async () =>
+      Response.json([{ result: 2 }, { result: 1 }]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    expect(
+      await consumeRateLimit("ingest:n8n", "203.0.113.8", { max: 1 }, 5_000),
+    ).toBe(true);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const init = (fetchMock.mock.calls as unknown as [string, { body?: string }][])[0]?.[1];
+    const body = JSON.parse(String(init?.body));
+    expect(body[0][0]).toBe("INCR");
+    expect(String(body[0][1])).toContain("ingest:n8n");
   });
 });
 

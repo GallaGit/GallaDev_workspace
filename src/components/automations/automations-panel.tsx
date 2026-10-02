@@ -21,13 +21,14 @@ async function fetchAutomations(): Promise<PublicAutomation[]> {
 
 export function AutomationsPanel() {
   const queryClient = useQueryClient();
+  const { isAdmin, ready } = useSessionAccess();
   const query = useQuery({
     queryKey: ["automations"],
     queryFn: fetchAutomations,
+    enabled: ready && isAdmin,
   });
   const [webhookDraft, setWebhookDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const { isAdmin } = useSessionAccess();
 
   async function patch(
     action: string,
@@ -100,8 +101,15 @@ export function AutomationsPanel() {
     }
   }
 
-  if (query.isPending) {
+  if (!ready || (isAdmin && query.isPending)) {
     return <p className="text-sm text-muted-fg">Cargando…</p>;
+  }
+  if (!isAdmin) {
+    return (
+      <p className="text-sm text-muted-fg">
+        Solo un administrador puede ver las automatizaciones.
+      </p>
+    );
   }
   if (query.isError) {
     return (

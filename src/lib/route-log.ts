@@ -48,6 +48,21 @@ export function logRouteError(
   else console.error(line);
 }
 
+/** Cambio de URL de integración. Solo el id del actor y el nombre del campo. */
+export function logConfigChange(actorId: string, fields: string[]): void {
+  if (fields.length === 0) return;
+  const names = fields.filter((field) => /^[a-z0-9._]{1,80}$/i.test(field));
+  if (names.length === 0) return;
+  console.info(
+    JSON.stringify({
+      level: "info",
+      event: "settings_url_change",
+      actorId: safeId(actorId) ?? "unknown",
+      fields: names.join(","),
+    }),
+  );
+}
+
 function safeId(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
   const id = value.trim();

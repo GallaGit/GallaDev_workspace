@@ -40,7 +40,10 @@ Variables clave (ver `.env.example` para la lista completa):
 | `DEMO_SESSION_SECRET` | Secreto HMAC de la cookie de visitante, al menos 16 caracteres. Obligatorio con la demo encendida. Genera con `openssl rand -hex 32`. |
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Smoke de login opcional en Playwright. `critical-paths` omite ese login si están vacías. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Usuarios Admin y Seller para `tests/e2e/auth-sync-roles.spec.ts`. CI no tiene credenciales E2E de Viewer. |
-| `INGEST_SECRET` | Secreto compartido para `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. |
+| `INGEST_SECRET` | Secreto de `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. Solo en servidor (Cloudflare), nunca en el bundle del navegador. |
+| `N8N_INGEST_SECRET` | Secreto opcional y distinto para `POST /api/ingest/n8n`. Si no está, esa ruta usa `INGEST_SECRET`. Si es el mismo valor, n8n responde 503. |
+| `N8N_ALLOWED_HOSTS` | Hosts https de n8n, separados por comas. Si no está, vale cualquier host público https (siguen prohibidos loopback, enlace local, privados y metadatos). |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Almacén opcional del límite de tasa. Si faltan, el cupo queda en memoria en cada instancia. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Email transaccional tras ingesta web (fail-open: el lead se guarda aunque falle el email). |
 
 Los secretos de producción viven en las **variables de entorno de Vercel**, nunca en git.
@@ -120,7 +123,7 @@ Convenciones de testing (detalle en [`TESTING.md`](./TESTING.md)):
 
 ## 8. Notas específicas del proyecto
 
-- **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository()` en `src/lib/repository/get-repository.ts` devuelve `SupabaseLeadRepository` (runtime Notion eliminado): service role si se llama sin cliente, RLS si recibe el cliente de sesión. `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
+- **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository(client)` devuelve `SupabaseLeadRepository` con ese cliente (RLS si es el de sesión). No hay cliente service role por defecto. `getPrivilegedLeadRepository()` es la factory de service role, solo para la ingesta pública y `AUTH_DISABLED` en local. `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
 - **Pipeline de leads:** exactamente 9 estados (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Los nombres legacy de Notion se normalizan al leer, nunca se escriben.
 - **La prospección con n8n** escribe leads nuevos (`Origen=n8n`, estado `Nuevo`); el CRM nunca edita el workflow de captación. Los dispatches de webhooks son best-effort y nunca deben impedir la persistencia.
 - **La UI está en español.** Código, commits, issues y PRs van en inglés; las cadenas visibles al usuario, en español.

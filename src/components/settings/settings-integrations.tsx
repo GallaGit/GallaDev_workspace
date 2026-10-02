@@ -28,7 +28,7 @@ type Draft = {
 
 function seedDraft(settings: PublicSettings): Draft {
   return {
-    n8nBaseUrl: settings.n8n.baseUrl,
+    n8nBaseUrl: "",
     n8nApiKey: "",
     n8nWebhooks: {
       lead_created: "",
@@ -55,13 +55,22 @@ async function fetchPublicSettings(): Promise<PublicSettings> {
 }
 
 export function SettingsIntegrations() {
+  const { isAdmin, ready } = useSessionAccess();
   const query = useQuery({
     queryKey: ["settings"],
     queryFn: fetchPublicSettings,
+    enabled: ready && isAdmin,
   });
 
-  if (query.isPending) {
+  if (!ready || (isAdmin && query.isPending)) {
     return <p className="text-sm text-(--muted-fg)">Cargando…</p>;
+  }
+  if (!isAdmin) {
+    return (
+      <p className="text-sm text-(--muted-fg)">
+        Solo un administrador puede ver la configuración de integraciones.
+      </p>
+    );
   }
   if (query.isError || !query.data) {
     return (
@@ -200,10 +209,20 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           label="URL base"
           value={draft.n8nBaseUrl}
           onChange={(v) => setDraft((d) => ({ ...d, n8nBaseUrl: v }))}
-          placeholder="http://localhost:5678"
-          hint="Opcional. Se usa para Probar conexión (/healthz)."
+          placeholder="https://n8n.ejemplo.com"
+          hint={
+            settings.n8n.baseUrl.configured
+              ? `Configurado ${settings.n8n.baseUrl.preview ?? ""}. Vacío = no cambiar. Solo https, sin usuario ni contraseña.`
+              : "Opcional. Solo https, sin usuario ni contraseña. Se usa para Probar conexión (/healthz)."
+          }
           disabled={!isAdmin}
         />
+        {isAdmin && settings.n8n.baseUrl.configured ? (
+          <ClearLink
+            onClick={() => markClear("n8n.baseUrl")}
+            active={Boolean(clearing["n8n.baseUrl"])}
+          />
+        ) : null}
         <SecretField
           id="n8n-key"
           label="API key"
@@ -247,9 +266,10 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
             void save(
               {
                 n8n: {
-                  baseUrl:
-                    draft.n8nBaseUrl !== settings.n8n.baseUrl
-                      ? draft.n8nBaseUrl
+                  baseUrl: clearing["n8n.baseUrl"]
+                    ? ""
+                    : draft.n8nBaseUrl.trim()
+                      ? draft.n8nBaseUrl.trim()
                       : undefined,
                   apiKey: clearing["n8n.apiKey"]
                     ? ""
@@ -264,7 +284,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           onTest={() =>
             void test("n8n", {
               n8n: {
-                baseUrl: draft.n8nBaseUrl,
+                baseUrl: draft.n8nBaseUrl.trim() || undefined,
                 apiKey: optionalSecret(draft.n8nApiKey),
               },
             })

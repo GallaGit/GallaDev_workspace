@@ -11,7 +11,7 @@ import type {
   AutomationAction,
   ResolvedSettings,
 } from "@/lib/settings/types";
-import { isHttpUrl } from "@/lib/settings/validate";
+import { outboundUrlError } from "@/lib/settings/outbound-url";
 import { N8nClientError } from "./errors";
 import {
   leadAnalyzedPayload,
@@ -128,15 +128,17 @@ export class N8nClient implements AutomationClient {
       );
     }
 
-    const label = isHttpUrl(urlOrAction)
+    const label = looksLikeUrl(urlOrAction)
       ? "url"
       : (resolveAutomationAction(urlOrAction) ?? urlOrAction);
+    this.assertOutboundUrl(url);
 
     try {
       const response = await this.fetchFn(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        redirect: "manual",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const text = await response.text();
@@ -226,7 +228,9 @@ export class N8nClient implements AutomationClient {
     );
   }
 
-  async testConnection(): Promise<{ ok: boolean; message: string }> {
+  async testConnection(options?: {
+    sendApiKey?: boolean;
+  }): Promise<{ ok: boolean; message: string }> {
     const settings = await this.getSettings();
     const baseUrl = settings.n8n.baseUrl.value.replace(/\/+$/, "");
     const apiKey = settings.n8n.apiKey.value;
@@ -246,12 +250,15 @@ export class N8nClient implements AutomationClient {
       );
     }
 
+    this.assertOutboundUrl(baseUrl);
     const healthUrl = `${baseUrl}/healthz`;
     const started = Date.now();
+    const sendApiKey = options?.sendApiKey !== false;
     try {
       const health = await this.fetchFn(healthUrl, {
         method: "GET",
         headers: { Accept: "application/json" },
+        redirect: "manual",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const durationMs = Date.now() - started;
@@ -264,13 +271,14 @@ export class N8nClient implements AutomationClient {
         );
       }
 
-      if (apiKey) {
+      if (apiKey && sendApiKey) {
         const workflows = await this.fetchFn(`${baseUrl}/api/v1/workflows?limit=1`, {
           method: "GET",
           headers: {
             Accept: "application/json",
             "X-N8N-API-KEY": apiKey,
           },
+          redirect: "manual",
           signal: AbortSignal.timeout(this.timeoutMs),
         });
         if (!workflows.ok) {
@@ -281,6 +289,14 @@ export class N8nClient implements AutomationClient {
           );
         }
         return { ok: true, message: "n8n reachable y API key válida" };
+      }
+
+      if (apiKey && !sendApiKey) {
+        return {
+          ok: true,
+          message:
+            "n8n reachable (healthz). Guarda la URL antes de comprobar la API key.",
+        };
       }
 
       return { ok: true, message: "n8n reachable (healthz)" };
@@ -329,11 +345,27 @@ export class N8nClient implements AutomationClient {
     return this.triggerWebhook(action, payload);
   }
 
+  private assertOutboundUrl(value: string): void {
+    const error = outboundUrlError(value);
+    if (error) {
+      throw new N8nClientError(error, "unsafe_url");
+    }
+  }
+
   private async resolveUrl(urlOrAction: string): Promise<string | null> {
     const trimmed = urlOrAction.trim();
-    if (isHttpUrl(trimmed)) return trimmed;
-    return this.getWebhookUrl(trimmed);
+    if (looksLikeUrl(trimmed)) {
+      this.assertOutboundUrl(trimmed);
+      return trimmed;
+    }
+    const stored = await this.getWebhookUrl(trimmed);
+    if (stored) this.assertOutboundUrl(stored);
+    return stored;
   }
+}
+
+function looksLikeUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
 }
 
 function isTimeout(error: unknown): boolean {

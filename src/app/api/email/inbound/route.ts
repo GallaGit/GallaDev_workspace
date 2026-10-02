@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { verifyInboundWebhook } from "@/lib/email/inbound-verify";
 import { storeInboundEmail } from "@/lib/email/inbound-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const requestId = requestIdFrom(request);
 
   if (
-    isRateLimited("email:inbound", clientIp(request), {
+    await consumeRateLimit("email:inbound", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })

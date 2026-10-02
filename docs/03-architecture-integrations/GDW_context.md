@@ -13,9 +13,9 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 ## Persistence and security
 
 - Leads and activities live in Supabase.
-- `getLeadRepository()` returns `SupabaseLeadRepository` (service role without a client; the session client when one is passed, so RLS applies).
+- `getLeadRepository(client)` returns `SupabaseLeadRepository` for that client (RLS with the session client). `getPrivilegedLeadRepository()` is the only service-role factory (public ingest and local `AUTH_DISABLED`).
 - `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. `AUTH_DISABLED` (non-production only) uses the service-role repository.
-- `src/proxy.ts` is the session gate (Next.js 16 `proxy`; there is no `src/middleware.ts`). It exempts `/api/health`, `/api/demo/enter`, `/api/demo/exit`, `/api/ingest/*`, and `/api/email/inbound` (Resend webhook; authenticated by Svix signature, not by session).
+- `src/proxy.ts` is the session gate (Next.js 16 `proxy`; there is no `src/middleware.ts`). It exempts `/api/health`, `/api/demo/enter`, `/api/demo/exit`, `/api/ingest/*`, and `/api/email/inbound` (Resend webhook; authenticated by Svix signature, not by session). A visitor cookie only reaches an allowlist of demo pages and read APIs.
 - Route handlers add an RBAC layer: `requireApiSession`, `requireApiRole`, `requireAdmin`, and `requireLeadWriter`. Roles are `profiles.role` (`Admin`, `Seller`, `Viewer`). A new account has a null role until an Admin assigns one.
 - Row-level security is the boundary for user data isolation. A Seller only reads and updates leads where `responsable` is their user id. Unassigned leads belong to Admin (Viewer can still read them: Viewer is the trusted read-only role for the whole book). The API uses the same predicate.
 - Settings expose masked previews and never return complete secrets.

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getApiSession, requireLeadWriter } from "@/lib/api-auth";
-import { isRateLimited } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 /**
  * Tope de análisis IA por usuario (Groq).
- * Misma primitiva que la ingesta (`isRateLimited`, ventana 60s, en memoria
- * por instancia). El cupo es más bajo porque cada llamada tiene coste.
+ * Misma primitiva que la ingesta (`consumeRateLimit`). El cupo es más bajo
+ * porque cada llamada tiene coste. Con Upstash el cupo es global; si no, por instancia.
  * `/api/leads/:id/analyze` y `/api/leads/pain-analysis` comparten el espacio
  * `ai:analyze`. La clave es el id de usuario: rotar IP no renueva el cupo.
  */
@@ -18,7 +18,7 @@ export async function requireAiAnalyzeAccess(): Promise<NextResponse | null> {
 
   const session = await getApiSession();
   const actorId = session?.id ?? "anonymous";
-  const limited = isRateLimited(
+  const limited = await consumeRateLimit(
     "ai:analyze",
     actorId,
     { windowMs: AI_ANALYZE_RATE_WINDOW_MS, max: AI_ANALYZE_RATE_MAX },

@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { bearerMatches, ingestSecrets, readBearer } from "@/lib/ingest/bearer";
 import {
+  INGEST_RECEIPT_KEY,
+  INGEST_RECEIPT_MAX,
+  INGEST_RECEIPT_NAMESPACE,
+  INGEST_RECEIPT_WINDOW_MS,
   clientIp,
-  isRateLimited,
+  consumeRateLimit,
   readCappedJson,
 } from "@/lib/rate-limit";
 import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { visitorDeniedResponse } from "@/lib/demo/gate";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getPrivilegedLeadRepository } from "@/lib/repository/get-repository";
 import { findLocalDuplicates } from "@/lib/leads/validate-lead";
 import {
   appendIngestNote,
@@ -23,31 +27,16 @@ export const dynamic = "force-dynamic";
  * POST /api/ingest/lead — ingesta pública del formulario galladev.com.
  *
  * Auth: `Authorization: Bearer <INGEST_SECRET>` (no la cookie de sesión;
- * la ruta está exenta del middleware, ver src/middleware.ts).
+ * la ruta está exenta en src/proxy.ts). No acepta `N8N_INGEST_SECRET`.
  * NO dispara automatizaciones n8n por decisión de producto: solo guarda.
  * Tras create/dedupe envía emails canal clientes (fail-open).
  *
- * Rate-limit en memoria best-effort (por instancia; en serverless no es
- * global — aceptado para v1, herramienta interna + secreto bearer).
+ * Rate-limit por IP (Redis si Upstash está configurado; si no, por instancia)
+ * y un cupo diario de acuses que no depende de la IP.
  */
 const MAX_BODY_BYTES = 32 * 1024;
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 30;
-
-function readBearer(request: Request): string {
-  const header = request.headers.get("authorization") ?? "";
-  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
-  return (match?.[1] ?? "").trim();
-}
-
-function bearerOk(provided: string, expected: string): boolean {
-  if (!provided || !expected) return false;
-  const a = Buffer.from(provided, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 
 async function safeSendEmails(args: {
   name: string;
@@ -59,6 +48,21 @@ async function safeSendEmails(args: {
   requestId?: string;
 }): Promise<void> {
   const { requestId, ...payload } = args;
+  const capped = await consumeRateLimit(INGEST_RECEIPT_NAMESPACE, INGEST_RECEIPT_KEY, {
+    windowMs: INGEST_RECEIPT_WINDOW_MS,
+    max: INGEST_RECEIPT_MAX,
+  });
+  if (capped) {
+    logRouteError(
+      {
+        route: "POST /api/ingest/lead",
+        errorClass: "ReceiptDailyCap",
+        requestId,
+      },
+      "warn",
+    );
+    return;
+  }
   try {
     await sendIngestEmails(payload);
   } catch (e) {
@@ -76,7 +80,7 @@ async function safeSendEmails(args: {
 export async function POST(request: Request) {
   if (await isVisitorRequest()) return visitorDeniedResponse();
   const requestId = requestIdFrom(request);
-  const secret = process.env.INGEST_SECRET ?? "";
+  const secret = ingestSecrets().form;
   if (!secret) {
     logRouteError({
       route: "POST /api/ingest/lead",
@@ -89,7 +93,7 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-  if (!bearerOk(readBearer(request), secret)) {
+  if (!bearerMatches(readBearer(request), secret)) {
     return NextResponse.json(
       { ok: false, error: "No autorizado" },
       { status: 401 },
@@ -97,7 +101,7 @@ export async function POST(request: Request) {
   }
 
   if (
-    isRateLimited("ingest:lead", clientIp(request), {
+    await consumeRateLimit("ingest:lead", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })
@@ -136,7 +140,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const repo = getLeadRepository();
+    const repo = getPrivilegedLeadRepository();
 
     // Fusión de duplicados: mismo email → anexar mensaje, sin fila nueva.
     const existing = await repo.list();

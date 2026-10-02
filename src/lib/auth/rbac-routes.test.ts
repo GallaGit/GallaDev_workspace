@@ -41,6 +41,15 @@ vi.mock("@/lib/repository/get-repository", () => ({
   getActiveProvider: () => "supabase",
 }));
 
+vi.mock("@/lib/email/sanitize-email-html", () => ({
+  prepareEmailHtml: (value: string | null) => value,
+  capEmailText: (value: string | null) => value,
+  prepareStoredEmailBodies: (html?: string, text?: string) => ({
+    html: html ?? null,
+    text: text ?? "",
+  }),
+}));
+
 vi.mock("@/lib/ai/run-lead-analyze", () => ({
   runLeadAnalyze: vi.fn(async () => ({
     ok: true,
@@ -132,11 +141,18 @@ describe("settings y automatizaciones: solo Admin muta", () => {
     });
   });
 
-  it("Seller sigue pudiendo leer settings", async () => {
-    const { GET } = await import("@/app/api/settings/route");
-    asRole("Seller");
-    const res = await GET();
-    expect(res.status).toBe(200);
+  it("Seller y Viewer no leen settings, estado ni automatizaciones", async () => {
+    const settings = await import("@/app/api/settings/route");
+    const status = await import("@/app/api/settings/status/route");
+    const automations = await import("@/app/api/automations/route");
+    for (const role of ["Seller", "Viewer"] as const) {
+      asRole(role);
+      await expectForbidden(await settings.GET());
+      asRole(role);
+      await expectForbidden(await status.GET());
+      asRole(role);
+      await expectForbidden(await automations.GET());
+    }
   });
 
   it("Seller y Viewer reciben 403 en POST /api/settings/test", async () => {
@@ -320,6 +336,54 @@ describe("análisis IA", () => {
     );
     expect(blocked.status).toBe(429);
     expect(analyze).toHaveBeenCalledTimes(AI_ANALYZE_RATE_MAX);
+  });
+});
+
+describe("correo: solo Admin", () => {
+  it("Seller recibe 403 en hilos y en la respuesta, sin cliente admin", async () => {
+    asRole("Seller");
+    const threads = await import("@/app/api/email/threads/route");
+    const item = await import("@/app/api/email/threads/[id]/route");
+    const reply = await import("@/app/api/email/threads/[id]/reply/route");
+    const ctx = {
+      params: Promise.resolve({
+        id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+      }),
+    };
+    await expectForbidden(
+      await threads.GET(new Request("http://localhost/api/email/threads")),
+    );
+    await expectForbidden(
+      await item.GET(new Request("http://localhost/api/email/threads/x"), ctx),
+    );
+    await expectForbidden(
+      await reply.POST(
+        jsonRequest("http://localhost/api/email/threads/x/reply", "POST", {
+          text: "hola",
+        }),
+        ctx,
+      ),
+    );
+    expect(adminClient).not.toHaveBeenCalled();
+  });
+
+  it("Admin no enlaza un lead_id que no es UUID", async () => {
+    asRole("Admin");
+    const { PATCH } = await import("@/app/api/email/threads/[id]/route");
+    const res = await PATCH(
+      jsonRequest(
+        "http://localhost/api/email/threads/ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+        "PATCH",
+        { lead_id: "not-a-uuid" },
+      ),
+      {
+        params: Promise.resolve({
+          id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+        }),
+      },
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "lead_id no es un UUID" });
   });
 });
 

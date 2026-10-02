@@ -109,7 +109,7 @@ export interface PublicSettings {
   authDisabled: boolean;
   n8n: {
     configured: boolean;
-    baseUrl: string;
+    baseUrl: MaskedField;
     apiKey: MaskedField;
     webhooks: Record<AutomationAction, MaskedField>;
     connection: IntegrationConnectionState;

@@ -1,15 +1,14 @@
+import { outboundUrlError } from "./outbound-url";
 import { AUTOMATION_ACTION_IDS, type FieldErrors, type SettingsPatch } from "./types";
 
-const HTTP_URL = /^https?:\/\/.+/i;
 const AI_PROVIDERS = new Set(["groq"]);
 
 function optionalUrl(path: string, value: string | undefined, errors: FieldErrors) {
   if (value === undefined) return;
   const trimmed = value.trim();
   if (!trimmed) return;
-  if (!HTTP_URL.test(trimmed)) {
-    errors[path] = "Debe ser una URL http(s) válida";
-  }
+  const error = outboundUrlError(trimmed);
+  if (error) errors[path] = error;
 }
 
 
@@ -46,5 +45,5 @@ export function validateSettingsPatch(patch: SettingsPatch): FieldErrors {
 }
 
 export function isHttpUrl(value: string): boolean {
-  return HTTP_URL.test(value.trim());
+  return /^https?:\/\/.+/i.test(value.trim());
 }

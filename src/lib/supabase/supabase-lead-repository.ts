@@ -8,7 +8,7 @@ import {
 } from "@/lib/domain/lead";
 import type { LeadRepository } from "@/lib/repository/lead-repository";
 import { splitNotes } from "@/lib/utils/email-plain";
-import { createSupabaseAdminClient } from "./admin";
+import { leadLookupColumns } from "./lead-lookup";
 import {
   leadCreateToRow,
   leadPatchToRow,
@@ -23,16 +23,17 @@ export interface ActivityEvent {
 }
 
 /**
- * SupabaseLeadRepository — misma interfaz que NotionLeadRepository.
- * Fase 1 usa el cliente admin (service_role) porque la app corre con
- * AUTH_DISABLED=true (un solo usuario, secretos solo en servidor).
- * Fase 2 cambiará a cliente por sesión para que RLS aplique por rol.
+ * Repositorio de leads. El cliente es obligatorio: la sesión aplica RLS;
+ * el service role solo entra por `getPrivilegedLeadRepository`.
  */
 export class SupabaseLeadRepository implements LeadRepository {
   private sb: SupabaseClient;
 
-  constructor(sb?: SupabaseClient) {
-    this.sb = sb ?? createSupabaseAdminClient();
+  constructor(sb: SupabaseClient) {
+    if (!sb) {
+      throw new Error("SupabaseLeadRepository requiere un cliente de Supabase");
+    }
+    this.sb = sb;
   }
 
   async list(options?: { includeArchived?: boolean }): Promise<Lead[]> {
@@ -59,11 +60,22 @@ export class SupabaseLeadRepository implements LeadRepository {
   }
 
   async get(id: string): Promise<Lead | null> {
-    // Acepta uuid Supabase o page id de Notion (compatibilidad deep-links tras migrar).
+    const value = id.trim();
+    for (const column of leadLookupColumns(value)) {
+      const lead = await this.fetchEq(column, value);
+      if (lead) return lead;
+    }
+    return null;
+  }
+
+  private async fetchEq(
+    column: "id" | "notion_page_id",
+    value: string,
+  ): Promise<Lead | null> {
     const { data, error } = await this.sb
       .from("leads")
       .select("*")
-      .or(`id.eq.${id},notion_page_id.eq.${id}`)
+      .eq(column, value)
       .limit(1)
       .maybeSingle();
     if (error) throw new Error(`Supabase get: ${error.message}`);
