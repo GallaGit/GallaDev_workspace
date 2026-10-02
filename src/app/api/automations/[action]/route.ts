@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, requireApiSession } from "@/lib/api-auth";
+import { getApiSession, requireAdmin } from "@/lib/api-auth";
+import { logConfigChange } from "@/lib/route-log";
+import { webhookAuditChanges } from "@/lib/settings/audit";
+import { toClientWebhookResult } from "@/lib/n8n/public-result";
 import { getAutomationClient } from "@/lib/automations/get-client";
 import { N8nClientError } from "@/lib/n8n/errors";
 import { sampleAutomationPayload } from "@/lib/n8n/payloads";
@@ -16,8 +19,8 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ action: string }> };
 
-export async function GET(request: Request, ctx: Ctx) {
-  const denied = await requireApiSession();
+export async function GET(_request: Request, ctx: Ctx) {
+  const denied = await requireAdmin();
   if (denied) return denied;
   const { action: rawAction } = await ctx.params;
   const action = resolveAutomationAction(rawAction);
@@ -57,7 +60,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
         { status: 400 },
       );
     }
-    const raw = getSettingsService().patch(patch);
+    const service = getSettingsService();
+    const before = service.getRaw();
+    const raw = service.patch(patch);
+    const actor = await getApiSession();
+    logConfigChange(actor?.id ?? "unknown", webhookAuditChanges(before, raw));
     const settings = toPublicSettings(raw);
     return NextResponse.json({
       automation: settings.automations.find((a) => a.action === action),
@@ -91,7 +98,9 @@ export async function POST(request: Request, ctx: Ctx) {
 
     const result = await getAutomationClient().triggerWebhook(action, body);
 
-    return NextResponse.json(result, { status: result.ok ? 200 : 502 });
+    return NextResponse.json(toClientWebhookResult(result), {
+      status: result.ok ? 200 : 502,
+    });
   } catch (e) {
     if (e instanceof N8nClientError) {
       const status =

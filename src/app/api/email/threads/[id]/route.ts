@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isVisitorRequest } from "@/lib/demo/visitor-request";
-import { visitorDeniedResponse } from "@/lib/demo/gate";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { prepareEmailHtml, capEmailText } from "@/lib/email/sanitize-email-html";
+import { threadUpdateFromBody } from "@/lib/email/thread-patch";
+import { isUuid } from "@/lib/supabase/lead-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +12,16 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/email/threads/[id] — hilo con sus mensajes y adjuntos.
- * Auth: sesión + RLS (Admin).
+ * Auth: requireAdmin y RLS.
  */
 export async function GET(request: Request, ctx: Ctx) {
-  if (await isVisitorRequest()) return visitorDeniedResponse();
+  const denied = await requireAdmin();
+  if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;
+  if (!isUuid(id)) {
+    return NextResponse.json({ ok: false, error: "Hilo no encontrado" }, { status: 404 });
+  }
 
   try {
     const supabase = await createSupabaseServerClient();
@@ -76,25 +81,26 @@ export async function GET(request: Request, ctx: Ctx) {
 
 /**
  * PATCH /api/email/threads/[id] — marcar leído, enlazar a lead.
- * Auth: sesión + RLS (Admin).
+ * Auth: requireAdmin y RLS.
  * Body: { is_read?: boolean, lead_id?: string | null }
  */
 export async function PATCH(request: Request, ctx: Ctx) {
-  if (await isVisitorRequest()) return visitorDeniedResponse();
+  const denied = await requireAdmin();
+  if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;
+  if (!isUuid(id)) {
+    return NextResponse.json({ ok: false, error: "Hilo no encontrado" }, { status: 404 });
+  }
 
   try {
     const supabase = await createSupabaseServerClient();
     const body = (await request.json()) as Record<string, unknown>;
-
-    const patch: Record<string, unknown> = {};
-    if (typeof body.is_read === "boolean") patch.is_read = body.is_read;
-    if (body.lead_id !== undefined) patch.lead_id = body.lead_id;
-
-    if (Object.keys(patch).length === 0) {
-      return NextResponse.json({ ok: false, error: "Nada que actualizar" }, { status: 400 });
+    const parsed = threadUpdateFromBody(body);
+    if (!parsed.ok) {
+      return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }
+    const patch = parsed.patch;
 
     const { data: thread, error } = await supabase
       .from("email_threads")

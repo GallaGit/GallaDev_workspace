@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { bearerMatches, ingestSecrets, readBearer } from "@/lib/ingest/bearer";
 import {
   clientIp,
-  isRateLimited,
+  consumeRateLimit,
   readCappedJson,
 } from "@/lib/rate-limit";
 import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { visitorDeniedResponse } from "@/lib/demo/gate";
-import { getLeadRepository } from "@/lib/repository/get-repository";
+import { getPrivilegedLeadRepository } from "@/lib/repository/get-repository";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import { dispatchLeadCreated } from "@/lib/automations/dispatch";
 import { errorClassOf, logRouteError, requestIdFrom } from "@/lib/route-log";
@@ -17,34 +17,21 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/ingest/n8n — ingesta rica de prospectos desde n8n → GDW CRM.
  *
- * Auth: `Authorization: Bearer <INGEST_SECRET>` (misma exención middleware
- * que /api/ingest/lead). SÍ dispara dispatchLeadCreated (Telegram / n8n).
- * El ingest de landing (/api/ingest/lead) sigue sin dispatch.
+ * Auth: `Authorization: Bearer <N8N_INGEST_SECRET>`. Si esa variable no
+ * está, se acepta `INGEST_SECRET` para no cortar un workflow ya desplegado.
+ * Si ambas están y son iguales, 503. SÍ dispara dispatchLeadCreated.
+ * El ingest de landing sigue sin dispatch y no acepta el secreto de n8n.
  */
 const MAX_BODY_BYTES = 64 * 1024;
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 60;
 const DEFAULT_SOURCE = "n8n";
 
-function readBearer(request: Request): string {
-  const header = request.headers.get("authorization") ?? "";
-  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
-  return (match?.[1] ?? "").trim();
-}
-
-function bearerOk(provided: string, expected: string): boolean {
-  if (!provided || !expected) return false;
-  const a = Buffer.from(provided, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 export async function POST(request: Request) {
   if (await isVisitorRequest()) return visitorDeniedResponse();
   const requestId = requestIdFrom(request);
-  const secret = process.env.INGEST_SECRET ?? "";
-  if (!secret) {
+  const { n8n: secret, n8nMisconfigured } = ingestSecrets();
+  if (n8nMisconfigured || !secret) {
     logRouteError({
       route: "POST /api/ingest/n8n",
       status: 503,
@@ -56,7 +43,7 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-  if (!bearerOk(readBearer(request), secret)) {
+  if (!bearerMatches(readBearer(request), secret)) {
     return NextResponse.json(
       { ok: false, error: "No autorizado" },
       { status: 401 },
@@ -64,7 +51,7 @@ export async function POST(request: Request) {
   }
 
   if (
-    isRateLimited("ingest:n8n", clientIp(request), {
+    await consumeRateLimit("ingest:n8n", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })
@@ -108,7 +95,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const repo = getLeadRepository();
+    const repo = getPrivilegedLeadRepository();
     const lead = await repo.create(result.value);
     const automation = dispatchLeadCreated(lead);
     return NextResponse.json(

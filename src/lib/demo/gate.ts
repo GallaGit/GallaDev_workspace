@@ -21,41 +21,63 @@ export function visitorDeniedResponse(): NextResponse {
   });
 }
 
-const BLOCKED_API_PREFIXES = [
-  "/api/team",
-  "/api/settings",
-  "/api/automations",
-  "/api/db-status",
-  "/api/ingest",
-  "/api/leads/score",
-  "/api/leads/merge",
-  "/api/leads/pain-analysis",
-  "/api/email/threads",
-  "/api/email/drafts",
-  "/api/email/compose",
+const VISITOR_PAGES = [
+  "/leads",
+  "/kanban",
+  "/stats",
+  "/inbox",
+  "/duplicates",
+  "/login",
 ];
 
-const BLOCKED_PAGES = ["/settings", "/automations", "/email", "/correo"];
+const RESERVED_LEAD_SEGMENTS = new Set(["score", "merge", "pain-analysis", "duplicates"]);
 
-/** APIs que un visitante no debe ejecutar (ni leer configuración). */
-export function isVisitorBlockedApi(pathname: string, method: string): boolean {
+function stripTrailingSlash(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    return pathname.slice(0, -1);
+  }
+  return pathname;
+}
+
+function isRead(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
+/**
+ * Lista blanca. Una ruta nueva no entra en la demo hasta añadirla aquí.
+ * El repositorio ficticio sigue siendo la segunda capa en las rutas de leads.
+ */
+export function isVisitorAllowedApi(pathname: string, method: string): boolean {
+  const path = stripTrailingSlash(pathname);
   if (
-    BLOCKED_API_PREFIXES.some(
-      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-    )
+    isRead(method) &&
+    (path === "/api/session" || path === "/api/leads" || path === "/api/leads/duplicates")
   ) {
     return true;
   }
-  if (/^\/api\/leads\/[^/]+\/analyze\/?$/.test(pathname)) return true;
-  const leadWrite =
-    pathname === "/api/leads" || /^\/api\/leads\/[^/]+\/?$/.test(pathname);
-  if (leadWrite && method !== "GET" && method !== "HEAD") return true;
-  return false;
+  const lead = /^\/api\/leads\/([^/]+)$/.exec(path);
+  if (lead && isRead(method) && !RESERVED_LEAD_SEGMENTS.has(lead[1] ?? "")) {
+    return true;
+  }
+  return method === "POST" && path === "/api/sync";
 }
 
-/** Páginas de ajustes, automatizaciones y correo: fuera de la demo. */
-export function isVisitorBlockedPage(pathname: string): boolean {
-  return BLOCKED_PAGES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+export function isVisitorAllowedPage(pathname: string): boolean {
+  const path = stripTrailingSlash(pathname);
+  if (path === "/") return true;
+  return VISITOR_PAGES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );
+}
+
+/** true cuando una API no está en la lista blanca. Las páginas no cuentan. */
+export function isVisitorBlockedApi(pathname: string, method: string): boolean {
+  if (!stripTrailingSlash(pathname).startsWith("/api/")) return false;
+  return !isVisitorAllowedApi(pathname, method);
+}
+
+/** Páginas fuera de la demo: el proxy redirige a /leads. Las APIs no cuentan. */
+export function isVisitorBlockedPage(pathname: string): boolean {
+  if (stripTrailingSlash(pathname).startsWith("/api/")) return false;
+  return !isVisitorAllowedPage(pathname);
 }

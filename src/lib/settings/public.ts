@@ -1,6 +1,6 @@
 import { isAuthDisabled } from "@/lib/auth";
 import { AUTOMATION_CATALOG } from "./catalog";
-import { maskSourcedSecret, maskSourcedUrl } from "./mask";
+import { maskSourcedEndpoint, maskSourcedSecret, maskSourcedUrl } from "./mask";
 import {
   AUTOMATION_ACTION_IDS,
   type PublicSettings,
@@ -16,7 +16,7 @@ export function toPublicSettings(raw: ResolvedSettings): PublicSettings {
           raw.n8n.apiKey.value ||
           AUTOMATION_ACTION_IDS.some((action) => raw.n8n.webhooks[action].value),
       ),
-      baseUrl: raw.n8n.baseUrl.value,
+      baseUrl: maskSourcedEndpoint(raw.n8n.baseUrl),
       apiKey: maskSourcedSecret(raw.n8n.apiKey),
       webhooks: {
         lead_created: maskSourcedUrl(raw.n8n.webhooks.lead_created),

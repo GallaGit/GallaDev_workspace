@@ -3,7 +3,8 @@ export type N8nClientErrorCode =
   | "http"
   | "invalid_json"
   | "not_configured"
-  | "network";
+  | "network"
+  | "unsafe_url";
 
 export class N8nClientError extends Error {
   readonly code: N8nClientErrorCode;

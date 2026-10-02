@@ -64,6 +64,22 @@ describe("proxy de visitante", () => {
     expect(createServerClient).not.toHaveBeenCalled();
   });
 
+  it("deja leer leads y sesión, y niega una ruta que no está en la lista", async () => {
+    const { proxy } = await import("@/proxy");
+    const token = signVisitorToken(SECRET).token;
+    const leads = await proxy(request("/api/leads", token, "GET"));
+    expect(leads.status).toBe(200);
+    const session = await proxy(request("/api/session", token, "GET"));
+    expect(session.status).toBe(200);
+    const sync = await proxy(request("/api/sync", token, "POST"));
+    expect(sync.status).toBe(200);
+    const reports = await proxy(request("/api/reports", token, "GET"));
+    expect(reports.status).toBe(403);
+    const write = await proxy(request("/api/leads", token, "POST"));
+    expect(write.status).toBe(403);
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
   it("redirige settings, automatizaciones y email a /leads", async () => {
     const { proxy } = await import("@/proxy");
     const token = signVisitorToken(SECRET).token;

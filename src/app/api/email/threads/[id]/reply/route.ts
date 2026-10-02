@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isVisitorRequest } from "@/lib/demo/visitor-request";
-import { visitorDeniedResponse } from "@/lib/demo/gate";
+import { requireAdmin } from "@/lib/api-auth";
 import { sendReply } from "@/lib/email/send-reply";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
+import { isUuid } from "@/lib/supabase/lead-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -17,16 +17,25 @@ const RATE_MAX = 10;
 /**
  * POST /api/email/threads/[id]/reply — enviar respuesta desde el mailbox_address del hilo.
  *
- * Auth: sesión + RLS (verificamos que el usuario puede ver el hilo).
+ * Auth: requireAdmin antes del cliente admin. La lectura del hilo usa la
+ * sesión (RLS). El insert del mensaje saliente no tiene GRANT para
+ * authenticated, así que la escritura sigue en service role después del gate.
  * Body: { text: string, html?: string }
  */
 export async function POST(request: Request, ctx: Ctx) {
-  if (await isVisitorRequest()) return visitorDeniedResponse();
+  const denied = await requireAdmin();
+  if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;
+  if (!isUuid(id)) {
+    return NextResponse.json(
+      { ok: false, error: "Hilo no encontrado o sin permiso" },
+      { status: 404 },
+    );
+  }
 
   if (
-    isRateLimited("email:reply", clientIp(request), {
+    await consumeRateLimit("email:reply", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })

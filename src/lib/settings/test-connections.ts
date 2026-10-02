@@ -2,6 +2,7 @@ import "server-only";
 
 import { createN8nClient } from "@/lib/n8n/client";
 import { N8nClientError } from "@/lib/n8n/errors";
+import { shouldSendN8nApiKey } from "./outbound-url";
 import { getSettingsService } from "./service";
 import type {
   IntegrationId,
@@ -90,9 +91,14 @@ async function testSerpApi(patch?: SettingsPatch): Promise<ConnectionTestResult>
 }
 
 async function testN8n(patch?: SettingsPatch): Promise<ConnectionTestResult> {
-  const settings = await resolveSettings(patch);
+  const saved = await getSettingsService().getRaw();
+  const settings = overlay(saved, patch);
+  const sendApiKey = shouldSendN8nApiKey(
+    saved.n8n.baseUrl.value,
+    settings.n8n.baseUrl.value,
+  );
   const client = createN8nClient({ getSettings: async () => settings });
-  return client.testConnection();
+  return client.testConnection({ sendApiKey });
 }
 
 export async function testIntegration(

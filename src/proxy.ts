@@ -78,7 +78,7 @@ export async function proxy(request: NextRequest) {
     if (isVisitorBlockedPage(pathname)) {
       return stamp(NextResponse.redirect(new URL("/leads", request.url)));
     }
-    // Cookie válida: no se crea el cliente de Supabase.
+    // Cookie válida: solo la lista blanca de la demo, sin cliente de Supabase.
     return forward((response) => {
       response.headers.set("X-Robots-Tag", "noindex, nofollow");
       response.headers.set("Cache-Control", "private, no-store");

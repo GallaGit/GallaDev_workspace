@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
+import { safeAppPath } from "@/lib/auth/safe-redirect";
 
 export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
   const router = useRouter();
@@ -36,7 +37,7 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
         return;
       }
       setAuthFlash("welcome");
-      router.push(from.startsWith("/") ? from : "/");
+      router.push(safeAppPath(from));
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";

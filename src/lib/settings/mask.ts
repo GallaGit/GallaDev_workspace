@@ -34,3 +34,26 @@ export function maskSourcedSecret(field: SourcedString): MaskedField {
 export function maskSourcedUrl(field: SourcedString): MaskedField {
   return maskUrl(field.value, field.source);
 }
+
+/** Oculta el host. La preview no sirve para reconstruir la URL base. */
+export function maskEndpoint(value: string, source: ValueSource): MaskedField {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { configured: false, preview: null, source: "none" };
+  }
+  try {
+    const url = new URL(trimmed);
+    const tail = url.hostname.slice(-4);
+    return {
+      configured: true,
+      preview: `${url.protocol}//••••${tail}`,
+      source,
+    };
+  } catch {
+    return maskSecret(trimmed, source);
+  }
+}
+
+export function maskSourcedEndpoint(field: SourcedString): MaskedField {
+  return maskEndpoint(field.value, field.source);
+}

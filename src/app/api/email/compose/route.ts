@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { isCompanyMailbox } from "@/lib/email/mailboxes";
 import { sendCompose } from "@/lib/email/send-compose";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const requestId = requestIdFrom(request);
 
   if (
-    isRateLimited("email:compose", clientIp(request), {
+    await consumeRateLimit("email:compose", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })

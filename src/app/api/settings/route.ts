@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, requireApiSession } from "@/lib/api-auth";
+import { getApiSession, requireAdmin } from "@/lib/api-auth";
+import { logConfigChange } from "@/lib/route-log";
 import {
   getSettingsService,
   toPublicSettings,
   validateSettingsPatch,
 } from "@/lib/settings";
+import { webhookAuditChanges } from "@/lib/settings/audit";
 import type { SettingsPatch } from "@/lib/settings/types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const denied = await requireApiSession();
+  const denied = await requireAdmin();
   if (denied) return denied;
   return NextResponse.json(toPublicSettings(getSettingsService().getRaw()));
 }
@@ -28,7 +30,11 @@ export async function PATCH(request: Request) {
         { status: 400 },
       );
     }
-    const raw = getSettingsService().patch(patch);
+    const service = getSettingsService();
+    const before = service.getRaw();
+    const raw = service.patch(patch);
+    const actor = await getApiSession();
+    logConfigChange(actor?.id ?? "unknown", webhookAuditChanges(before, raw));
     return NextResponse.json(toPublicSettings(raw));
   } catch (e) {
     const message =

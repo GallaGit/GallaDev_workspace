@@ -7,7 +7,7 @@ import {
   isDemoModeEnabled,
 } from "@/lib/demo/config";
 import { signVisitorToken } from "@/lib/demo/token";
-import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     );
   }
   if (
-    isRateLimited("demo-enter", clientIp(request), {
+    await consumeRateLimit("demo-enter", clientIp(request), {
       windowMs: WINDOW_MS,
       max: MAX_PER_WINDOW,
     })

@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isCompanyMailbox, defaultMailbox } from "@/lib/email/mailboxes";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const requestId = requestIdFrom(request);
 
   if (
-    isRateLimited("email:drafts", clientIp(request), {
+    await consumeRateLimit("email:drafts", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })

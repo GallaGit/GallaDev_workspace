@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isVisitorRequest } from "@/lib/demo/visitor-request";
-import { visitorDeniedResponse } from "@/lib/demo/gate";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +8,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/email/threads — lista de hilos del buzón.
  *
- * Auth: sesión de usuario + RLS (solo Admin ve los hilos).
+ * Auth: requireAdmin y RLS (solo Admin ve los hilos).
  * Query params:
  *   - limit (default 50, max 100)
  *   - offset (default 0)
@@ -17,7 +16,8 @@ export const dynamic = "force-dynamic";
  *   - mailbox (hola@galladev.com | ociel@galladev.com; omitir = todos)
  */
 export async function GET(request: Request) {
-  if (await isVisitorRequest()) return visitorDeniedResponse();
+  const denied = await requireAdmin();
+  if (denied) return denied;
   const requestId = requestIdFrom(request);
 
   try {
