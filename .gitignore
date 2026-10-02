@@ -59,6 +59,8 @@ data/
 .agents/
 .cursor/
 .opencode/
+.opencode/supabase-auth.json
+.opencode/*auth*.json
 Nicho/
 Notas/
 Notas-de-ideas/
