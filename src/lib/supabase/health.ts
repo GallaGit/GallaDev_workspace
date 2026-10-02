@@ -10,6 +10,18 @@ export interface DbHealth {
   latencyMs: number;
 }
 
+/** Texto fijo por código. No incluye mensajes de Postgres ni de la red. */
+const DB_STATUS_MESSAGE: Record<DbStatus, string> = {
+  ok: "Supabase conectado",
+  auth: "Sin permiso para comprobar la base",
+  config: "Falta configuración o el esquema de la base",
+  down: "Supabase no disponible",
+};
+
+export function dbStatusMessage(status: DbStatus): string {
+  return DB_STATUS_MESSAGE[status];
+}
+
 interface SupabaseErrorLike {
   code?: string;
   message?: string;

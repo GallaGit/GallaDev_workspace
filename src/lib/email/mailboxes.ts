@@ -29,6 +29,18 @@ export function extractEmailAddress(address: string): string {
   return (match?.[1] ?? address).trim().toLowerCase();
 }
 
+const BASIC_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Correo externo usable como destinatario.
+ * Rechaza vacío, basura, más de 320 caracteres y saltos de línea.
+ */
+export function isValidExternalEmail(value: string): boolean {
+  if (!value || /[\r\n]/.test(value)) return false;
+  const email = extractEmailAddress(value);
+  return BASIC_EMAIL_RE.test(email) && email.length <= 320;
+}
+
 export function isCompanyMailbox(value: string): value is CompanyMailbox {
   return (COMPANY_MAILBOXES as readonly string[]).includes(value);
 }

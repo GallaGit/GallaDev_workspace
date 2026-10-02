@@ -5,6 +5,7 @@ import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { prepareEmailHtml, capEmailText } from "@/lib/email/sanitize-email-html";
 import { threadUpdateFromBody } from "@/lib/email/thread-patch";
 import { isUuid } from "@/lib/supabase/lead-lookup";
+import { readCappedJson } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -94,12 +95,19 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
-    const body = (await request.json()) as Record<string, unknown>;
-    const parsed = threadUpdateFromBody(body);
+    const read = await readCappedJson(request, 8 * 1024);
+    if (!read.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Datos del correo no válidos" },
+        { status: read.status },
+      );
+    }
+    const parsed = threadUpdateFromBody(read.value);
     if (!parsed.ok) {
       return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }
+
+    const supabase = await createSupabaseServerClient();
     const patch = parsed.patch;
 
     const { data: thread, error } = await supabase

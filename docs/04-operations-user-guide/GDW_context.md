@@ -53,7 +53,7 @@ The login page can offer **Entrar como visitante** / “Ver demo sin cuenta”. 
 | Variable | Role |
 | --- | --- |
 | `DEMO_MODE_ENABLED` | `true` or `1` turns the demo on. **Unset, empty, or anything else is off.** |
-| `DEMO_SESSION_SECRET` | HMAC secret, at least 16 characters. Required while the flag is on. Generate with `openssl rand -hex 32`. |
+| `DEMO_SESSION_SECRET` | HMAC secret, at least 16 characters. Required while the flag is on. Generate with `openssl rand -hex 32`. Use a production-only value. CI may set the GitHub Actions secret `E2E_DEMO_SESSION_SECRET`; if it is missing, Playwright generates a process-local value and CI still passes. |
 
 To disable in production without a code change, set `DEMO_MODE_ENABLED=false` or remove it, then redeploy/restart so the process picks up the env. Entry is rate-limited (8 requests / 15 minutes / IP). The Playwright server sets the flag only for E2E; production stays off until you set the variables.
 
@@ -63,7 +63,9 @@ To disable in production without a code change, set `DEMO_MODE_ENABLED=false` or
 
 ## Troubleshooting
 
-- If login fails or the browser reports a network error, check `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY`, and confirm `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` were present at **build** time. Next does not inject those public vars into the client unless the access is a static `process.env.NEXT_PUBLIC_*` read, and a rebuild is required after they change.
+- If login fails or the browser reports a network error, check `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY`, and confirm `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` were present at **build** time. Next does not inject those public vars into the client unless the access is a static `process.env.NEXT_PUBLIC_*` read, and a rebuild is required after they change. The form posts to `POST /api/auth/login`. A wrong password and an unconfirmed email show the same message. After 20 attempts in 15 minutes from one platform IP, or 10 for the same account, the response is 429.
+- `GET /api/db-status` counts with the signed-in session (RLS), not the service role. The badge uses `ok`, `auth`, `config`, or `down`. The message is fixed and does not include the database error text.
+- Apply `supabase/migrations/20261002200000_revoke_handle_new_user_execute.sql` in the Supabase SQL editor after the earlier migrations. It only revokes `EXECUTE` on `handle_new_user()`. It does not change profile rows. The signup trigger keeps working.
 - If an authenticated user gets HTTP 401 with `code: "no_profile"`, or sees the pending-access screen, that account has no `Admin`, `Seller`, or `Viewer` role. The trigger no longer assigns Seller. An Admin sets the role in Settings → Equipo. Apply migration `20261002180000_least_privilege_signup_and_lead_rls.sql` in the SQL editor; it does not change roles that already exist.
 - **Cerrar todas las sesiones** calls `supabase.auth.signOut({ scope: "global" })`. The app has no `POST /api/auth/logout-all` and does not consult `app_session_epoch`. A 503 on `POST /api/demo/enter` means the demo flag is on and `DEMO_SESSION_SECRET` is missing or too short (`demo_misconfigured`), not a session-epoch failure.
 - Visitor pages `/settings`, `/automations`, `/email`, and `/correo` redirect to `/leads`. The matching APIs return 403 `demo_readonly`. `GET /api/session` includes `visitor: true` for that cookie.

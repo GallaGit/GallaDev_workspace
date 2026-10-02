@@ -70,6 +70,10 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/api/demo/enter" || pathname === "/api/demo/exit") {
     return forward();
   }
+  // El login aplica su propio cupo. Sin esto el proxy responde 401 antes.
+  if (pathname === "/api/auth/login" && request.method === "POST") {
+    return forward();
+  }
 
   if (visitorAllowed(request)) {
     if (isVisitorBlockedApi(pathname, request.method)) {

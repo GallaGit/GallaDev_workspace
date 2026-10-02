@@ -37,7 +37,7 @@ Variables clave (ver `.env.example` para la lista completa):
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | La misma URL pública y la clave publishable. Next incrusta `NEXT_PUBLIC_*` en el build para el cliente del navegador. |
 | `AUTH_DISABLED=true` | Desarrollo local sin login. Se ignora con `NODE_ENV=production` (fail-closed). El acceso es email + contraseña de Supabase Auth; un Admin crea las cuentas en el Dashboard (el trigger asigna Seller). |
 | `DEMO_MODE_ENABLED` | `true` o `1` enciende la demo de visitante. Si no está, está vacía o es otro valor, queda apagada. |
-| `DEMO_SESSION_SECRET` | Secreto HMAC de la cookie de visitante, al menos 16 caracteres. Obligatorio con la demo encendida. Genera con `openssl rand -hex 32`. |
+| `DEMO_SESSION_SECRET` | Secreto HMAC de la cookie de visitante, al menos 16 caracteres. Obligatorio con la demo encendida. Genera con `openssl rand -hex 32`. Producción no reutiliza un valor de CI. |
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Smoke de login opcional en Playwright. `critical-paths` omite ese login si están vacías. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Usuarios Admin y Seller para `tests/e2e/auth-sync-roles.spec.ts`. CI no tiene credenciales E2E de Viewer. |
 | `INGEST_SECRET` | Secreto de `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. Solo en servidor (Cloudflare), nunca en el bundle del navegador. |

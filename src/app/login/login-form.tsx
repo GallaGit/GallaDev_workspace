@@ -3,8 +3,13 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
+import {
+  LOGIN_CONFIG_ERROR,
+  LOGIN_GENERIC_ERROR,
+  LOGIN_NETWORK_ERROR,
+  LOGIN_RATE_ERROR,
+} from "@/lib/auth/login-limit";
 import { safeAppPath } from "@/lib/auth/safe-redirect";
 
 export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
@@ -23,29 +28,31 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
     setError("");
     setBusy(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      if (signInError) {
-        setError(
-          signInError.message?.toLowerCase().includes("invalid")
-            ? "Credenciales incorrectas"
-            : signInError.message || "No se pudo iniciar sesión",
-        );
+      const data = (await res.json().catch(() => null)) as {
+        code?: string;
+      } | null;
+      if (!res.ok) {
+        if (res.status === 429 || data?.code === "rate_limited") {
+          setError(LOGIN_RATE_ERROR);
+        } else if (data?.code === "config") {
+          setError(LOGIN_CONFIG_ERROR);
+        } else if (data?.code === "network" || res.status >= 500) {
+          setError(LOGIN_NETWORK_ERROR);
+        } else {
+          setError(LOGIN_GENERIC_ERROR);
+        }
         return;
       }
       setAuthFlash("welcome");
       router.push(safeAppPath(from));
       router.refresh();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      setError(
-        msg.includes("no configurados")
-          ? "Supabase no está configurado en el cliente. Revisa NEXT_PUBLIC_SUPABASE_*."
-          : "Error de red. Inténtalo de nuevo.",
-      );
+    } catch {
+      setError(LOGIN_NETWORK_ERROR);
     } finally {
       setBusy(false);
     }

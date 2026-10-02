@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isAllowedRecipient,
+  isValidExternalEmail,
   resolveMailbox,
   displayFrom,
   mailboxChipLabel,
@@ -39,6 +40,12 @@ describe("mailboxes", () => {
     expect(displayFrom("ociel@galladev.com").from).toBe(
       "Ociel <ociel@galladev.com>",
     );
+  });
+
+  it("isValidExternalEmail rejects newlines and garbage", () => {
+    expect(isValidExternalEmail("Name <ana@example.com>")).toBe(true);
+    expect(isValidExternalEmail("ana@example.com\nBcc: x@y.z")).toBe(false);
+    expect(isValidExternalEmail("not-an-email")).toBe(false);
   });
 
   it("mailboxChipLabel shortens local-part", () => {

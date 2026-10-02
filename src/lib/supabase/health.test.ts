@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifySupabaseError,
+  dbStatusMessage,
   isDbStatus,
 } from "./health";
 
@@ -33,6 +34,17 @@ describe("classifySupabaseError", () => {
   });
 });
 
+
+describe("dbStatusMessage", () => {
+  it("es fijo y no arrastra el texto de Postgres", () => {
+    expect(dbStatusMessage("ok")).toBe("Supabase conectado");
+    expect(dbStatusMessage("config")).toBe(
+      "Falta configuración o el esquema de la base",
+    );
+    expect(dbStatusMessage("down")).toBe("Supabase no disponible");
+    expect(dbStatusMessage("auth")).not.toMatch(/relation|postgres|jwt/i);
+  });
+});
 
 describe("isDbStatus", () => {
   it("valida los 4 estados", () => {

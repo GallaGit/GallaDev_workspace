@@ -146,6 +146,51 @@ describe("sendReply", () => {
     expect(result).toEqual({ sent: false, reason: "no-client" });
   });
 
+  it("rechecks the stored sender and sends only the address", async () => {
+    const admin = mockAdmin({
+      messages: [
+        {
+          message_id: "<msg-1@example.com>",
+          direction: "inbound",
+          from_address: "Sender <sender@example.com>",
+          to_addresses: ["hola@galladev.com"],
+        },
+      ],
+    });
+    const result = await sendReply(admin, { threadId: "t-1", bodyText: "Hi" });
+    expect(result.sent).toBe(true);
+    expect(sendMock.mock.calls[0][0].to).toBe("sender@example.com");
+  });
+
+  it("does not send when the stored recipient is not an email", async () => {
+    const admin = mockAdmin({
+      thread: {
+        id: "t-1",
+        subject: "Test Subject",
+        from_address: "not-an-email",
+        mailbox_address: "hola@galladev.com",
+      },
+      messages: [],
+    });
+    const result = await sendReply(admin, { threadId: "t-1", bodyText: "Hi" });
+    expect(result).toEqual({ sent: false, reason: "invalid-recipient" });
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("does not send from a mailbox outside the allowlist", async () => {
+    const admin = mockAdmin({
+      thread: {
+        id: "t-1",
+        subject: "Test Subject",
+        from_address: "sender@example.com",
+        mailbox_address: "otro@galladev.com",
+      },
+    });
+    const result = await sendReply(admin, { threadId: "t-1", bodyText: "Hi" });
+    expect(result).toEqual({ sent: false, reason: "invalid-mailbox" });
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
   it("returns send-failed on Resend error", async () => {
     sendMock.mockResolvedValue({ data: null, error: { message: "quota exceeded" } });
 

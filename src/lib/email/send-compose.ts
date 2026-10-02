@@ -5,22 +5,18 @@ import {
   displayFrom,
   extractEmailAddress,
   isCompanyMailbox,
+  isValidExternalEmail,
   type CompanyMailbox,
 } from "./mailboxes";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
+export { isValidExternalEmail };
+
 /**
  * Envía un correo nuevo (compose) desde un buzón de empresa y crea el hilo.
  * Si draftId está presente, borra el borrador solo tras envío OK.
  */
-
-const BASIC_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export function isValidExternalEmail(value: string): boolean {
-  const email = extractEmailAddress(value);
-  return BASIC_EMAIL_RE.test(email) && email.length <= 320;
-}
 
 export interface ComposeInput {
   mailbox: CompanyMailbox;
