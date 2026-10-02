@@ -48,7 +48,8 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 - `POST /api/leads/pain-analysis`
 - `POST /api/sync`
 - `GET /api/health` (liveness, sin sesión ni base de datos)
-- `GET /api/db-status` (sesión; conectividad con Supabase)
+- `POST /api/auth/login` (sin sesión; cupo por IP de plataforma y por cuenta; un solo mensaje de error)
+- `GET /api/db-status` (cliente de sesión y RLS; estados `ok` / `auth` / `config` / `down` con mensaje fijo)
 - `GET /api/session` (`visitor: true` con cookie de visitante)
 - `GET /api/team` (Admin)
 - `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`)

@@ -1,9 +1,9 @@
 import "server-only";
 
 import sanitizeHtml from "sanitize-html";
+import { MAX_EMAIL_BODY_CHARS } from "./limits";
 
-/** Tope al persistir cuerpo de correo (el webhook ya corta metadatos a 256 KB). */
-export const MAX_EMAIL_BODY_CHARS = 256 * 1024;
+export { MAX_EMAIL_BODY_CHARS };
 
 const ALLOWED_TAGS = [
   "a",

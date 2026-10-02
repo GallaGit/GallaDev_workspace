@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { isCompanyMailbox, defaultMailbox } from "@/lib/email/mailboxes";
+import { parseDraftBody } from "@/lib/email/email-payload";
+import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -71,34 +72,41 @@ export async function POST(request: Request) {
   }
 
   try {
+    const read = await readCappedJson(request, EMAIL_JSON_MAX_BYTES);
+    if (!read.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            read.status === 413
+              ? "El cuerpo es demasiado largo"
+              : "Datos del correo no válidos",
+        },
+        { status: read.status },
+      );
+    }
+    const parsed = parseDraftBody(read.value);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { ok: false, error: parsed.error },
+        { status: 400 },
+      );
+    }
+
     const supabase = await createSupabaseServerClient();
-    const body = (await request.json()) as Record<string, unknown>;
-
-    const id = typeof body.id === "string" ? body.id.trim() : "";
-    const rawMailbox =
-      typeof body.mailbox === "string" ? body.mailbox.trim().toLowerCase() : "";
-    const mailbox = isCompanyMailbox(rawMailbox) ? rawMailbox : defaultMailbox();
-    const to = typeof body.to === "string" ? body.to.trim() : "";
-    const subject = typeof body.subject === "string" ? body.subject : "";
-    const bodyText = typeof body.bodyText === "string" ? body.bodyText : "";
-    const leadId =
-      typeof body.leadId === "string" && body.leadId.trim()
-        ? body.leadId.trim()
-        : null;
-
     const row = {
-      mailbox_address: mailbox,
-      to_address: to,
-      subject,
-      body_text: bodyText,
-      lead_id: leadId,
+      mailbox_address: parsed.value.mailbox,
+      to_address: parsed.value.to,
+      subject: parsed.value.subject,
+      body_text: parsed.value.bodyText,
+      lead_id: parsed.value.leadId,
     };
 
-    if (id) {
+    if (parsed.value.id) {
       const { data, error } = await supabase
         .from("email_drafts")
         .update(row)
-        .eq("id", id)
+        .eq("id", parsed.value.id)
         .select(
           "id, mailbox_address, to_address, subject, body_text, lead_id, created_at, updated_at",
         )

@@ -80,6 +80,14 @@ describe("proxy de visitante", () => {
     expect(createServerClient).not.toHaveBeenCalled();
   });
 
+  it("deja el POST de login fuera de la lista blanca de la demo", async () => {
+    const { proxy } = await import("@/proxy");
+    const token = signVisitorToken(SECRET).token;
+    const res = await proxy(request("/api/auth/login", token, "POST"));
+    expect(res.status).toBe(200);
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
   it("redirige settings, automatizaciones y email a /leads", async () => {
     const { proxy } = await import("@/proxy");
     const token = signVisitorToken(SECRET).token;

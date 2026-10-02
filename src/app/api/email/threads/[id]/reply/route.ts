@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { parseReplyBody } from "@/lib/email/email-payload";
+import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
 import { sendReply } from "@/lib/email/send-reply";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +49,27 @@ export async function POST(request: Request, ctx: Ctx) {
   }
 
   try {
+    const read = await readCappedJson(request, EMAIL_JSON_MAX_BYTES);
+    if (!read.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            read.status === 413
+              ? "El texto de la respuesta es demasiado largo"
+              : "Datos del correo no válidos",
+        },
+        { status: read.status },
+      );
+    }
+    const parsed = parseReplyBody(read.value);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { ok: false, error: parsed.error },
+        { status: 400 },
+      );
+    }
+
     const supabase = await createSupabaseServerClient();
     const { data: thread } = await supabase
       .from("email_threads")
@@ -61,30 +84,29 @@ export async function POST(request: Request, ctx: Ctx) {
       );
     }
 
-    const body = (await request.json()) as Record<string, unknown>;
-    const text = typeof body.text === "string" ? body.text.trim() : "";
-    const html = typeof body.html === "string" ? body.html.trim() : undefined;
-
-    if (!text) {
-      return NextResponse.json(
-        { ok: false, error: "El texto de la respuesta no puede estar vacío" },
-        { status: 400 },
-      );
-    }
-
     const admin = createSupabaseAdminClient();
     const result = await sendReply(admin, {
       threadId: id,
-      bodyText: text,
-      bodyHtml: html || undefined,
+      bodyText: parsed.value.text,
+      bodyHtml: parsed.value.html,
     });
 
     if (!result.sent) {
       const statusMap: Record<string, number> = {
         "no-client": 503,
         "no-thread": 404,
+        "invalid-body": 400,
+        "invalid-mailbox": 400,
+        "invalid-recipient": 400,
         "send-failed": 502,
         "db-error": 500,
+      };
+      const fixed: Record<string, string> = {
+        "no-client": "No se pudo enviar la respuesta",
+        "no-thread": "Hilo no encontrado o sin permiso",
+        "invalid-body": "El texto de la respuesta no es válido",
+        "invalid-mailbox": "Buzón de origen no válido",
+        "invalid-recipient": "El destinatario de la respuesta no es válido",
       };
       logRouteError({
         route: `POST /api/email/threads/${id}/reply`,
@@ -93,7 +115,10 @@ export async function POST(request: Request, ctx: Ctx) {
         requestId,
       });
       return NextResponse.json(
-        { ok: false, error: result.detail ?? "No se pudo enviar la respuesta" },
+        {
+          ok: false,
+          error: fixed[result.reason] ?? result.detail ?? "No se pudo enviar la respuesta",
+        },
         { status: statusMap[result.reason] ?? 500 },
       );
     }

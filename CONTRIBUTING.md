@@ -38,7 +38,7 @@ Key env facts (see `.env.example` for the full list):
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Same public URL and publishable key. Next inlines `NEXT_PUBLIC_*` at build time for the browser client. |
 | `AUTH_DISABLED=true` | Local dev without login. Ignored when `NODE_ENV=production` (fail-closed). Sign-in is Supabase Auth email + password; an Admin creates accounts in the Dashboard (the trigger assigns Seller). |
 | `DEMO_MODE_ENABLED` | `true` or `1` turns the visitor demo on. Unset, empty, or any other value is off. |
-| `DEMO_SESSION_SECRET` | HMAC secret for the visitor cookie, at least 16 characters. Required while the demo is on. Generate with `openssl rand -hex 32`. |
+| `DEMO_SESSION_SECRET` | HMAC secret for the visitor cookie, at least 16 characters. Required while the demo is on. Generate with `openssl rand -hex 32`. Production must not reuse a CI value. |
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Optional Playwright login smoke. `critical-paths` skips that login when they are empty. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Admin and Seller users for `tests/e2e/auth-sync-roles.spec.ts`. CI has no Viewer E2E credentials. |
 | `INGEST_SECRET` | Shared secret for `POST /api/ingest/lead` only. Generate with `openssl rand -hex 32`. Keep it on the server (Cloudflare), never in the browser bundle. |

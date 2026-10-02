@@ -48,7 +48,8 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 - `POST /api/leads/pain-analysis`
 - `POST /api/sync`
 - `GET /api/health` (liveness, no session, no database)
-- `GET /api/db-status` (session; Supabase connectivity)
+- `POST /api/auth/login` (no session; rate limit per platform IP and per account; one error message)
+- `GET /api/db-status` (session client and RLS; statuses `ok` / `auth` / `config` / `down` with a fixed message)
 - `GET /api/session` (`visitor: true` for a visitor cookie)
 - `GET /api/team` (Admin)
 - `POST /api/demo/enter` (404 `demo_disabled`, 503 `demo_misconfigured`, 429 `rate_limited`)

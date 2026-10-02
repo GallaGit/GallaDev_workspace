@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/api-auth";
-import { isCompanyMailbox } from "@/lib/email/mailboxes";
+import { parseComposeBody } from "@/lib/email/email-payload";
+import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
 import { sendCompose } from "@/lib/email/send-compose";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -34,45 +35,36 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as Record<string, unknown>;
-    const rawMailbox =
-      typeof body.mailbox === "string" ? body.mailbox.trim().toLowerCase() : "";
-    if (!isCompanyMailbox(rawMailbox)) {
+    const read = await readCappedJson(request, EMAIL_JSON_MAX_BYTES);
+    if (!read.ok) {
       return NextResponse.json(
-        { ok: false, error: "Buzón de origen no válido" },
-        { status: 400 },
+        {
+          ok: false,
+          error:
+            read.status === 413
+              ? "El cuerpo es demasiado largo"
+              : "Datos del correo no válidos",
+        },
+        { status: read.status },
       );
     }
-
-    const to = typeof body.to === "string" ? body.to.trim() : "";
-    const subject = typeof body.subject === "string" ? body.subject.trim() : "";
-    const text = typeof body.text === "string" ? body.text.trim() : "";
-    const html = typeof body.html === "string" ? body.html.trim() : undefined;
-    const draftId =
-      typeof body.draftId === "string" && body.draftId.trim()
-        ? body.draftId.trim()
-        : undefined;
-    const leadId =
-      typeof body.leadId === "string" && body.leadId.trim()
-        ? body.leadId.trim()
-        : null;
-
-    if (!text) {
+    const parsed = parseComposeBody(read.value);
+    if (!parsed.ok) {
       return NextResponse.json(
-        { ok: false, error: "El cuerpo no puede estar vacío" },
+        { ok: false, error: parsed.error },
         { status: 400 },
       );
     }
 
     const admin = createSupabaseAdminClient();
     const result = await sendCompose(admin, {
-      mailbox: rawMailbox,
-      to,
-      subject,
-      bodyText: text,
-      bodyHtml: html || undefined,
-      draftId,
-      leadId,
+      mailbox: parsed.value.mailbox,
+      to: parsed.value.to,
+      subject: parsed.value.subject,
+      bodyText: parsed.value.text,
+      bodyHtml: parsed.value.html,
+      draftId: parsed.value.draftId,
+      leadId: parsed.value.leadId,
     });
 
     if (!result.sent) {

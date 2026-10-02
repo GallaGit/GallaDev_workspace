@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
+import { e2eDemoSessionSecret } from './src/lib/demo/e2e-secret'
+
+const demoSessionSecret = e2eDemoSessionSecret()
 
 const isCI = !!process.env.CI
 
@@ -54,8 +57,9 @@ export default defineConfig({
       E2E_SELLER_EMAIL: process.env.E2E_SELLER_EMAIL ?? '',
       E2E_SELLER_PASSWORD: process.env.E2E_SELLER_PASSWORD ?? '',
       // La demo del E2E no usa E2E_* ni Supabase. Solo el servidor de pruebas.
+      // Secreto del job (E2E_DEMO_SESSION_SECRET) o uno generado para este proceso.
       DEMO_MODE_ENABLED: 'true',
-      DEMO_SESSION_SECRET: 'e2e-visitor-demo-secret',
+      DEMO_SESSION_SECRET: demoSessionSecret,
       PORT: '3000',
     },
   },

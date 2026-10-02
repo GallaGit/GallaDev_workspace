@@ -2,10 +2,12 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  defaultMailbox,
   displayFrom,
+  extractEmailAddress,
   isCompanyMailbox,
+  isValidExternalEmail,
 } from "./mailboxes";
+import { MAX_EMAIL_BODY_CHARS } from "./limits";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
@@ -27,12 +29,32 @@ export interface ReplyInput {
 
 export type ReplyResult =
   | { sent: true; messageId: string }
-  | { sent: false; reason: "no-client" | "no-thread" | "send-failed" | "db-error"; detail?: string };
+  | {
+      sent: false;
+      reason:
+        | "no-client"
+        | "no-thread"
+        | "invalid-body"
+        | "invalid-mailbox"
+        | "invalid-recipient"
+        | "send-failed"
+        | "db-error";
+      detail?: string;
+    };
 
 export async function sendReply(
   admin: SupabaseClient,
   input: ReplyInput,
 ): Promise<ReplyResult> {
+  const bodyText = input.bodyText.trim();
+  if (
+    !bodyText ||
+    bodyText.length > MAX_EMAIL_BODY_CHARS ||
+    (input.bodyHtml != null && input.bodyHtml.length > MAX_EMAIL_BODY_CHARS)
+  ) {
+    return { sent: false, reason: "invalid-body" };
+  }
+
   const client = getResendClient();
   if (!client) {
     return { sent: false, reason: "no-client" };
@@ -49,8 +71,10 @@ export async function sendReply(
   }
 
   const rawMailbox = String(thread.mailbox_address ?? "");
-  const mailbox = isCompanyMailbox(rawMailbox) ? rawMailbox : defaultMailbox();
-  const fromMeta = displayFrom(mailbox);
+  if (!isCompanyMailbox(rawMailbox)) {
+    return { sent: false, reason: "invalid-mailbox" };
+  }
+  const fromMeta = displayFrom(rawMailbox);
 
   const { data: messages } = await admin
     .from("email_messages")
@@ -64,7 +88,11 @@ export async function sendReply(
     .reverse()
     .find((m) => m.direction === "inbound");
 
-  const replyTo = lastInbound?.from_address ?? thread.from_address;
+  const rawReplyTo = String(lastInbound?.from_address ?? thread.from_address ?? "");
+  if (!isValidExternalEmail(rawReplyTo)) {
+    return { sent: false, reason: "invalid-recipient" };
+  }
+  const replyTo = extractEmailAddress(rawReplyTo);
 
   const allMessageIds = threadMessages
     .map((m) => m.message_id)
@@ -77,7 +105,7 @@ export async function sendReply(
     ? thread.subject
     : `Re: ${thread.subject}`;
 
-  const stored = prepareStoredEmailBodies(input.bodyHtml, input.bodyText);
+  const stored = prepareStoredEmailBodies(input.bodyHtml, bodyText);
 
   let resendEmailId: string | undefined;
   let resendMessageId: string | undefined;
@@ -87,7 +115,7 @@ export async function sendReply(
       from: fromMeta.from,
       to: replyTo,
       subject,
-      text: stored.text ?? input.bodyText,
+      text: stored.text ?? bodyText,
       ...(stored.html ? { html: stored.html } : {}),
       headers: {
         ...(inReplyTo ? { "In-Reply-To": inReplyTo } : {}),
@@ -129,7 +157,7 @@ export async function sendReply(
       bcc_addresses: [],
       subject,
       body_html: stored.html,
-      body_text: stored.text ?? input.bodyText,
+      body_text: stored.text ?? bodyText,
       send_status: "delivered",
       received_at: new Date().toISOString(),
     })

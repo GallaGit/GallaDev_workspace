@@ -63,6 +63,17 @@ describe("proxy sin rol", () => {
     expect(await api.json()).toMatchObject({ code: "no_profile" });
   });
 
+  it("deja pasar POST /api/auth/login sin sesión", async () => {
+    const { proxy } = await import("@/proxy");
+    const res = await proxy(
+      new NextRequest(new URL("http://localhost:3000/api/auth/login"), {
+        method: "POST",
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
   it("deja pasar a un Seller y no lo manda a /pending", async () => {
     createServerClient.mockReturnValue(clientWithRole("Seller"));
     const { proxy } = await import("@/proxy");

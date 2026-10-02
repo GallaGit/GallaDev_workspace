@@ -49,7 +49,7 @@ Specs in `tests/e2e/`:
 
 - `critical-paths.spec.ts` — unauthenticated redirect, and shell checks that log in when `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD` are set.
 - `auth-sync-roles.spec.ts` — Admin and Seller (`E2E_ADMIN_*`, `E2E_SELLER_*`). Skipped when those four vars are empty. No Viewer credential.
-- `visitor-demo.spec.ts` — passwordless visitor. The Playwright server forces `DEMO_MODE_ENABLED=true` and `DEMO_SESSION_SECRET`.
+- `visitor-demo.spec.ts` — passwordless visitor. The Playwright server forces `DEMO_MODE_ENABLED=true`. `DEMO_SESSION_SECRET` comes from the environment when it is at least 16 characters (CI secret `E2E_DEMO_SESSION_SECRET`); otherwise Playwright generates a process-local value.
 
 ### Full CI Pipeline
 

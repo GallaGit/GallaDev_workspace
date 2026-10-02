@@ -18,7 +18,7 @@ Supabase is the active persistence layer and sole source of truth. The current a
 - Explicit session checks on sensitive API routes (`requireApiSession`; 401 without session in production).
 - **Superseded (PR #37):** “`AUTH_SECRET` mandatory in production” no longer applies. Sign-in is Supabase Auth (email + password). `AUTH_SECRET`, `AUTH_PASSWORD`, and `SESSION_TTL_DAYS` are not read. `AUTH_DISABLED` is fail-closed in production.
 - Security headers (HSTS, CSP, frame/content-type/referrer/permissions).
-- Shared in-memory rate limiter on public ingest, AI analysis (10 / 60s per user), and `POST /api/demo/enter` (8 / 15 min per IP), plus body caps on ingest and bulk PATCH. Login is not rate-limited in this app. The limiter is per instance, not distributed.
+- Shared rate limiter on public ingest, AI analysis (10 / 60s per user), `POST /api/demo/enter` (8 / 15 min per IP), and `POST /api/auth/login` (20 / 15 min per platform IP and 10 / 15 min per account), plus body caps on ingest and bulk PATCH. Upstash is used when configured; otherwise the limiter is per instance.
 - Role-based RLS migration applied in Supabase (`app_role`: Admin/Seller/Viewer; `profiles.role`; per-role policies on `leads`/`lead_activities`).
 - `zod` validation on lead PATCH bodies (`PATCH /api/leads/:id` and bulk PATCH).
 - Hygiene done: MIT `LICENSE`, Dependabot (npm and GitHub Actions; opens PRs, does not merge them), and secret scanning with push protection (enabled).

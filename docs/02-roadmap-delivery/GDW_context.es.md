@@ -18,7 +18,7 @@ Supabase es la capa de persistencia activa y la única fuente de verdad. La apli
 - Verificación explícita de sesión en rutas API sensibles (`requireApiSession`; 401 sin sesión en producción).
 - **Sustituido (PR #37):** «`AUTH_SECRET` obligatorio en producción» ya no aplica. El acceso es Supabase Auth (email + contraseña). `AUTH_SECRET`, `AUTH_PASSWORD` y `SESSION_TTL_DAYS` no se leen. `AUTH_DISABLED` es fail-closed en producción.
 - Cabeceras de seguridad (HSTS, CSP, frame/content-type/referrer/permissions).
-- Rate-limit compartido en memoria en la ingesta pública, el análisis IA (10 / 60s por usuario) y `POST /api/demo/enter` (8 / 15 min por IP), más topes de cuerpo en ingesta y PATCH masivo. El login no tiene rate-limit en esta app. El limitador es por instancia, no distribuido.
+- Rate-limit en la ingesta pública, el análisis IA (10 / 60s por usuario), `POST /api/demo/enter` (8 / 15 min por IP) y `POST /api/auth/login` (20 / 15 min por IP de plataforma y 10 / 15 min por cuenta), más topes de cuerpo en ingesta y PATCH masivo. Con Upstash el cupo es compartido; si no, es por instancia.
 - Migración RLS por rol aplicada en Supabase (`app_role`: Admin/Seller/Viewer; `profiles.role`; policies por rol en `leads`/`lead_activities`).
 - Validación con `zod` en cuerpos PATCH de leads (`PATCH /api/leads/:id` y PATCH masivo).
 - Higiene hecha: `LICENSE` MIT, Dependabot (npm y GitHub Actions; abre PRs, no los fusiona) y secret scanning con push protection (activados).

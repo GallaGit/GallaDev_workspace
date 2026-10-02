@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
+import { isUuid } from "@/lib/supabase/lead-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,12 @@ export async function DELETE(request: Request, ctx: Ctx) {
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;
+  if (!isUuid(id)) {
+    return NextResponse.json(
+      { ok: false, error: "Borrador no encontrado o sin permiso" },
+      { status: 404 },
+    );
+  }
 
   try {
     const supabase = await createSupabaseServerClient();
