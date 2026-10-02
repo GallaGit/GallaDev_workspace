@@ -144,6 +144,11 @@ export interface LeadCreateInput {
   score?: number | null;
   notesOverflow?: string | null;
   discoveredAt?: string | null;
+  /**
+   * Solo lo rellena el servidor. Seller: su propio id. Admin: null
+   * (cola sin responsable, visible para Admin y Viewer).
+   */
+  responsibleId?: string | null;
 }
 
 export interface ActivityEvent {

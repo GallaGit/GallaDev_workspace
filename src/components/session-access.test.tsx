@@ -13,7 +13,7 @@ function Probe() {
   if (!access.ready) return <p>cargando</p>;
   return (
     <p>
-      {access.role}:{access.canWriteLeads ? "write" : "read"}:
+      {access.pending ? "pending" : access.role}:{access.canWriteLeads ? "write" : "read"}:
       {access.isAdmin ? "admin" : "member"}
     </p>
   );
@@ -42,6 +42,27 @@ describe("SessionAccessProvider", () => {
       </SessionAccessProvider>,
     );
     expect(await screen.findByText("Viewer:read:member")).toBeInTheDocument();
+  });
+
+  it("marca una cuenta sin rol como pendiente", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          ok: false,
+          code: "no_profile",
+          error: "sin perfil",
+        }),
+      })),
+    );
+    render(
+      <SessionAccessProvider>
+        <Probe />
+      </SessionAccessProvider>,
+    );
+    expect(await screen.findByText("pending:read:member")).toBeInTheDocument();
   });
 
   it("marca Admin como escritor y administrador", async () => {

@@ -435,28 +435,30 @@ function LeadDrawerBody({
                 data-testid="lead-responsible"
                 className="mt-1 w-full rounded-md border border-(--border) bg-(--bg) px-2 py-1.5 text-sm"
                 value={lead.responsibleId ?? ""}
-                disabled={saving || !canWriteLeads}
+                disabled={saving || !canWriteLeads || !isAdmin}
                 onChange={(e) =>
                   savePatch({ responsibleId: e.target.value || null })
                 }
               >
-                <option value="">Sin asignar</option>
+                {isAdmin ? <option value="">Sin asignar</option> : null}
                 {isAdmin
-                  ? team.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.email ?? m.id} ({m.role})
-                      </option>
-                    ))
+                  ? team
+                      .filter((m) => m.role === "Admin" || m.role === "Seller")
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.email ?? m.id} ({m.role})
+                        </option>
+                      ))
                   : null}
-                {!isAdmin && userId ? (
-                  <option value={userId}>Yo</option>
-                ) : null}
-                {!isAdmin &&
+                {isAdmin &&
                 lead.responsibleId &&
-                lead.responsibleId !== userId ? (
+                !team.some((m) => m.id === lead.responsibleId) ? (
                   <option value={lead.responsibleId}>
                     {lead.responsibleId}
                   </option>
+                ) : null}
+                {!isAdmin && userId ? (
+                  <option value={userId}>Yo</option>
                 ) : null}
               </select>
               <Field label="Score" value={lead.score?.toString()} />

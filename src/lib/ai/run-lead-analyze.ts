@@ -18,6 +18,8 @@ import {
 import { dispatchLeadAnalyzed } from "@/lib/automations/dispatch";
 import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
+import { getApiSession } from "@/lib/api-auth";
+import { canWriteLead } from "@/lib/leads/lead-access";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import type { LeadRepository } from "@/lib/repository/lead-repository";
 import { getSettingsService } from "@/lib/settings/service";
@@ -97,6 +99,11 @@ export async function runLeadAnalyze(
   }
 
   if (!lead) {
+    return { ok: false, status: 404, body: { error: "Lead no encontrado" } };
+  }
+
+  const actor = await getApiSession();
+  if (!actor || !canWriteLead(actor, lead)) {
     return { ok: false, status: 404, body: { error: "Lead no encontrado" } };
   }
 

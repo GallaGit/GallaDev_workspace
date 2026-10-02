@@ -114,7 +114,7 @@ Route: `src/app/api/email/inbound/route.ts` (the App Router lives under `src/app
 - [x] An Admin opens `/correo`, sees threads (filter All / hola@ / ociel@), opens one, and the unread marker clears when the thread is read. (`InboxPage`, chip, `ThreadView`)
 - [x] The Admin can attach a thread to an existing lead, and the link is still there on reload. (`LinkLeadDialog`, `PATCH /api/email/threads/[id]`)
 - [x] A signed-out user, a visitor demo session, and a role that is not allowed do not get the thread list or the message bodies. (`gate.ts` blocks `/correo` and `/api/email/threads`; RLS Admin-only)
-- [x] HTML from the message is sanitized before it is shown. Remote images are not loaded by default. (`sanitizeHtml` in `thread-view.tsx`)
+- [x] HTML from the message is sanitized on the server when it is stored and again when it is served (`sanitize-html` in `src/lib/email/sanitize-email-html.ts`). The view renders it in a sandboxed iframe with no scripts. Remote images are not loaded.
 
 ### Phase 3 — Reply
 

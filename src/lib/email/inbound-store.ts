@@ -10,6 +10,7 @@ import {
   type CompanyMailbox,
 } from "./mailboxes";
 import { getResendClient } from "./resend-client";
+import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
 /** Resend Receiving API shape (not fully typed in the SDK). */
 interface ReceivingGetResponse {
@@ -106,6 +107,10 @@ export async function storeInboundEmail(
   } catch (e) {
     console.warn("[inbound-store] Could not fetch full message body", data.email_id, e);
   }
+
+  const prepared = prepareStoredEmailBodies(bodyHtml, bodyText);
+  bodyHtml = prepared.html;
+  bodyText = prepared.text;
 
   const { data: msg, error: msgErr } = await admin
     .from("email_messages")

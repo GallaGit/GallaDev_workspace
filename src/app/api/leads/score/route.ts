@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireLeadWriter } from "@/lib/api-auth";
+import { filterWritableLeads } from "@/lib/leads/enforce-lead-write";
 import { scoreLead } from "@/lib/leads/lead-scorer";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 
@@ -34,7 +35,9 @@ export async function POST(request: Request) {
         );
       }
       const found = await Promise.all(ids.map((id) => repo.get(id)));
-      targets = found.filter((l): l is NonNullable<typeof l> => l != null);
+      targets = await filterWritableLeads(
+        found.filter((l): l is NonNullable<typeof l> => l != null),
+      );
       const missing = ids.length - targets.length;
       if (targets.length === 0) {
         return NextResponse.json(
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
       }
     } else {
       // All active leads
-      targets = await repo.list();
+      targets = await filterWritableLeads(await repo.list());
     }
 
     let updated = 0;

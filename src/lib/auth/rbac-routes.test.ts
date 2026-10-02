@@ -20,6 +20,7 @@ vi.mock("@/lib/supabase/admin", () => ({
         data: [{ id: "admin-1", role: "Admin" }],
         error: null,
       }),
+      upsert: async () => ({ error: null }),
     }),
     auth: {
       admin: {
@@ -341,6 +342,38 @@ describe("GET /api/team", () => {
       members: [{ id: "admin-1", email: "admin@b.c", role: "Admin" }],
     });
     expect(adminClient).toHaveBeenCalledOnce();
+  });
+
+  it("Admin asigna Seller a otra cuenta", async () => {
+    asRole("Admin");
+    const { PATCH } = await import("@/app/api/team/route");
+    const res = await PATCH(
+      jsonRequest("http://localhost/api/team", "PATCH", {
+        id: "11111111-1111-4111-8111-111111111111",
+        role: "Seller",
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      member: {
+        id: "11111111-1111-4111-8111-111111111111",
+        role: "Seller",
+      },
+    });
+  });
+
+  it("Seller no asigna roles", async () => {
+    asRole("Seller");
+    const { PATCH } = await import("@/app/api/team/route");
+    await expectForbidden(
+      await PATCH(
+        jsonRequest("http://localhost/api/team", "PATCH", {
+          id: "11111111-1111-4111-8111-111111111111",
+          role: "Admin",
+        }),
+      ),
+    );
   });
 });
 

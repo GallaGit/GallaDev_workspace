@@ -32,7 +32,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 AUTH_DISABLED=true
 ```
 
-Sign-in is Supabase Auth (email + password). There is no self-signup: an Admin creates accounts in the Supabase Dashboard (Authentication → Users). The `on_auth_user_created` trigger inserts a `profiles` row with role Seller; set Admin with SQL on `profiles.role`. `AUTH_DISABLED=true` skips login only when `NODE_ENV` is not `production`.
+Sign-in is Supabase Auth (email + password). There is no self-signup: keep public sign-up disabled, and an Admin creates accounts in the Supabase Dashboard (Authentication → Users). The `on_auth_user_created` trigger inserts a `profiles` row with no role; the account sees a pending-access screen until an Admin assigns Admin, Seller, or Viewer in Settings → Equipo. `AUTH_DISABLED=true` skips login only when `NODE_ENV` is not `production`.
 
 ## Documentation
 

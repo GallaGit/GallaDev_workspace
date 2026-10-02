@@ -8,26 +8,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LinkLeadDialog } from "@/components/correo/link-lead-dialog";
 import { ReplyForm } from "@/components/correo/reply-form";
 import { cn } from "@/lib/utils";
+import { emailHtmlSrcDoc } from "@/lib/email/email-srcdoc";
 import type { EmailThread, EmailMessage, EmailAttachment } from "./inbox-page";
 
 /**
- * Sanea HTML de un correo antes de renderizarlo.
- * Quita scripts, event handlers e imágenes remotas (tracking pixels).
+ * HTML ya saneado en servidor, dentro de un iframe sin scripts.
+ * El sandbox vacío no concede allow-scripts ni allow-same-origin.
  */
-function sanitizeHtml(html: string): string {
-  let safe = html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\bon\w+\s*=\s*'[^']*'/gi, "")
-    .replace(/javascript\s*:/gi, "blocked:");
-
-  safe = safe.replace(
-    /<img([^>]*)src\s*=\s*["'](https?:\/\/[^"']*)["']([^>]*)>/gi,
-    '<img$1data-blocked-src="$2"$3 alt="[imagen bloqueada]" style="display:none">',
+export function EmailHtmlFrame({ html }: { html: string }) {
+  return (
+    <iframe
+      title="Contenido del correo"
+      sandbox=""
+      referrerPolicy="no-referrer"
+      srcDoc={emailHtmlSrcDoc(html)}
+      className="mt-4 h-80 w-full rounded-md border border-gris-200 bg-white dark:border-gris-700"
+    />
   );
-
-  return safe;
 }
 
 function formatFullDate(iso: string): string {
@@ -208,10 +205,7 @@ function MessageCard({
             <Shield className="h-3 w-3" />
             HTML saneado
           </div>
-          <div
-            className="email-body prose prose-sm max-w-none text-grafito dark:text-gris-200 dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.body_html) }}
-          />
+          <EmailHtmlFrame html={message.body_html} />
         </div>
       ) : message.body_text ? (
         <pre className="whitespace-pre-wrap text-[13px] text-grafito dark:text-gris-200 font-sans">

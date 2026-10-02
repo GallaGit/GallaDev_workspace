@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
+import { filterReadableLeads } from "@/lib/leads/enforce-lead-write";
 import { detectDuplicateGroups } from "@/lib/leads/detect-duplicates";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 
@@ -10,7 +11,9 @@ export async function GET() {
   if (denied) return denied;
   try {
     const repo = await getSessionLeadRepository();
-    const leads = await repo.list({ includeArchived: true });
+    const leads = await filterReadableLeads(
+      await repo.list({ includeArchived: true }),
+    );
     const groups = detectDuplicateGroups(leads);
     return NextResponse.json({
       groups,
