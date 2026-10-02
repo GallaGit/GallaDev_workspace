@@ -8,6 +8,7 @@ import {
   type CompanyMailbox,
 } from "./mailboxes";
 import { getResendClient } from "./resend-client";
+import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
 /**
  * Envía un correo nuevo (compose) desde un buzón de empresa y crea el hilo.
@@ -64,6 +65,7 @@ export async function sendCompose(
   if (!bodyText) {
     return { sent: false, reason: "empty-body" };
   }
+  const stored = prepareStoredEmailBodies(input.bodyHtml, bodyText);
 
   const client = getResendClient();
   if (!client) {
@@ -78,8 +80,8 @@ export async function sendCompose(
       from: fromMeta.from,
       to,
       subject,
-      text: bodyText,
-      ...(input.bodyHtml ? { html: input.bodyHtml } : {}),
+      text: stored.text ?? bodyText,
+      ...(stored.html ? { html: stored.html } : {}),
     });
 
     if (result.error) {
@@ -134,8 +136,8 @@ export async function sendCompose(
       cc_addresses: [],
       bcc_addresses: [],
       subject,
-      body_html: input.bodyHtml ?? null,
-      body_text: bodyText,
+      body_html: stored.html,
+      body_text: stored.text ?? bodyText,
       send_status: "delivered",
       received_at: now,
     })

@@ -35,6 +35,24 @@ export default defineConfig({
       ],
     },
     globals: false,
+    // sanitize-html no carga en vmThreads (htmlparser2 es ESM). Esos tests
+    // viven en vitest.sanitize.config.mts con pool forks. El include de un
+    // proyecto inline se mezcla con este y volvería a correr toda la suite.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "vm",
+          pool: "vmThreads",
+          exclude: [
+            "src/lib/email/sanitize-email-html.test.ts",
+            "src/lib/email/send-compose.test.ts",
+            "src/lib/email/send-reply.test.ts",
+          ],
+        },
+      },
+      "./vitest.sanitize.config.mts",
+    ],
   },
   resolve: {
     alias: {

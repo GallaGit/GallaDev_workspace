@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import {
+  constrainLeadPatch,
+  filterReadableLeads,
+} from "@/lib/leads/enforce-lead-write";
+import {
   changedKeys,
   dispatchLeadUpdated,
 } from "@/lib/automations/dispatch";
@@ -17,7 +21,9 @@ export async function GET(request: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
     const repo = await getSessionLeadRepository();
-    const lead = await repo.get(id);
+    const found = await repo.get(id);
+    const visible = found ? await filterReadableLeads([found]) : [];
+    const lead = visible[0] ?? null;
     if (!lead) {
       return NextResponse.json({ error: "Lead no encontrado" }, { status: 404 });
     }
@@ -51,8 +57,12 @@ export async function PATCH(request: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
     const repo = await getSessionLeadRepository();
-    const lead = await repo.update(id, parsed.value);
-    const automation = dispatchLeadUpdated(lead, changedKeys(parsed.value));
+    const gate = await constrainLeadPatch(repo, id, parsed.value);
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error }, { status: gate.status });
+    }
+    const lead = await repo.update(id, gate.patch);
+    const automation = dispatchLeadUpdated(lead, changedKeys(gate.patch));
     return NextResponse.json({ lead, automation });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al actualizar lead";
@@ -66,6 +76,10 @@ export async function DELETE(request: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
     const repo = await getSessionLeadRepository();
+    const gate = await constrainLeadPatch(repo, id, {});
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error }, { status: gate.status });
+    }
     await repo.archive(id);
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -6,7 +6,13 @@ import { SessionAccessProvider } from "@/components/session-access";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/toast/toast";
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -17,7 +23,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider>
+    <ThemeProvider nonce={nonce}>
       <QueryClientProvider client={client}>
         <SessionAccessProvider>
           {children}

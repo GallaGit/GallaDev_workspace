@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` in `.env.local`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same public URL and publishable key; Next inlines them at build time). For the Correo module, add `RESEND_API_KEY` and `RESEND_INBOUND_WEBHOOK_SECRET` (Svix signing secret from the Resend inbound webhook). Use `AUTH_DISABLED=true` only for local development. Never commit credentials. There is no self-signup: an Admin creates accounts in the Supabase Dashboard (Authentication → Users). The `on_auth_user_created` trigger assigns Seller.
+Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` in `.env.local`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same public URL and publishable key; Next inlines them at build time). For the Correo module, add `RESEND_API_KEY` and `RESEND_INBOUND_WEBHOOK_SECRET` (Svix signing secret from the Resend inbound webhook). Use `AUTH_DISABLED=true` only for local development. Never commit credentials. There is no self-signup: leave public sign-up off and create accounts in Authentication → Users. The `on_auth_user_created` trigger inserts a profile with no role. An Admin assigns Admin, Seller, or Viewer in Settings → Equipo.
 
 ## Main routes
 
@@ -36,8 +36,9 @@ New leads enter the `Nuevo` queue. Users can search by company, domain, email, c
 The role comes from `profiles.role` (PostgreSQL enum `app_role`): Admin, Seller, or Viewer.
 
 - **Admin:** settings and automation mutations, `GET /api/team`, lead writes, and AI analysis.
-- **Seller:** lead writes and AI analysis (subject to the rate limit). Cannot change settings or automations, and cannot list the team.
-- **Viewer:** read-only. Write APIs return 403.
+- **Seller:** lead writes and AI analysis (subject to the rate limit) only on leads they already own. They do not see the unassigned queue, cannot change settings or automations, and cannot list the team.
+- **Viewer:** read-only on the whole book, including unassigned leads. Write APIs return 403.
+- **No role:** the account lands on `/pending` and cannot read leads until an Admin assigns one.
 
 AI analysis (`POST /api/leads/:id/analyze` and `POST /api/leads/pain-analysis`) allows 10 requests / 60s per session user (in-memory limit). It uses the authenticated session and RLS; normal user requests do not use the privileged `service_role`.
 
@@ -63,7 +64,7 @@ To disable in production without a code change, set `DEMO_MODE_ENABLED=false` or
 ## Troubleshooting
 
 - If login fails or the browser reports a network error, check `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY`, and confirm `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` were present at **build** time. Next does not inject those public vars into the client unless the access is a static `process.env.NEXT_PUBLIC_*` read, and a rebuild is required after they change.
-- If an authenticated user gets HTTP 401 with `code: "no_profile"`, that Auth user has no `profiles` row, or `profiles.role` is not `Admin`, `Seller`, or `Viewer`. The trigger should insert Seller; set Admin with `UPDATE public.profiles SET role = 'Admin' WHERE id = '<user id>'`.
+- If an authenticated user gets HTTP 401 with `code: "no_profile"`, or sees the pending-access screen, that account has no `Admin`, `Seller`, or `Viewer` role. The trigger no longer assigns Seller. An Admin sets the role in Settings → Equipo. Apply migration `20261002180000_least_privilege_signup_and_lead_rls.sql` in the SQL editor; it does not change roles that already exist.
 - **Cerrar todas las sesiones** calls `supabase.auth.signOut({ scope: "global" })`. The app has no `POST /api/auth/logout-all` and does not consult `app_session_epoch`. A 503 on `POST /api/demo/enter` means the demo flag is on and `DEMO_SESSION_SECRET` is missing or too short (`demo_misconfigured`), not a session-epoch failure.
 - Visitor pages `/settings`, `/automations`, `/email`, and `/correo` redirect to `/leads`. The matching APIs return 403 `demo_readonly`. `GET /api/session` includes `visitor: true` for that cookie.
 - If an integration fails, inspect Settings status and server logs without exposing credentials.

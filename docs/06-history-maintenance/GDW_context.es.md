@@ -22,7 +22,7 @@ Notion dejó de ser la fuente de verdad en runtime. Los leads persisten solo en 
 
 ### Supabase Auth (PR #37)
 
-Email + contraseña sustituyó el login de contraseña compartida. `AUTH_SECRET`, `AUTH_PASSWORD`, `SESSION_TTL_DAYS`, la comprobación del epoch de sesión y `POST /api/auth/logout-all` no forman parte de la app. Un Admin crea los usuarios en el Dashboard de Supabase; `on_auth_user_created` asigna Seller. **Cerrar todas las sesiones** llama a `supabase.auth.signOut({ scope: "global" })`.
+Email + contraseña sustituyó el login de contraseña compartida. `AUTH_SECRET`, `AUTH_PASSWORD`, `SESSION_TTL_DAYS`, la comprobación del epoch de sesión y `POST /api/auth/logout-all` no forman parte de la app. Un Admin crea los usuarios en el Dashboard de Supabase; `on_auth_user_created` deja el perfil sin rol hasta que otro Admin lo asigne. **Cerrar todas las sesiones** llama a `supabase.auth.signOut({ scope: "global" })`.
 
 ### RBAC (PR #44)
 

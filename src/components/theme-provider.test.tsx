@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, act, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+vi.mock("next/navigation", () => ({
+  useServerInsertedHTML: () => undefined,
+}));
+
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 
 const STORAGE_KEY = "lead-crm-theme";

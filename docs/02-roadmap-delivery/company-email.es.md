@@ -114,7 +114,7 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 - [x] Un Admin abre `/correo`, ve los hilos (filtro Todos / hola@ / ociel@), abre uno, y el marcador de no leído se quita al leer el hilo. (`InboxPage`, chip, `ThreadView`)
 - [x] El Admin puede enganchar un hilo a un lead existente, y el enlace sigue ahí al recargar. (`LinkLeadDialog`, `PATCH /api/email/threads/[id]`)
 - [x] Un usuario sin sesión, una sesión de demo de visitante y un rol no permitido no obtienen la lista de hilos ni los cuerpos. (`gate.ts` bloquea `/correo` y `/api/email/threads`; RLS Admin-only)
-- [x] El HTML del mensaje se sanea antes de mostrarlo. Las imágenes remotas no se cargan por defecto. (`sanitizeHtml` en `thread-view.tsx`)
+- [x] El HTML del mensaje se sanea en servidor al guardarlo y al servirlo (`sanitize-html` en `src/lib/email/sanitize-email-html.ts`). La vista lo pinta en un iframe con `sandbox` sin scripts. Las imágenes remotas no se cargan.
 
 ### Fase 3 — Responder
 

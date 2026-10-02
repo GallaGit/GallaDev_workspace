@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppProviders } from "@/components/app-providers";
@@ -24,15 +25,18 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Lee el nonce para forzar render dinámico. Next aplica ese valor a
+  // los scripts del framework; el script de tema lo recibe aparte.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="es" suppressHydrationWarning className="h-full">
       <body
         className={`${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
-        <AppProviders>
+        <AppProviders nonce={nonce}>
           <AppShell>{children}</AppShell>
         </AppProviders>
       </body>

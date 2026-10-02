@@ -143,7 +143,7 @@ export function leadCreateToRow(input: LeadCreateInput): LeadInsert {
     notion_last_edited_time: null,
     archived: false,
     tags: [],
-    responsable: null,
+    responsable: input.responsibleId?.trim() || null,
   };
 }
 

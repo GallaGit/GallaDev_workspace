@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
+import { filterReadableLeads } from "@/lib/leads/enforce-lead-write";
 import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import {
   getActiveProvider,
@@ -13,7 +14,7 @@ export async function POST() {
   if (denied) return denied;
   try {
     const repo = await getSessionLeadRepository();
-    const leads = await repo.list();
+    const leads = await filterReadableLeads(await repo.list());
     return NextResponse.json({
       ok: true,
       count: leads.length,

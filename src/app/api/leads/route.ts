@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
+import { getApiSession, requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { readCappedJson } from "@/lib/rate-limit";
 import {
@@ -9,6 +9,10 @@ import {
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { validateLeadCreate } from "@/lib/leads/validate-lead";
 import { validateBulkLeadPatch } from "@/lib/leads/validate-lead-patch";
+import {
+  constrainLeadPatch,
+  filterReadableLeads,
+} from "@/lib/leads/enforce-lead-write";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
 import {
   changedKeys,
@@ -31,7 +35,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const repo = await getSessionLeadRepository();
-    const leads = await repo.list();
+    const leads = await filterReadableLeads(await repo.list());
 
     const filters: LeadFilters = {
       search: searchParams.get("q") || undefined,
@@ -84,8 +88,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const actor = await getApiSession();
+    if (!actor) {
+      return NextResponse.json(
+        { ok: false, error: "No autorizado", code: "unauthenticated" },
+        { status: 401 },
+      );
+    }
+    const input =
+      actor.role === "Seller"
+        ? { ...result.value, responsibleId: actor.id }
+        : { ...result.value, responsibleId: null };
     const repo = await getSessionLeadRepository();
-    const lead = await repo.create(result.value);
+    const lead = await repo.create(input);
     const automation = dispatchLeadCreated(lead);
     return NextResponse.json({ lead, automation }, { status: 201 });
   } catch (e) {
@@ -120,7 +135,11 @@ export async function PATCH(request: Request) {
     const automations = [];
     const changed = changedKeys(patch);
     for (const id of ids) {
-      const lead = await repo.update(id, patch);
+      const gate = await constrainLeadPatch(repo, id, patch);
+      if (!gate.ok) {
+        return NextResponse.json({ error: gate.error }, { status: gate.status });
+      }
+      const lead = await repo.update(id, gate.patch);
       updated.push(lead);
       automations.push(dispatchLeadUpdated(lead, changed));
     }

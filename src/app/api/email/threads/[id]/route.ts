@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isVisitorRequest } from "@/lib/demo/visitor-request";
 import { visitorDeniedResponse } from "@/lib/demo/gate";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
+import { prepareEmailHtml, capEmailText } from "@/lib/email/sanitize-email-html";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,20 @@ export async function GET(request: Request, ctx: Ctx) {
       attachments = atts ?? [];
     }
 
+    const safeMessages = (messages ?? []).map((message) => ({
+      ...message,
+      body_html: prepareEmailHtml(
+        typeof message.body_html === "string" ? message.body_html : null,
+      ),
+      body_text: capEmailText(
+        typeof message.body_text === "string" ? message.body_text : null,
+      ),
+    }));
+
     return NextResponse.json({
       ok: true,
       thread,
-      messages: messages ?? [],
+      messages: safeMessages,
       attachments,
     });
   } catch (e) {

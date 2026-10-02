@@ -7,6 +7,7 @@ import {
   isCompanyMailbox,
 } from "./mailboxes";
 import { getResendClient } from "./resend-client";
+import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
 /**
  * Envía una respuesta en un hilo y guarda el mensaje saliente.
@@ -76,6 +77,8 @@ export async function sendReply(
     ? thread.subject
     : `Re: ${thread.subject}`;
 
+  const stored = prepareStoredEmailBodies(input.bodyHtml, input.bodyText);
+
   let resendEmailId: string | undefined;
   let resendMessageId: string | undefined;
 
@@ -84,8 +87,8 @@ export async function sendReply(
       from: fromMeta.from,
       to: replyTo,
       subject,
-      text: input.bodyText,
-      ...(input.bodyHtml ? { html: input.bodyHtml } : {}),
+      text: stored.text ?? input.bodyText,
+      ...(stored.html ? { html: stored.html } : {}),
       headers: {
         ...(inReplyTo ? { "In-Reply-To": inReplyTo } : {}),
         ...(references ? { References: references } : {}),
@@ -125,8 +128,8 @@ export async function sendReply(
       cc_addresses: [],
       bcc_addresses: [],
       subject,
-      body_html: input.bodyHtml ?? null,
-      body_text: input.bodyText,
+      body_html: stored.html,
+      body_text: stored.text ?? input.bodyText,
       send_status: "delivered",
       received_at: new Date().toISOString(),
     })

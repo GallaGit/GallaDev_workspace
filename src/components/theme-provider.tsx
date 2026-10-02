@@ -37,12 +37,19 @@ function applyThemeClass(theme: Theme) {
   root.style.colorScheme = theme;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
   const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME);
   const [mounted, setMounted] = useState(false);
 
   useServerInsertedHTML(() => (
     <script
+      nonce={nonce}
       id="lead-crm-theme-init"
       dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
     />

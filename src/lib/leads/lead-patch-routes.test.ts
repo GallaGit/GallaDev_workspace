@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
+import { getApiSession, requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import { dispatchLeadUpdated } from "@/lib/automations/dispatch";
 
 vi.mock("@/lib/api-auth", () => ({
   requireApiSession: vi.fn(async () => null),
   requireLeadWriter: vi.fn(async () => null),
+  getApiSession: vi.fn(async () => ({
+    id: "admin",
+    email: "a@b.c",
+    role: "Admin",
+  })),
 }));
 
 vi.mock("@/lib/repository/get-repository", () => ({
@@ -41,6 +46,11 @@ describe("PATCH /api/leads/:id", () => {
     vi.clearAllMocks();
     vi.mocked(requireApiSession).mockResolvedValue(null);
     vi.mocked(requireLeadWriter).mockResolvedValue(null);
+    vi.mocked(getApiSession).mockResolvedValue({
+      id: "admin",
+      email: "a@b.c",
+      role: "Admin",
+    });
     update.mockClear();
     vi.mocked(getSessionLeadRepository).mockResolvedValue({
       update,
@@ -101,6 +111,68 @@ describe("PATCH /api/leads/:id", () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "JSON no válido" });
   });
+
+  it("Seller no pasa a Cliente un lead sin responsable", async () => {
+    vi.mocked(getApiSession).mockResolvedValue({
+      id: "seller-1",
+      email: "s@b.c",
+      role: "Seller",
+    });
+    vi.mocked(getSessionLeadRepository).mockResolvedValue({
+      get: async () => ({ id: "lead-1", responsibleId: null }),
+      update,
+    } as never);
+    const { PATCH } = await import("@/app/api/leads/[id]/route");
+    const res = await PATCH(
+      jsonRequest(
+        "http://localhost/api/leads/lead-1",
+        JSON.stringify({ status: "Cliente" }),
+      ),
+      { params: Promise.resolve({ id: "lead-1" }) },
+    );
+    expect(res.status).toBe(404);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("Seller pasa a Cliente un lead propio", async () => {
+    vi.mocked(getApiSession).mockResolvedValue({
+      id: "seller-1",
+      email: "s@b.c",
+      role: "Seller",
+    });
+    vi.mocked(getSessionLeadRepository).mockResolvedValue({
+      get: async () => ({ id: "lead-1", responsibleId: "seller-1" }),
+      update,
+    } as never);
+    const { PATCH } = await import("@/app/api/leads/[id]/route");
+    const res = await PATCH(
+      jsonRequest(
+        "http://localhost/api/leads/lead-1",
+        JSON.stringify({ status: "Cliente" }),
+      ),
+      { params: Promise.resolve({ id: "lead-1" }) },
+    );
+    expect(res.status).toBe(200);
+    expect(update).toHaveBeenCalledWith("lead-1", { status: "Cliente" });
+  });
+
+  it("Seller no puede devolver su lead a la cola", async () => {
+    vi.mocked(getApiSession).mockResolvedValue({
+      id: "seller-1",
+      email: "s@b.c",
+      role: "Seller",
+    });
+    const { PATCH } = await import("@/app/api/leads/[id]/route");
+    const res = await PATCH(
+      jsonRequest(
+        "http://localhost/api/leads/lead-1",
+        JSON.stringify({ responsibleId: null }),
+      ),
+      { params: Promise.resolve({ id: "lead-1" }) },
+    );
+    expect(res.status).toBe(403);
+    expect(update).not.toHaveBeenCalled();
+  });
 });
 
 describe("PATCH /api/leads bulk", () => {
@@ -108,6 +180,11 @@ describe("PATCH /api/leads bulk", () => {
     vi.clearAllMocks();
     vi.mocked(requireApiSession).mockResolvedValue(null);
     vi.mocked(requireLeadWriter).mockResolvedValue(null);
+    vi.mocked(getApiSession).mockResolvedValue({
+      id: "admin",
+      email: "a@b.c",
+      role: "Admin",
+    });
     update.mockClear();
     vi.mocked(getSessionLeadRepository).mockResolvedValue({
       update,

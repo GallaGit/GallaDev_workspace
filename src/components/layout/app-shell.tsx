@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AuthFlashBanner } from "@/components/auth-flash-banner";
+import { PendingAccess } from "@/components/auth/pending-access";
 import { DemoBanner } from "@/components/demo/demo-banner";
+import { useSessionAccess } from "@/components/session-access";
 import {
   NavChromeProvider,
   useNavChrome,
@@ -110,6 +112,7 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const access = useSessionAccess();
   // El login se muestra sin el chrome de la app.
   if (pathname === "/login") {
     return (
@@ -117,6 +120,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
     );
+  }
+  // Cuenta autenticada sin rol: no montar el CRM (evita listas vacías o errores).
+  if (pathname === "/pending" || (access.ready && access.pending)) {
+    return <PendingAccess />;
   }
   return (
     <NavChromeProvider>

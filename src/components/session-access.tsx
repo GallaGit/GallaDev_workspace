@@ -12,6 +12,8 @@ export type SessionAccess = {
   userId: string | null;
   /** Sesión de demo: no es Admin, Seller ni Viewer. */
   isVisitor: boolean;
+  /** Autenticado sin rol de app. No puede leer leads. */
+  pending: boolean;
 };
 
 const LOCKED: SessionAccess = {
@@ -21,6 +23,7 @@ const LOCKED: SessionAccess = {
   isAdmin: false,
   userId: null,
   isVisitor: false,
+  pending: false,
 };
 
 const SessionAccessContext = createContext<SessionAccess>(LOCKED);
@@ -42,18 +45,32 @@ export function SessionAccessProvider({
     let cancelled = false;
     fetch("/api/session")
       .then(async (res) => {
-        if (!res.ok) return null;
-        return (await res.json()) as {
+        const data = (await res.json().catch(() => null)) as {
           id?: unknown;
           role?: unknown;
           visitor?: unknown;
-        };
+          code?: unknown;
+        } | null;
+        if (!res.ok) {
+          return data?.code === "no_profile" ? { pending: true as const } : null;
+        }
+        return data;
       })
       .then((data) => {
         if (cancelled) return;
-        const role = data?.role;
+        const role = data && "role" in data ? data.role : undefined;
         const value: SessionAccess =
-          data?.visitor === true
+          data && "pending" in data && data.pending === true
+            ? {
+                role: null,
+                ready: true,
+                canWriteLeads: false,
+                isAdmin: false,
+                userId: null,
+                isVisitor: false,
+                pending: true,
+              }
+            : data && "visitor" in data && data.visitor === true
             ? {
                 role: null,
                 ready: true,
@@ -61,6 +78,7 @@ export function SessionAccessProvider({
                 isAdmin: false,
                 userId: null,
                 isVisitor: true,
+                pending: false,
               }
             : isAppRole(role)
               ? {
@@ -68,8 +86,12 @@ export function SessionAccessProvider({
                   ready: true,
                   canWriteLeads: isLeadWriter(role),
                   isAdmin: isAdminRole(role),
-                  userId: typeof data?.id === "string" ? data.id : null,
+                  userId:
+                    data && "id" in data && typeof data.id === "string"
+                      ? data.id
+                      : null,
                   isVisitor: false,
+                  pending: false,
                 }
               : { ...LOCKED, ready: true };
         setAccess({ path: pathname, value });

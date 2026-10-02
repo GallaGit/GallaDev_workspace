@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireLeadWriter } from "@/lib/api-auth";
+import { getApiSession, requireLeadWriter } from "@/lib/api-auth";
+import { canWriteLead } from "@/lib/leads/lead-access";
 import {
   buildEmptyFieldMerge,
   MERGEABLE_FIELD_LABELS,
@@ -57,6 +58,11 @@ export async function POST(request: Request) {
         { error: "Lead a archivar no encontrado" },
         { status: 404 },
       );
+    }
+
+    const actor = await getApiSession();
+    if (!actor || !canWriteLead(actor, keep) || !canWriteLead(actor, archive)) {
+      return NextResponse.json({ error: "Lead no encontrado" }, { status: 404 });
     }
 
     const { patch, filledKeys } = buildEmptyFieldMerge(keep, archive);
