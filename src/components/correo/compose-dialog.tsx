@@ -19,6 +19,7 @@ import {
   isCompanyMailbox,
   type CompanyMailbox,
 } from "@/lib/email/mailboxes";
+import { readJsonResponse } from "@/lib/http/read-json";
 
 export interface EmailDraft {
   id: string;
@@ -88,9 +89,11 @@ export function ComposeDialog({
           bodyText: body,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al guardar");
-      const draft = data.draft as EmailDraft;
+      const data = await readJsonResponse<{ draft: EmailDraft }>(
+        res,
+        "Error al guardar",
+      );
+      const draft = data.draft;
       setDraftId(draft.id);
       onDraftSaved(draft);
       toast.success("Borrador guardado");
@@ -123,11 +126,13 @@ export function ComposeDialog({
           draftId: draftId ?? undefined,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al enviar");
+      const data = await readJsonResponse<{ threadId: string }>(
+        res,
+        "Error al enviar",
+      );
       toast.success("Correo enviado");
       onOpenChange(false);
-      onSent(data.threadId as string);
+      onSent(data.threadId);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al enviar");
     } finally {

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { withJsonErrors } from "@/lib/api-handler";
 import { parseReplyBody } from "@/lib/email/email-payload";
 import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
-import { sendReply } from "@/lib/email/send-reply";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/supabase/lead-lookup";
@@ -24,7 +24,7 @@ const RATE_MAX = 10;
  * authenticated, así que la escritura sigue en service role después del gate.
  * Body: { text: string, html?: string }
  */
-export async function POST(request: Request, ctx: Ctx) {
+async function postReply(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -84,6 +84,7 @@ export async function POST(request: Request, ctx: Ctx) {
       );
     }
 
+    const { sendReply } = await import("@/lib/email/send-reply");
     const admin = createSupabaseAdminClient();
     const result = await sendReply(admin, {
       threadId: id,
@@ -140,3 +141,8 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 }
+
+export const POST = withJsonErrors(
+  "POST /api/email/threads/[id]/reply",
+  postReply,
+);

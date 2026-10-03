@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { withJsonErrors } from "@/lib/api-handler";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 
@@ -11,7 +12,7 @@ type Ctx = { params: Promise<{ id: string }> };
 /**
  * DELETE /api/email/drafts/[id] — eliminar borrador (Admin).
  */
-export async function DELETE(request: Request, ctx: Ctx) {
+async function deleteDraft(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -63,3 +64,8 @@ export async function DELETE(request: Request, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const DELETE = withJsonErrors(
+  "DELETE /api/email/drafts/[id]",
+  deleteDraft,
+);

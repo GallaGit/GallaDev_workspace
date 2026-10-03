@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { readJsonResponse } from "@/lib/http/read-json";
 
 export function ReplyForm({
   threadId,
@@ -29,8 +30,7 @@ export function ReplyForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: trimmed }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al enviar");
+      await readJsonResponse(res, "Error al enviar");
       toast.success("Respuesta enviada");
       setText("");
       onSent();

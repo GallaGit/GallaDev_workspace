@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { verifyInboundWebhook } from "@/lib/email/inbound-verify";
-import { storeInboundEmail } from "@/lib/email/inbound-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { withJsonErrors } from "@/lib/api-handler";
 import { errorClassOf, logRouteError, requestIdFrom } from "@/lib/route-log";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ const MAX_BODY_BYTES = 256 * 1024;
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 60;
 
-export async function POST(request: Request) {
+async function postInbound(request: Request) {
   const requestId = requestIdFrom(request);
 
   if (
@@ -87,6 +87,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const { storeInboundEmail } = await import("@/lib/email/inbound-store");
     const admin = createSupabaseAdminClient();
     const result = await storeInboundEmail(admin, verification.event);
 
@@ -124,3 +125,8 @@ export async function POST(request: Request) {
     );
   }
 }
+
+// 500 con cuerpo: Svix reintenta. Un 500 vacío no se distingue de un crash de módulo.
+export const POST = withJsonErrors("POST /api/email/inbound", postInbound, {
+  error: "Internal error",
+});

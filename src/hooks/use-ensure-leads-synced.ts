@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { Lead } from "@/lib/domain/lead";
 import type { DbHealth } from "@/lib/supabase/health";
+import { readJsonResponse } from "@/lib/http/read-json";
 import { useUiStore } from "@/store/ui-store";
 
 export type SyncLeadsOptions = {
@@ -36,8 +37,15 @@ export async function syncLeadsFromApi(
   setSync({ state: "syncing", error: null });
   try {
     const res = await fetch("/api/sync", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
+    const data = await readJsonResponse<{
+      ok?: boolean;
+      error?: string;
+      leads?: Lead[];
+      syncedAt?: string;
+      count?: number;
+      provider?: string;
+    }>(res, "Error de sincronización");
+    if (!data.ok) {
       throw new Error(data.error || "Error de sincronización");
     }
     setLeads(data.leads as Lead[]);
@@ -66,7 +74,10 @@ export async function syncLeadsFromApi(
 export async function refreshDbStatus(): Promise<void> {
   try {
     const res = await fetch("/api/db-status");
-    const data = (await res.json()) as Partial<DbHealth>;
+    const data = await readJsonResponse<Partial<DbHealth>>(
+      res,
+      "Estado no disponible",
+    );
     if (
       (data.provider === "supabase") &&
       (data.status === "ok" ||

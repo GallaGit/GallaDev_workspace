@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { readJsonResponse } from "@/lib/http/read-json";
 import { useUiStore } from "@/store/ui-store";
 
 export function LinkLeadDialog({
@@ -54,10 +55,7 @@ export function LinkLeadDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lead_id: selectedLeadId }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Error al vincular");
-      }
+      await readJsonResponse(res, "Error al vincular");
       onLinked(selectedLeadId);
       onOpenChange(false);
       toast.success(

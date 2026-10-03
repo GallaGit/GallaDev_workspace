@@ -18,6 +18,7 @@ import {
   mailboxChipLabel,
   type CompanyMailbox,
 } from "@/lib/email/mailboxes";
+import { readJsonResponse } from "@/lib/http/read-json";
 
 export interface EmailThread {
   id: string;
@@ -100,9 +101,11 @@ export function InboxPage() {
         const res = await fetch(
           qs ? `/api/email/threads?${qs}` : "/api/email/threads",
         );
-        const data = await res.json();
+        const data = await readJsonResponse<{ threads?: EmailThread[] }>(
+          res,
+          "Error al cargar hilos",
+        );
         if (cancelled) return;
-        if (!res.ok) throw new Error(data.error ?? "Error al cargar hilos");
         setThreads(data.threads ?? []);
         setSelectedId(null);
       } catch (e) {
@@ -128,10 +131,12 @@ export function InboxPage() {
       setLoading(true);
       try {
         const res = await fetch("/api/email/drafts");
-        const data = await res.json();
+        const data = await readJsonResponse<{ drafts?: EmailDraft[] }>(
+          res,
+          "Error al cargar borradores",
+        );
         if (cancelled) return;
-        if (!res.ok) throw new Error(data.error ?? "Error al cargar borradores");
-        let list = (data.drafts ?? []) as EmailDraft[];
+        let list = data.drafts ?? [];
         if (mailboxFilter !== "all") {
           list = list.filter((d) => d.mailbox_address === mailboxFilter);
         }
@@ -199,8 +204,7 @@ export function InboxPage() {
       const res = await fetch(`/api/email/drafts/${draftId}`, {
         method: "DELETE",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al eliminar");
+      await readJsonResponse(res, "Error al eliminar");
       setDrafts((prev) => prev.filter((d) => d.id !== draftId));
       toast.success("Borrador eliminado");
     } catch (e) {

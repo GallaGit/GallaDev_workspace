@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
  *   - unread (si "true", solo no leídos)
  *   - mailbox (hola@galladev.com | ociel@galladev.com; omitir = todos)
  */
-export async function GET(request: Request) {
+async function listThreads(request: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -71,3 +72,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export const GET = withJsonErrors("GET /api/email/threads", listThreads);

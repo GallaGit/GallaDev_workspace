@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/api-auth";
+import { withJsonErrors } from "@/lib/api-handler";
 import { parseComposeBody } from "@/lib/email/email-payload";
 import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
-import { sendCompose } from "@/lib/email/send-compose";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 
@@ -17,7 +17,7 @@ const RATE_MAX = 10;
  * Body: { mailbox, to, subject, text, html?, draftId?, leadId? }
  * Auth: Admin.
  */
-export async function POST(request: Request) {
+async function postCompose(request: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const { sendCompose } = await import("@/lib/email/send-compose");
     const admin = createSupabaseAdminClient();
     const result = await sendCompose(admin, {
       mailbox: parsed.value.mailbox,
@@ -107,3 +108,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const POST = withJsonErrors("POST /api/email/compose", postCompose);

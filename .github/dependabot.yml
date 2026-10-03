@@ -15,6 +15,11 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # 2.17.6+ depende de htmlparser2 ESM-only. require() falla en Vercel
+      # y Correo / el webhook inbound responden 500 con cuerpo vacío.
+      # No subir de 2.17.5 hasta que el runtime cargue ese require
+      # o htmlparser2 vuelva a publicar un build CommonJS.
+      - dependency-name: "sanitize-html"
 
   - package-ecosystem: github-actions
     directory: "/"

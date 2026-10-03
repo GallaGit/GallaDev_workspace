@@ -46,6 +46,7 @@ export default defineConfig({
           pool: "vmThreads",
           exclude: [
             "src/lib/email/sanitize-email-html.test.ts",
+            "src/lib/email/sanitize-html-cjs.test.ts",
             "src/lib/email/send-compose.test.ts",
             "src/lib/email/send-reply.test.ts",
           ],
