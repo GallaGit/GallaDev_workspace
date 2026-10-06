@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
 import { render } from "@testing-library/react";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
-import es from "../../messages/es.json";
-import en from "../../messages/en.json";
+import es from "../../../messages/es.json";
+import en from "../../../messages/en.json";
 
 const refresh = vi.fn();
 const setLocaleMock = vi.fn(async (locale: string) => locale);

@@ -32,6 +32,22 @@ function MultiSelectEditor({
   const tProvince = useTranslations("province");
   const field = dim.arrayField!;
   const selected = (filters[field] as string[] | undefined) ?? [];
+
+  const filtered = useMemo(() => {
+    const labelOf = (option: string) => {
+      if (dim.key === "status") return leadStatusLabel(tStatus, option);
+      if (dim.key === "province") {
+        return tProvince(
+          option as "Valencia" | "Alicante" | "Castellón" | "Otra",
+        );
+      }
+      return option;
+    };
+    if (!query.trim()) return options;
+    const q = query.toLowerCase();
+    return options.filter((o) => labelOf(o).toLowerCase().includes(q));
+  }, [options, query, dim.key, tProvince, tStatus]);
+
   const optionLabel = (option: string) => {
     if (dim.key === "status") return leadStatusLabel(tStatus, option);
     if (dim.key === "province") {
@@ -39,12 +55,6 @@ function MultiSelectEditor({
     }
     return option;
   };
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return options;
-    const q = query.toLowerCase();
-    return options.filter((o) => optionLabel(o).toLowerCase().includes(q));
-  }, [options, query, dim.key, tProvince, tStatus]);
 
   return (
     <div className="flex flex-col">
