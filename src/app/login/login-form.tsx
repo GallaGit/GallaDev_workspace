@@ -1,31 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { setAuthFlash } from "@/components/auth-flash-banner";
-import {
-  LOGIN_CONFIG_ERROR,
-  LOGIN_GENERIC_ERROR,
-  LOGIN_NETWORK_ERROR,
-  LOGIN_RATE_ERROR,
-} from "@/lib/auth/login-limit";
 import { safeAppPath } from "@/lib/auth/safe-redirect";
 
+type LoginErrorKey =
+  | "auth.login.errors.generic"
+  | "auth.login.errors.rate"
+  | "auth.login.errors.config"
+  | "auth.login.errors.network"
+  | "auth.login.demoFailed";
+
 export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
+  const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [errorKey, setErrorKey] = useState<LoginErrorKey | null>(null);
   const [busy, setBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setErrorKey(null);
     setBusy(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -38,13 +41,13 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
       } | null;
       if (!res.ok) {
         if (res.status === 429 || data?.code === "rate_limited") {
-          setError(LOGIN_RATE_ERROR);
+          setErrorKey("auth.login.errors.rate");
         } else if (data?.code === "config") {
-          setError(LOGIN_CONFIG_ERROR);
+          setErrorKey("auth.login.errors.config");
         } else if (data?.code === "network" || res.status >= 500) {
-          setError(LOGIN_NETWORK_ERROR);
+          setErrorKey("auth.login.errors.network");
         } else {
-          setError(LOGIN_GENERIC_ERROR);
+          setErrorKey("auth.login.errors.generic");
         }
         return;
       }
@@ -52,28 +55,25 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
       router.push(safeAppPath(from));
       router.refresh();
     } catch {
-      setError(LOGIN_NETWORK_ERROR);
+      setErrorKey("auth.login.errors.network");
     } finally {
       setBusy(false);
     }
   }
 
   async function enterDemo() {
-    setError("");
+    setErrorKey(null);
     setDemoBusy(true);
     try {
       const res = await fetch("/api/demo/enter", { method: "POST" });
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
       if (!res.ok) {
-        setError(data?.error || "No se pudo abrir la demo");
+        setErrorKey("auth.login.demoFailed");
         return;
       }
       router.push("/leads");
       router.refresh();
     } catch {
-      setError("Error de red. Inténtalo de nuevo.");
+      setErrorKey("auth.login.errors.network");
     } finally {
       setDemoBusy(false);
     }
@@ -88,7 +88,7 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
           htmlFor="email"
           className="mb-1 block text-sm font-medium"
         >
-          Email
+          {t("auth.login.email")}
         </label>
         <input
           id="email"
@@ -106,7 +106,7 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
           htmlFor="password"
           className="mb-1 block text-sm font-medium"
         >
-          Contraseña
+          {t("auth.login.password")}
         </label>
         <div className="relative">
           <input
@@ -123,7 +123,9 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
             onClick={() => setShowPassword((v) => !v)}
             className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-800"
             aria-label={
-              showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+              showPassword
+                ? t("auth.login.hidePassword")
+                : t("auth.login.showPassword")
             }
           >
             {showPassword ? (
@@ -134,9 +136,9 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
           </button>
         </div>
       </div>
-      {error ? (
+      {errorKey ? (
         <p role="alert" className="text-sm font-medium text-red-700">
-          {error}
+          {t(errorKey)}
         </p>
       ) : null}
       <button
@@ -145,7 +147,7 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
         disabled={!canSubmit}
         className="w-full rounded-md bg-gray-900 px-4 py-2 font-semibold text-white disabled:opacity-50"
       >
-        {busy ? "Entrando…" : "Entrar"}
+        {busy ? t("auth.login.submitting") : t("auth.login.submit")}
       </button>
       {demoEnabled ? (
         <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
@@ -156,10 +158,12 @@ export function LoginForm({ demoEnabled = false }: { demoEnabled?: boolean }) {
             disabled={demoBusy || busy}
             className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800"
           >
-            {demoBusy ? "Abriendo demo…" : "Entrar como visitante"}
+            {demoBusy
+              ? t("auth.login.demoOpening")
+              : t("auth.login.demoEnter")}
           </button>
           <p className="mt-2 text-center text-xs text-gray-500">
-            Ver demo sin cuenta. Solo datos ficticios.
+            {t("auth.login.demoHint")}
           </p>
         </div>
       ) : null}

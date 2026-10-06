@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Menu, Moon, Sun, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { useTheme } from "@/components/theme-provider";
 import {
   refreshDbStatus,
@@ -26,6 +28,8 @@ export function Topbar({
   title,
   subtitle,
 }: { title: string; subtitle?: string }) {
+  const format = useFormatter();
+  const t = useTranslations();
   const { theme, setTheme, mounted } = useTheme();
   const syncState = useUiStore((s) => s.syncState);
   const lastSyncAt = useUiStore((s) => s.lastSyncAt);
@@ -54,7 +58,9 @@ export function Topbar({
             onClick={navToggle}
             aria-expanded={navOpen}
             aria-controls={navId}
-            aria-label={navOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-label={
+              navOpen ? t("topbar.closeMenu") : t("topbar.openMenu")
+            }
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </Button>
@@ -76,7 +82,7 @@ export function Topbar({
             title={
               dbHealth
                 ? `${dbHealth.message} (${dbHealth.latencyMs} ms)`
-                : "Comprobando conexión…"
+                : t("topbar.checkingConnection")
             }
             className="flex items-center gap-1.5 rounded-full border border-gris-200 px-2 py-0.5 text-[11px] font-medium text-gris-500 dark:border-gris-700 dark:text-gris-400"
           >
@@ -99,20 +105,21 @@ export function Topbar({
                 className="h-3.5 w-3.5 animate-spin"
                 aria-hidden="true"
               />
-              Sincronizando…
+              {t("topbar.syncing")}
             </span>
           )}
           {syncState === "error" && (
             <span className="flex items-center gap-1.5 text-error">
-              Error: {syncError}
+              {t("topbar.error", { error: syncError ?? "" })}
             </span>
           )}
           {syncState === "idle" && lastSyncAt && (
             <span>
-              Última sync:{" "}
-              {new Date(lastSyncAt).toLocaleString("es-ES", {
-                dateStyle: "short",
-                timeStyle: "short",
+              {t("topbar.lastSync", {
+                date: format.dateTime(new Date(lastSyncAt), {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                }),
               })}
             </span>
           )}
@@ -125,8 +132,8 @@ export function Topbar({
           }
           disabled={syncState === "syncing"}
           className="gap-1.5 px-2 sm:px-3"
-          aria-label="Sincronizar"
-          title="Sincronizar"
+          aria-label={t("topbar.sync")}
+          title={t("topbar.sync")}
         >
           <RefreshCw
             className={cn(
@@ -135,13 +142,14 @@ export function Topbar({
             )}
             aria-hidden="true"
           />
-          <span className="hidden sm:inline">Sincronizar</span>
+          <span className="hidden sm:inline">{t("topbar.sync")}</span>
         </Button>
+        <LocaleSwitcher />
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label="Cambiar tema"
+          aria-label={t("topbar.changeTheme")}
         >
           {!mounted ? (
             <span className="h-4 w-4" />
