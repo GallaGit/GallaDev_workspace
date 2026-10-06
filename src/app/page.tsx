@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useCallback } from "react";
 import { Topbar } from "@/components/layout/topbar";
@@ -13,6 +14,7 @@ import {
 import { useUiStore } from "@/store/ui-store";
 
 type Kpi = {
+  key: string;
   label: string;
   value: string | number;
   queue?: WorkQueueId;
@@ -20,6 +22,7 @@ type Kpi = {
 };
 
 export default function HomePage() {
+  const t = useTranslations();
   useEnsureLeadsSynced();
   const router = useRouter();
   const leads = useUiStore((s) => s.leads);
@@ -42,42 +45,69 @@ export default function HomePage() {
     const total = leads.length;
     const clients = by("Cliente");
     return [
-      { label: "Leads encontrados", value: total, href: "/leads" },
       {
-        label: "Pendientes",
+        key: "found",
+        label: t("dashboard.kpis.found"),
+        value: total,
+        href: "/leads",
+      },
+      {
+        key: "pending",
+        label: t("dashboard.kpis.pending"),
         value: by("Pendiente revisar") + by("Nuevo"),
         queue: "pendiente_revisar",
       },
       {
-        label: "Validados",
+        key: "validated",
+        label: t("dashboard.kpis.validated"),
         value: by("Validado"),
         href: "/leads",
       },
       {
-        label: "Emails preparados",
+        key: "emailsPrepared",
+        label: t("dashboard.kpis.emailsPrepared"),
         value: by("Email preparado"),
         queue: "emails_listos",
       },
-      { label: "Emails enviados", value: by("Email enviado") },
-      { label: "Respuestas", value: by("Respondió") },
-      { label: "Reuniones", value: by("Reunión") },
-      { label: "Clientes", value: clients },
       {
-        label: "Conversion rate",
+        key: "emailsSent",
+        label: t("dashboard.kpis.emailsSent"),
+        value: by("Email enviado"),
+      },
+      {
+        key: "replies",
+        label: t("dashboard.kpis.replies"),
+        value: by("Respondió"),
+      },
+      {
+        key: "meetings",
+        label: t("dashboard.kpis.meetings"),
+        value: by("Reunión"),
+      },
+      {
+        key: "clients",
+        label: t("dashboard.kpis.clients"),
+        value: clients,
+      },
+      {
+        key: "conversionRate",
+        label: t("dashboard.kpis.conversionRate"),
         value: total ? `${Math.round((clients / total) * 100)}%` : "—",
       },
       {
-        label: "Faltan datos",
+        key: "missingData",
+        label: t("dashboard.kpis.missingData"),
         value: queueCount("faltan_datos"),
         queue: "faltan_datos",
       },
       {
-        label: "Follow-up vencido",
+        key: "followupOverdue",
+        label: t("dashboard.kpis.followupOverdue"),
         value: queueCount("followup_overdue"),
         queue: "followup_overdue",
       },
     ];
-  }, [leads, queueCount]);
+  }, [leads, queueCount, t]);
 
   function openValidated() {
     setActiveQueue(null);
@@ -99,18 +129,19 @@ export default function HomePage() {
 
   return (
     <>
-      <Topbar title="Dashboard" />
+      <Topbar title={t("dashboard.title")} />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <p className="mb-4 text-sm text-(--muted-fg)">
-          Cualificación de leads · Supabase como fuente de verdad. Las tarjetas
-          con cola abren Daily Work filtrado.
+          {t("dashboard.subtitle")}
         </p>
         {syncState === "syncing" && leads.length === 0 ? (
-          <p className="mb-4 text-sm text-(--muted-fg)">Sincronizando…</p>
+          <p className="mb-4 text-sm text-(--muted-fg)">
+            {t("dashboard.syncing")}
+          </p>
         ) : null}
         {!leads.length && syncState === "idle" ? (
           <p className="mb-4 text-sm text-(--muted-fg)">
-            Sin leads aún. Pulsa Sincronizar o crea uno en Leads.
+            {t("dashboard.empty")}
           </p>
         ) : null}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -127,7 +158,7 @@ export default function HomePage() {
             if (k.queue) {
               return (
                 <button
-                  key={k.label}
+                  key={k.key}
                   type="button"
                   onClick={() => openQueue(k.queue!)}
                   className="rounded-lg border border-(--border) bg-(--panel) p-3 text-left transition-colors hover:border-(--accent)"
@@ -136,10 +167,10 @@ export default function HomePage() {
                 </button>
               );
             }
-            if (k.label === "Validados") {
+            if (k.key === "validated") {
               return (
                 <button
-                  key={k.label}
+                  key={k.key}
                   type="button"
                   onClick={openValidated}
                   className="rounded-lg border border-(--border) bg-(--panel) p-3 text-left transition-colors hover:border-(--accent)"
@@ -151,7 +182,7 @@ export default function HomePage() {
             if (k.href) {
               return (
                 <Link
-                  key={k.label}
+                  key={k.key}
                   href={k.href}
                   className="rounded-lg border border-(--border) bg-(--panel) p-3 transition-colors hover:border-(--accent)"
                 >
@@ -161,7 +192,7 @@ export default function HomePage() {
             }
             return (
               <div
-                key={k.label}
+                key={k.key}
                 className={`rounded-lg border border-(--border) bg-(--panel) p-3 ${
                   clickable ? "" : "opacity-95"
                 }`}
@@ -173,10 +204,10 @@ export default function HomePage() {
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
           <Button onClick={() => router.push("/inbox")}>
-            Daily Work
+            {t("dashboard.goDailyWork")}
           </Button>
           <Button variant="outline" onClick={() => router.push("/leads")}>
-            Ir a Leads
+            {t("dashboard.goLeads")}
           </Button>
         </div>
       </div>

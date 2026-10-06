@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginForm } from "@/app/login/login-form";
 import { LOGIN_GENERIC_ERROR, LOGIN_RATE_ERROR } from "@/lib/auth/login-limit";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -26,7 +27,7 @@ describe("LoginForm", () => {
       json: async () => ({ ok: false, error: "Email not confirmed" }),
     }));
     vi.stubGlobal("fetch", fetchMock);
-    render(<LoginForm />);
+    renderWithIntl(<LoginForm />);
     fireEvent.change(screen.getByTestId("login-email"), {
       target: { value: "ana@example.com" },
     });
@@ -55,7 +56,7 @@ describe("LoginForm", () => {
         }),
       })),
     );
-    render(<LoginForm />);
+    renderWithIntl(<LoginForm />);
     fireEvent.change(screen.getByTestId("login-email"), {
       target: { value: "ana@example.com" },
     });

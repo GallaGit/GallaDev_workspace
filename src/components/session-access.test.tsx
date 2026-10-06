@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { SessionAccessProvider, useSessionAccess } from "@/components/session-access";
 import { LeadFiltersBar } from "@/components/leads/lead-filters";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -36,7 +37,7 @@ beforeEach(() => {
 
 describe("SessionAccessProvider", () => {
   it("marca Viewer como solo lectura", async () => {
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <Probe />
       </SessionAccessProvider>,
@@ -57,7 +58,7 @@ describe("SessionAccessProvider", () => {
         }),
       })),
     );
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <Probe />
       </SessionAccessProvider>,
@@ -70,7 +71,7 @@ describe("SessionAccessProvider", () => {
       "fetch",
       vi.fn(async () => jsonResponse({ id: "u1", email: "a@b.c", role: "Admin" })),
     );
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <Probe />
       </SessionAccessProvider>,
@@ -81,7 +82,7 @@ describe("SessionAccessProvider", () => {
 
 describe("LeadFiltersBar", () => {
   it("oculta crear y puntuar cuando el rol es Viewer", async () => {
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <Probe />
         <LeadFiltersBar />
@@ -102,7 +103,7 @@ describe("LeadFiltersBar", () => {
       "fetch",
       vi.fn(async () => jsonResponse({ id: "u1", email: "s@b.c", role: "Seller" })),
     );
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <LeadFiltersBar />
       </SessionAccessProvider>,

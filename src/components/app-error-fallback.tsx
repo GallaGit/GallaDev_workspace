@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export function AppErrorFallback({
   digest?: string;
   onRetry: () => void;
 }) {
+  const t = useTranslations("errors");
   const ref = digest && DIGEST_RE.test(digest) ? digest : undefined;
   return (
     <div className="flex min-h-full flex-1 items-center justify-center p-6">
@@ -26,17 +28,16 @@ export function AppErrorFallback({
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
           GallaDev Workspace
         </p>
-        <h1 className="mt-1 text-xl font-bold">Algo ha fallado</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          No hemos podido mostrar esta pantalla. Puedes reintentar o volver al
-          inicio.
-        </p>
+        <h1 className="mt-1 text-xl font-bold">{t("somethingWrong")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("body")}</p>
         {ref ? (
-          <p className="mt-3 font-mono text-xs text-gray-400">Ref. {ref}</p>
+          <p className="mt-3 font-mono text-xs text-gray-400">
+            {t("ref", { digest: ref })}
+          </p>
         ) : null}
         <div className="mt-6 flex flex-wrap gap-2">
           <Button type="button" onClick={onRetry}>
-            Reintentar
+            {t("retry")}
           </Button>
           {/* Carga completa: el router puede ser lo que ha fallado. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
@@ -48,7 +49,7 @@ export function AppErrorFallback({
               "dark:bg-gris-800 dark:text-gris-100 dark:hover:bg-gris-700",
             )}
           >
-            Ir al inicio
+            {t("goHome")}
           </a>
         </div>
       </div>

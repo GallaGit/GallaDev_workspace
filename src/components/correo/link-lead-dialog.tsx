@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { readJsonResponse } from "@/lib/http/read-json";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 import { useUiStore } from "@/store/ui-store";
 
 export function LinkLeadDialog({
@@ -28,6 +30,8 @@ export function LinkLeadDialog({
   currentLeadId: string | null;
   onLinked: (leadId: string | null) => void;
 }) {
+  const t = useTranslations("correo.link");
+  const tStatus = useTranslations("leadStatus");
   const leads = useUiStore((s) => s.leads);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,31 +59,27 @@ export function LinkLeadDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lead_id: selectedLeadId }),
       });
-      await readJsonResponse(res, "Error al vincular");
+      await readJsonResponse(res, t("error"));
       onLinked(selectedLeadId);
       onOpenChange(false);
-      toast.success(
-        selectedLeadId ? "Lead vinculado al hilo" : "Vinculación eliminada",
-      );
+      toast.success(selectedLeadId ? t("linked") : t("unlinked"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al vincular");
+      toast.error(e instanceof Error ? e.message : t("error"));
     } finally {
       setSaving(false);
     }
-  }, [threadId, selectedLeadId, onLinked, onOpenChange]);
+  }, [threadId, selectedLeadId, onLinked, onOpenChange, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Vincular hilo con lead</DialogTitle>
-          <DialogDescription>
-            Selecciona un lead para enlazar este hilo de correo.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <Input
-          placeholder="Buscar por empresa o email…"
+          placeholder={t("search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-3"
@@ -95,12 +95,12 @@ export function LinkLeadDialog({
                 selectedLeadId === null ? "bg-rojo/5" : ""
               }`}
             >
-              Quitar vinculación
+              {t("remove")}
             </button>
           )}
           {filtered.length === 0 ? (
             <p className="p-3 text-[12px] text-gris-500 dark:text-gris-400">
-              No se encontraron leads.
+              {t("empty")}
             </p>
           ) : (
             filtered.map((lead) => (
@@ -116,7 +116,8 @@ export function LinkLeadDialog({
                   {lead.companyName}
                 </div>
                 <div className="text-[10px] text-gris-500 dark:text-gris-400">
-                  {lead.email ?? "Sin email"} · {lead.status}
+                  {lead.email ?? t("noEmail")} ·{" "}
+                  {leadStatusLabel(tStatus, lead.status)}
                 </div>
               </button>
             ))
@@ -130,10 +131,10 @@ export function LinkLeadDialog({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            Cancelar
+            {t("cancel")}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Guardando…" : "Guardar"}
+            {saving ? t("saving") : t("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

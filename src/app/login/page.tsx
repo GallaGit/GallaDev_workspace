@@ -1,29 +1,46 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
 import { AuthFlashBanner } from "@/components/auth-flash-banner";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { isDemoConfigured } from "@/lib/demo/config";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Entrar · GallaDev Workspace",
-  robots: "noindex, nofollow",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.login");
+  return {
+    title: `${t("title")} · ${t("brand")}`,
+    robots: "noindex, nofollow",
+  };
+}
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getTranslations("auth.login");
+  const linkText = "galladev.com";
+  const [subtitleBefore, ...subtitleAfter] = t("subtitle", {
+    link: linkText,
+  }).split(linkText);
+
   return (
     <div className="flex min-h-full flex-1 items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-md dark:bg-gris-800">
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-          GallaDev Workspace
-        </p>
-        <h1 className="mt-1 text-xl font-bold">Entrar</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              {t("brand")}
+            </p>
+            <h1 className="mt-1 text-xl font-bold">{t("title")}</h1>
+          </div>
+          <LocaleSwitcher size="md" />
+        </div>
         <p className="mt-1 text-sm text-gray-500">
-          Herramienta interna. Si has llegado aquí por error, vuelve a{" "}
+          {subtitleBefore}
           <a className="underline" href="https://galladev.com">
-            galladev.com
+            {linkText}
           </a>
-          .
+          {subtitleAfter.join(linkText)}
         </p>
         <AuthFlashBanner kind="goodbye" />
         <Suspense>

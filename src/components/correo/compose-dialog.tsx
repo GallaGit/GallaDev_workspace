@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Send, Save } from "lucide-react";
 import {
@@ -63,6 +64,7 @@ export function ComposeDialog({
   onSent: (threadId: string) => void;
   onDraftSaved: (draft: EmailDraft) => void;
 }) {
+  const t = useTranslations("correo");
   // Parent remounts with key when draft/open changes — no sync effect.
   const [mailbox, setMailbox] = useState<CompanyMailbox>(() =>
     resolveMailbox(defaultMailboxAddress, initialDraft),
@@ -91,26 +93,26 @@ export function ComposeDialog({
       });
       const data = await readJsonResponse<{ draft: EmailDraft }>(
         res,
-        "Error al guardar",
+        t("compose.saveError"),
       );
       const draft = data.draft;
       setDraftId(draft.id);
       onDraftSaved(draft);
-      toast.success("Borrador guardado");
+      toast.success(t("compose.draftSaved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al guardar");
+      toast.error(e instanceof Error ? e.message : t("compose.saveError"));
     } finally {
       setBusy(false);
     }
-  }, [draftId, mailbox, to, subject, body, onDraftSaved]);
+  }, [draftId, mailbox, to, subject, body, onDraftSaved, t]);
 
   const handleSend = useCallback(async () => {
     if (!to.trim()) {
-      toast.error("Indica el destinatario");
+      toast.error(t("compose.recipientRequired"));
       return;
     }
     if (!body.trim()) {
-      toast.error("Escribe el cuerpo del mensaje");
+      toast.error(t("compose.bodyRequired"));
       return;
     }
     setBusy(true);
@@ -128,31 +130,29 @@ export function ComposeDialog({
       });
       const data = await readJsonResponse<{ threadId: string }>(
         res,
-        "Error al enviar",
+        t("sendError"),
       );
-      toast.success("Correo enviado");
+      toast.success(t("compose.sent"));
       onOpenChange(false);
       onSent(data.threadId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al enviar");
+      toast.error(e instanceof Error ? e.message : t("sendError"));
     } finally {
       setBusy(false);
     }
-  }, [mailbox, to, subject, body, draftId, onOpenChange, onSent]);
+  }, [mailbox, to, subject, body, draftId, onOpenChange, onSent, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg" className="gap-3">
         <DialogHeader>
-          <DialogTitle>Nuevo mensaje</DialogTitle>
-          <DialogDescription>
-            Se envía desde tu correo de empresa vía Resend. Sin Gmail.
-          </DialogDescription>
+          <DialogTitle>{t("compose.title")}</DialogTitle>
+          <DialogDescription>{t("compose.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            De
+            {t("compose.from")}
             <select
               className="mt-1 w-full rounded border border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-2 py-1.5 text-[13px]"
               value={mailbox}
@@ -170,31 +170,31 @@ export function ComposeDialog({
           </label>
 
           <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            Para
+            {t("compose.to")}
             <Input
               className="mt-1"
               type="email"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              placeholder="destinatario@ejemplo.com"
+              placeholder={t("compose.recipientPlaceholder")}
               disabled={busy}
               autoComplete="off"
             />
           </label>
 
           <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            Asunto
+            {t("compose.subject")}
             <Input
               className="mt-1"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Asunto"
+              placeholder={t("compose.subject")}
               disabled={busy}
             />
           </label>
 
           <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            Mensaje
+            {t("compose.message")}
             <textarea
               className="mt-1 min-h-36 w-full resize-y rounded border border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-2 py-1.5 text-[13px]"
               value={body}
@@ -213,7 +213,7 @@ export function ComposeDialog({
             onClick={() => void handleSaveDraft()}
           >
             <Save className="mr-1 h-3.5 w-3.5" />
-            Guardar borrador
+            {t("compose.saveDraft")}
           </Button>
           <Button
             type="button"
@@ -222,7 +222,7 @@ export function ComposeDialog({
             onClick={() => void handleSend()}
           >
             <Send className="mr-1 h-3.5 w-3.5" />
-            {busy ? "Enviando…" : "Enviar"}
+            {busy ? t("compose.sending") : t("compose.send")}
           </Button>
         </DialogFooter>
       </DialogContent>

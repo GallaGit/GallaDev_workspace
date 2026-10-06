@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useSessionAccess } from "@/components/session-access";
 import type { AppRole } from "@/lib/auth";
@@ -18,6 +19,7 @@ const ROLES: AppRole[] = ["Admin", "Seller", "Viewer"];
  * (nacen sin rol) y puede cambiar el de las existentes.
  */
 export function SettingsTeam() {
+  const t = useTranslations("settings");
   const { isAdmin, ready } = useSessionAccess();
   const [members, setMembers] = useState<Member[]>([]);
   const [draft, setDraft] = useState<Record<string, AppRole | "">>({});
@@ -35,12 +37,12 @@ export function SettingsTeam() {
         setMembers(data.members);
       })
       .catch(() => {
-        if (!cancelled) setError("No se pudo cargar el equipo");
+        if (!cancelled) setError(t("teamPanel.loadError"));
       });
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, ready]);
+  }, [isAdmin, ready, t]);
 
   if (!ready || !isAdmin) return null;
 
@@ -57,7 +59,7 @@ export function SettingsTeam() {
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setError(data?.error || "No se pudo asignar el rol");
+        setError(data?.error || t("teamPanel.roleError"));
         return;
       }
       setMembers((current) =>
@@ -69,7 +71,7 @@ export function SettingsTeam() {
         return next;
       });
     } catch {
-      setError("Error de red al asignar el rol");
+      setError(t("teamPanel.networkError"));
     } finally {
       setSavingId(null);
     }
@@ -78,13 +80,9 @@ export function SettingsTeam() {
   return (
     <section aria-labelledby="equipo-heading" className="rounded-lg border border-border bg-panel p-4">
       <h3 id="equipo-heading" className="text-sm font-semibold text-fg">
-        Equipo
+        {t("team")}
       </h3>
-      <p className="mt-1 text-sm text-muted-fg">
-        Las cuentas nuevas entran sin rol y no ven leads. Asigna Admin,
-        Seller o Viewer. Los leads sin responsable solo los ves tú hasta
-        que elijas un Seller.
-      </p>
+      <p className="mt-1 text-sm text-muted-fg">{t("teamPanel.description")}</p>
       {error ? (
         <p role="alert" className="mt-2 text-sm text-red-400">
           {error}
@@ -92,7 +90,7 @@ export function SettingsTeam() {
       ) : null}
       <ul className="mt-3 space-y-2">
         {members.length === 0 ? (
-          <li className="text-sm text-muted-fg">No hay cuentas que mostrar.</li>
+          <li className="text-sm text-muted-fg">{t("teamPanel.empty")}</li>
         ) : (
           members.map((member) => {
             const current = (draft[member.id] || member.role || "") as AppRole | "";
@@ -106,10 +104,10 @@ export function SettingsTeam() {
                   {member.email ?? member.id}
                 </span>
                 <span className="text-xs text-muted-fg">
-                  {member.role ?? "Pendiente"}
+                  {member.role ?? t("teamPanel.pending")}
                 </span>
                 <label className="sr-only" htmlFor={`role-${member.id}`}>
-                  Rol de {member.email ?? member.id}
+                  {t("teamPanel.roleOf", { member: member.email ?? member.id })}
                 </label>
                 <select
                   id={`role-${member.id}`}
@@ -123,7 +121,7 @@ export function SettingsTeam() {
                   }
                 >
                   <option value="" disabled>
-                    Elegir rol
+                    {t("teamPanel.chooseRole")}
                   </option>
                   {ROLES.map((role) => (
                     <option key={role} value={role}>
@@ -137,7 +135,7 @@ export function SettingsTeam() {
                   disabled={!dirty || savingId === member.id}
                   onClick={() => void save(member)}
                 >
-                  Guardar
+                  {t("teamPanel.save")}
                 </Button>
               </li>
             );

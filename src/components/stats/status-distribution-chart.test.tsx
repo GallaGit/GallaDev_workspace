@@ -5,13 +5,14 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   useServerInsertedHTML: () => undefined,
 }));
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import type { CountRow } from "@/lib/leads/compute-stats";
 import { STATS_CHART_STORAGE_KEY } from "@/components/stats/chart-type";
 import { StatusDistributionChart } from "@/components/stats/status-distribution-chart";
 import { StatsPage } from "@/components/stats/stats-page";
 import { useUiStore } from "@/store/ui-store";
 import type { Lead, LeadStatus } from "@/lib/domain/lead";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => (
@@ -108,7 +109,7 @@ describe("StatusDistributionChart", () => {
   });
 
   it("defaults to bars and switches among the three types", () => {
-    render(<StatusDistributionChart rows={mixed} />);
+    renderWithIntl(<StatusDistributionChart rows={mixed} />);
 
     expect(screen.getByRole("radio", { name: "Barras" })).toBeChecked();
     expect(screen.getByTestId("chart-barras")).toBeInTheDocument();
@@ -123,7 +124,7 @@ describe("StatusDistributionChart", () => {
   });
 
   it("does not draw a donut when only one status has leads", () => {
-    render(
+    renderWithIntl(
       <StatusDistributionChart rows={[row("Nuevo", 5), row("Cliente", 0)]} />,
     );
     fireEvent.click(screen.getByRole("radio", { name: "Circular" }));
@@ -133,13 +134,13 @@ describe("StatusDistributionChart", () => {
   });
 
   it("shows an empty message instead of a chart when every count is zero", () => {
-    render(<StatusDistributionChart rows={[row("Nuevo", 0)]} />);
+    renderWithIntl(<StatusDistributionChart rows={[row("Nuevo", 0)]} />);
     expect(screen.getByRole("status").textContent).toMatch(/Sin datos para graficar/);
     expect(screen.queryByTestId("chart-barras")).not.toBeInTheDocument();
   });
 
   it("persists the choice in localStorage", () => {
-    const view = render(<StatusDistributionChart rows={mixed} />);
+    const view = renderWithIntl(<StatusDistributionChart rows={mixed} />);
     fireEvent.click(screen.getByRole("radio", { name: "Área" }));
     expect(window.localStorage.setItem).toHaveBeenCalledWith(
       STATS_CHART_STORAGE_KEY,
@@ -147,7 +148,7 @@ describe("StatusDistributionChart", () => {
     );
     view.unmount();
 
-    render(<StatusDistributionChart rows={mixed} />);
+    renderWithIntl(<StatusDistributionChart rows={mixed} />);
     expect(screen.getByRole("radio", { name: "Área" })).toBeChecked();
     expect(screen.getByTestId("chart-area")).toBeInTheDocument();
   });
@@ -189,7 +190,7 @@ describe("StatsPage chart selector", () => {
   });
 
   it("keeps funnel rates and breakdowns when the chart type changes", () => {
-    render(<StatsPage />);
+    renderWithIntl(<StatsPage />);
 
     expect(screen.getByRole("radiogroup", { name: "Tipo de gráfico" })).toBeInTheDocument();
     expect(screen.getByText("Tasa de validación")).toBeInTheDocument();

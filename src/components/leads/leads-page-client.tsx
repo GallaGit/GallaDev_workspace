@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { LeadFiltersBar } from "@/components/leads/lead-filters";
 import { LeadTable } from "@/components/leads/lead-table";
@@ -23,6 +24,7 @@ function buildLeadsUrl(opts: {
 }
 
 export function LeadsPageClient() {
+  const t = useTranslations("leads");
   const searchParams = useSearchParams();
   const router = useRouter();
   useEnsureLeadsSynced();
@@ -69,7 +71,7 @@ export function LeadsPageClient() {
 
   return (
     <>
-      <Topbar title="Leads" />
+      <Topbar title={t("title")} />
       <LeadFiltersBar />
       <BulkActionBar />
       <div className="flex min-h-0 flex-1">

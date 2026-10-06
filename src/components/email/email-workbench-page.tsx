@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
 import { useSessionAccess } from "@/components/session-access";
@@ -10,6 +11,7 @@ import { useEnsureLeadsSynced } from "@/hooks/use-ensure-leads-synced";
 import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
 import { readJsonResponse } from "@/lib/http/read-json";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 import { outreachV1 } from "@/lib/templates/outreach-v1";
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
 import { useUiStore } from "@/store/ui-store";
@@ -21,6 +23,8 @@ function hasDraft(lead: Lead): boolean {
 }
 
 export function EmailWorkbenchPage() {
+  const t = useTranslations("email");
+  const tStatus = useTranslations("leadStatus");
   useEnsureLeadsSynced();
   const leads = useUiStore((s) => s.leads);
   const upsertLead = useUiStore((s) => s.upsertLead);
@@ -42,17 +46,14 @@ export function EmailWorkbenchPage() {
 
   return (
     <>
-      <Topbar title="Email" />
+      <Topbar title={t("title")} />
       <div className="flex min-h-0 flex-1">
         <aside className="w-72 shrink-0 overflow-y-auto border-r border-(--border) bg-(--panel)">
           <div className="border-b border-(--border) px-3 py-2 text-[11px] text-(--muted-fg)">
-            Borradores · {candidates.length}
+            {t("draftCount", { count: candidates.length })}
           </div>
           {candidates.length === 0 ? (
-            <p className="p-3 text-[12px] text-(--muted-fg)">
-              No hay emails generados. Genera borradores en n8n o aplica la
-              plantilla desde un lead.
-            </p>
+            <p className="p-3 text-[12px] text-(--muted-fg)">{t("empty")}</p>
           ) : (
             <ul>
               {candidates.map((lead) => (
@@ -68,7 +69,7 @@ export function EmailWorkbenchPage() {
                       {lead.companyName}
                     </div>
                     <div className="mt-0.5 truncate text-[10px] text-(--muted-fg)">
-                      {lead.emailSubject || lead.status}
+                      {lead.emailSubject || leadStatusLabel(tStatus, lead.status)}
                     </div>
                   </button>
                 </li>
@@ -78,9 +79,7 @@ export function EmailWorkbenchPage() {
         </aside>
         <div className="min-w-0 flex-1 overflow-y-auto p-4">
           {!selected ? (
-            <p className="text-sm text-(--muted-fg)">
-              Selecciona un lead con borrador a la izquierda.
-            </p>
+            <p className="text-sm text-(--muted-fg)">{t("select")}</p>
           ) : (
             <EmailDraftPanel
               key={selected.id}
@@ -101,6 +100,9 @@ function EmailDraftPanel({
   selected: Lead;
   upsertLead: (lead: Lead) => void;
 }) {
+  const t = useTranslations("email");
+  const tStatus = useTranslations("leadStatus");
+  const tAuto = useTranslations("automations");
   const [subject, setSubject] = useState(selected.emailSubject ?? "");
   const [body, setBody] = useState(selected.emailBody ?? "");
   const [saving, setSaving] = useState(false);
@@ -118,12 +120,14 @@ function EmailDraftPanel({
       const data = await readJsonResponse<{
         lead: Lead;
         automation?: AutomationDispatchResult;
-      }>(res, "Error al guardar");
+      }>(res, t("saveError"));
       upsertLead(data.lead);
-      toast.success("Guardado");
-      toastAutomationDispatch(data.automation);
+      toast.success(t("saved"));
+      toastAutomationDispatch(data.automation, {
+        dispatched: tAuto("dispatched"),
+      });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error");
+      toast.error(e instanceof Error ? e.message : t("saveError"));
     } finally {
       setSaving(false);
     }
@@ -131,9 +135,7 @@ function EmailDraftPanel({
 
   function applyTemplate() {
     if (body.trim()) {
-      const ok = window.confirm(
-        "El cuerpo no está vacío. ¿Sustituir por la plantilla outreach-v1?",
-      );
+      const ok = window.confirm(t("replaceTemplate"));
       if (!ok) return;
     }
     const ctx = {
@@ -149,7 +151,8 @@ function EmailDraftPanel({
     <div className="mx-auto max-w-2xl">
       <h2 className="mb-1 text-sm font-semibold">{selected.companyName}</h2>
       <p className="mb-4 text-[12px] text-(--muted-fg)">
-        {selected.email ?? "Sin correo"} · {selected.status}
+        {selected.email ?? t("noEmail")} ·{" "}
+        {leadStatusLabel(tStatus, selected.status)}
       </p>
       <EmailEditor
         subject={subject}
@@ -169,7 +172,7 @@ function EmailDraftPanel({
         }
         onCopy={() => {
           void navigator.clipboard.writeText(`${subject}\n\n${body}`);
-          toast.success("Email copiado");
+          toast.success(t("copied"));
         }}
         onMarkPrepared={() =>
           void savePatch({

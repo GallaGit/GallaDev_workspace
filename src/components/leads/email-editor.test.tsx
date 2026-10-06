@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import { cleanup, screen, fireEvent } from "@testing-library/react";
 import { EmailEditor } from "@/components/leads/email-editor";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 vi.mock("@/lib/utils/gmail-compose", () => ({
   openGmailCompose: vi.fn(),
@@ -23,7 +24,7 @@ describe("EmailEditor", () => {
   };
 
   it("renders subject and body fields", () => {
-    render(<EmailEditor {...defaultProps} />);
+    renderWithIntl(<EmailEditor {...defaultProps} />);
     expect(screen.getByPlaceholderText("Asunto")).toHaveValue("Test Subject");
     expect(screen.getByPlaceholderText("Cuerpo (texto plano)")).toHaveValue(
       "Test body content",
@@ -31,7 +32,7 @@ describe("EmailEditor", () => {
   });
 
   it("calls onSubjectChange when subject changes", () => {
-    render(<EmailEditor {...defaultProps} />);
+    renderWithIntl(<EmailEditor {...defaultProps} />);
     fireEvent.change(screen.getByPlaceholderText("Asunto"), {
       target: { value: "New Subject" },
     });
@@ -39,7 +40,7 @@ describe("EmailEditor", () => {
   });
 
   it("calls onBodyChange when body changes", () => {
-    render(<EmailEditor {...defaultProps} />);
+    renderWithIntl(<EmailEditor {...defaultProps} />);
     fireEvent.change(screen.getByPlaceholderText("Cuerpo (texto plano)"), {
       target: { value: "New body" },
     });
@@ -47,7 +48,7 @@ describe("EmailEditor", () => {
   });
 
   it("exposes save, copy and mark prepared actions", () => {
-    render(<EmailEditor {...defaultProps} />);
+    renderWithIntl(<EmailEditor {...defaultProps} />);
     fireEvent.click(screen.getByRole("button", { name: /guardar email/i }));
     fireEvent.click(screen.getByRole("button", { name: /copiar/i }));
     fireEvent.click(screen.getByRole("button", { name: /marcar preparado/i }));
@@ -57,7 +58,7 @@ describe("EmailEditor", () => {
   });
 
   it("shows apply template when enabled", () => {
-    render(<EmailEditor {...defaultProps} />);
+    renderWithIntl(<EmailEditor {...defaultProps} />);
     fireEvent.click(screen.getByRole("button", { name: /aplicar plantilla/i }));
     expect(defaultProps.onApplyTemplate).toHaveBeenCalled();
   });

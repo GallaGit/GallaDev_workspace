@@ -2,11 +2,11 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConnectionBadge } from "@/components/settings/connection-badge";
 import { SecretField, TextField } from "@/components/settings/fields";
-import { AUTOMATION_CATALOG } from "@/lib/settings/catalog";
 import type {
   AutomationAction,
   IntegrationId,
@@ -24,6 +24,12 @@ type Draft = {
   aiApiKey: string;
   aiModel: string;
   serpapiKey: string;
+};
+
+const CATALOG_KEYS: Record<AutomationAction, "leadCreated" | "leadUpdated" | "leadAnalyzed"> = {
+  lead_created: "leadCreated",
+  lead_updated: "leadUpdated",
+  lead_analyzed: "leadAnalyzed",
 };
 
 function seedDraft(settings: PublicSettings): Draft {
@@ -47,37 +53,30 @@ function optionalSecret(value: string): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-async function fetchPublicSettings(): Promise<PublicSettings> {
-  const res = await fetch("/api/settings");
-  const data = (await res.json()) as PublicSettings & { error?: string };
-  if (!res.ok) throw new Error(data.error || "No se pudo cargar Settings");
-  return data;
-}
-
 export function SettingsIntegrations() {
+  const t = useTranslations("settings");
   const { isAdmin, ready } = useSessionAccess();
   const query = useQuery({
     queryKey: ["settings"],
-    queryFn: fetchPublicSettings,
+    queryFn: async (): Promise<PublicSettings> => {
+      const res = await fetch("/api/settings");
+      const data = (await res.json()) as PublicSettings & { error?: string };
+      if (!res.ok) throw new Error(data.error || t("loadError"));
+      return data;
+    },
     enabled: ready && isAdmin,
   });
 
   if (!ready || (isAdmin && query.isPending)) {
-    return <p className="text-sm text-(--muted-fg)">Cargando…</p>;
+    return <p className="text-sm text-(--muted-fg)">{t("loading")}</p>;
   }
   if (!isAdmin) {
-    return (
-      <p className="text-sm text-(--muted-fg)">
-        Solo un administrador puede ver la configuración de integraciones.
-      </p>
-    );
+    return <p className="text-sm text-(--muted-fg)">{t("adminOnlyView")}</p>;
   }
   if (query.isError || !query.data) {
     return (
       <p className="text-sm text-red-400">
-        {query.error instanceof Error
-          ? query.error.message
-          : "No se pudo cargar Settings"}
+        {query.error instanceof Error ? query.error.message : t("loadError")}
       </p>
     );
   }
@@ -86,6 +85,8 @@ export function SettingsIntegrations() {
 }
 
 function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
+  const t = useTranslations("settings");
+  const tAuto = useTranslations("automations");
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState(initial);
   const [draft, setDraft] = useState(() => seedDraft(initial));
@@ -103,7 +104,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
 
   async function save(patch: SettingsPatch, scope: IntegrationId) {
     if (!isAdmin) {
-      toast.error("No tienes permiso para realizar esta acción");
+      toast.error(t("permissionDenied"));
       return;
     }
     setSaving(scope);
@@ -121,12 +122,12 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         const first = data.fieldErrors
           ? Object.values(data.fieldErrors)[0]
           : data.error;
-        throw new Error(first || "No se pudo guardar");
+        throw new Error(first || t("saveFailed"));
       }
       remember(data);
-      toast.success("Configuración guardada");
+      toast.success(t("saved"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al guardar");
+      toast.error(e instanceof Error ? e.message : t("saveError"));
     } finally {
       setSaving(null);
     }
@@ -134,7 +135,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
 
   async function test(integration: IntegrationId, overrides?: SettingsPatch) {
     if (!isAdmin) {
-      toast.error("No tienes permiso para realizar esta acción");
+      toast.error(t("permissionDenied"));
       return;
     }
     setTesting(integration);
@@ -150,15 +151,15 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         error?: string;
         settings?: PublicSettings;
       };
-      if (!res.ok) throw new Error(data.error || "Error al probar");
+      if (!res.ok) throw new Error(data.error || t("testError"));
       if (data.settings) {
         setSettings(data.settings);
         queryClient.setQueryData(["settings"], data.settings);
       }
-      if (data.ok) toast.success(data.message || "Conexión correcta");
-      else toast.error(data.message || "Conexión fallida");
+      if (data.ok) toast.success(data.message || t("connectionOk"));
+      else toast.error(data.message || t("connectionFailed"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al probar");
+      toast.error(e instanceof Error ? e.message : t("testError"));
     } finally {
       setTesting(null);
     }
@@ -171,28 +172,20 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
   return (
     <div className="space-y-4">
       {!isAdmin ? (
-        <p className="text-sm text-(--muted-fg)">
-          Solo un administrador puede cambiar la configuración. Puedes
-          consultar el estado de las integraciones.
-        </p>
+        <p className="text-sm text-(--muted-fg)">{t("adminOnlyChange")}</p>
       ) : null}
 
-      <p className="text-sm text-(--muted-fg)">
-        Secretos solo en el servidor. Los valores se mezclan desde{" "}
-        <code>.env.local</code> (arranque) y{" "}
-        <code>data/settings.local.json</code> (cambios de esta pantalla). El
-        navegador solo ve si está configurado y las últimas 4 caracteres.
-      </p>
+      <p className="text-sm text-(--muted-fg)">{t("secretsInfo")}</p>
 
       <div className="rounded-lg border border-(--border) bg-(--panel) px-4 py-3 text-sm">
         <div className="flex items-center justify-between">
-          <span>Auth desactivado (local)</span>
+          <span>{t("authDisabled")}</span>
           <span
             className={
               settings.authDisabled ? "text-emerald-400" : "text-amber-400"
             }
           >
-            {settings.authDisabled ? "OK" : "Activa"}
+            {settings.authDisabled ? t("connection.ok") : t("active")}
           </span>
         </div>
       </div>
@@ -206,14 +199,16 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         />
         <TextField
           id="n8n-url"
-          label="URL base"
+          label={t("urlBase")}
           value={draft.n8nBaseUrl}
           onChange={(v) => setDraft((d) => ({ ...d, n8nBaseUrl: v }))}
           placeholder="https://n8n.ejemplo.com"
           hint={
             settings.n8n.baseUrl.configured
-              ? `Configurado ${settings.n8n.baseUrl.preview ?? ""}. Vacío = no cambiar. Solo https, sin usuario ni contraseña.`
-              : "Opcional. Solo https, sin usuario ni contraseña. Se usa para Probar conexión (/healthz)."
+              ? t("urlHintConfigured", {
+                  preview: settings.n8n.baseUrl.preview ?? "",
+                })
+              : t("urlHintEmpty")
           }
           disabled={!isAdmin}
         />
@@ -225,7 +220,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         ) : null}
         <SecretField
           id="n8n-key"
-          label="API key"
+          label={t("apiKey")}
           field={settings.n8n.apiKey}
           value={draft.n8nApiKey}
           onChange={(v) => setDraft((d) => ({ ...d, n8nApiKey: v }))}
@@ -241,7 +236,9 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           <SecretField
             key={action}
             id={`n8n-wh-${action}`}
-            label={`Webhook · ${AUTOMATION_CATALOG[action].name}`}
+            label={t("webhook", {
+              name: tAuto(`catalog.${CATALOG_KEYS[action]}.name`),
+            })}
             field={settings.n8n.webhooks[action]}
             value={draft.n8nWebhooks[action]}
             onChange={(v) =>
@@ -304,7 +301,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
             htmlFor="ai-provider"
             className="mb-1 block text-[11px] font-medium text-(--muted-fg)"
           >
-            Proveedor
+            {t("provider")}
           </label>
           <select
             id="ai-provider"
@@ -320,7 +317,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         </div>
         <SecretField
           id="ai-key"
-          label="API key"
+          label={t("apiKey")}
           field={settings.ai.apiKey}
           value={draft.aiApiKey}
           onChange={(v) => setDraft((d) => ({ ...d, aiApiKey: v }))}
@@ -334,7 +331,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         ) : null}
         <TextField
           id="ai-model"
-          label="Modelo"
+          label={t("model")}
           value={draft.aiModel}
           onChange={(v) => setDraft((d) => ({ ...d, aiModel: v }))}
           disabled={!isAdmin}
@@ -384,7 +381,7 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
         />
         <SecretField
           id="serp-key"
-          label="API key"
+          label={t("apiKey")}
           field={settings.serpapi.apiKey}
           value={draft.serpapiKey}
           onChange={(v) => setDraft((d) => ({ ...d, serpapiKey: v }))}
@@ -434,12 +431,13 @@ function Header({
   connection: PublicSettings["n8n"]["connection"];
   pending?: boolean;
 }) {
+  const t = useTranslations("settings");
   return (
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div>
         <h2 className="text-[13px] font-medium tracking-tight">{title}</h2>
         <p className="text-[11px] text-(--muted-fg)">
-          {configured ? "Credenciales presentes" : "Pendiente de configurar"}
+          {configured ? t("credentialsPresent") : t("pendingConfiguration")}
         </p>
       </div>
       <ConnectionBadge connection={connection} pending={pending} />
@@ -460,10 +458,11 @@ function Actions({
   onSave: () => void;
   onTest: () => void;
 }) {
+  const t = useTranslations("settings");
   return (
     <div className="flex flex-wrap gap-2 pt-1">
       <Button size="sm" onClick={onSave} disabled={locked || saving || testing}>
-        {saving ? "Guardando…" : "Guardar"}
+        {saving ? t("saving") : t("save")}
       </Button>
       <Button
         size="sm"
@@ -471,7 +470,7 @@ function Actions({
         onClick={onTest}
         disabled={locked || saving || testing}
       >
-        {testing ? "Probando…" : "Probar conexión"}
+        {testing ? t("testing") : t("testConnection")}
       </Button>
     </div>
   );
@@ -484,15 +483,14 @@ function ClearLink({
   onClick: () => void;
   active: boolean;
 }) {
+  const t = useTranslations("settings");
   return (
     <button
       type="button"
       onClick={onClick}
       className="text-[11px] text-(--muted-fg) underline-offset-2 hover:text-(--fg) hover:underline"
     >
-      {active
-        ? "Al guardar se restaurará el valor de .env"
-        : "Restablecer a .env al guardar"}
+      {active ? t("willResetEnv") : t("resetEnv")}
     </button>
   );
 }

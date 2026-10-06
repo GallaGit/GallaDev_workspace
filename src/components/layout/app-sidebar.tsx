@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -20,24 +21,26 @@ import { cn } from "@/lib/utils";
 import { useNavChrome } from "@/components/layout/nav-chrome";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { useSessionAccess } from "@/components/session-access";
 
 const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inbox", label: "Daily Work", icon: Inbox },
-  { href: "/leads", label: "Leads", icon: Users },
-  { href: "/kanban", label: "Kanban", icon: Columns3 },
-  { href: "/stats", label: "Statistics", icon: BarChart3 },
-  { href: "/email", label: "Email", icon: Mail },
-  { href: "/correo", label: "Correo", icon: MailCheck },
-  { href: "/automations", label: "Automations", icon: Workflow },
-  { href: "/duplicates", label: "Duplicados", icon: Copy },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/inbox", labelKey: "nav.dailyWork", icon: Inbox },
+  { href: "/leads", labelKey: "nav.leads", icon: Users },
+  { href: "/kanban", labelKey: "nav.kanban", icon: Columns3 },
+  { href: "/stats", labelKey: "nav.statistics", icon: BarChart3 },
+  { href: "/email", labelKey: "nav.email", icon: Mail },
+  { href: "/correo", labelKey: "nav.correo", icon: MailCheck },
+  { href: "/automations", labelKey: "nav.automations", icon: Workflow },
+  { href: "/duplicates", labelKey: "nav.duplicates", icon: Copy },
+  { href: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 const HIDDEN_FOR_VISITOR = new Set(["/email", "/correo", "/automations", "/settings"]);
 
 export function AppSidebar() {
+  const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
   const { open, close, navId } = useNavChrome();
@@ -137,7 +140,7 @@ export function AppSidebar() {
       data-app-sidebar
       role={drawerActive ? "dialog" : undefined}
       aria-modal={drawerActive ? true : undefined}
-      aria-label={drawerActive ? "Menú de navegación" : undefined}
+      aria-label={drawerActive ? t("nav.menuAria") : undefined}
       aria-hidden={isMobile && !open ? true : undefined}
       className={cn(
         "flex h-full w-55 flex-col bg-sidebar",
@@ -150,13 +153,16 @@ export function AppSidebar() {
       <div className="flex h-12 items-center gap-2 px-4">
         <div className="h-5 w-5 rounded bg-accent" />
         <span className="text-sm font-semibold tracking-tight text-fg">
-          Leads_CRM
+          {t("nav.brand")}
         </span>
       </div>
-      <nav className="flex flex-1 flex-col gap-0.5 p-2" aria-label="Principal">
+      <nav
+        className="flex flex-1 flex-col gap-0.5 p-2"
+        aria-label={t("nav.principalAria")}
+      >
         {NAV.filter(
           (item) => !isVisitor || !HIDDEN_FOR_VISITOR.has(item.href),
-        ).map(({ href, label, icon: Icon }) => {
+        ).map(({ href, labelKey, icon: Icon }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
@@ -173,12 +179,13 @@ export function AppSidebar() {
               )}
             >
               <Icon className="h-4 w-4 opacity-70" />
-              {label}
+              {t(labelKey)}
             </Link>
           );
         })}
       </nav>
       <div className="flex flex-col gap-1 p-3">
+        <LocaleSwitcher className="mb-1 self-start" />
         <button
           type="button"
           onClick={handleLogout}
@@ -186,9 +193,11 @@ export function AppSidebar() {
           className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-muted-fg transition-colors hover:bg-muted hover:text-fg"
         >
           <LogOut className="h-4 w-4 opacity-70" />
-          {isVisitor ? "Salir de la demo" : "Cerrar sesión"}
+          {isVisitor ? t("nav.exitDemo") : t("nav.logout")}
         </button>
-        <div className="text-[11px] text-muted-fg">developed by GallaDev</div>
+        <div className="text-[11px] text-muted-fg">
+          {t("nav.developedBy")}
+        </div>
       </div>
     </aside>
   );

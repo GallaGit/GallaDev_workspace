@@ -4,6 +4,14 @@ CRM for reviewing, qualifying, and managing leads for asesorías y gestorías. *
 
 > Formerly `Leads_CRM`. Production: [https://workspace.galladev.com](https://workspace.galladev.com).
 
+**[Live demo](https://workspace.galladev.com/login)** — open the login page and choose **Entrar como visitante** (fictional data only). The UI is available in **Spanish** (default) and **English** via the ES/EN control.
+
+<p>
+  <img src="./docs/screenshots/dashboard.webp" alt="Dashboard" width="420" />
+  <img src="./docs/screenshots/leads-list.webp" alt="Leads list" width="420" />
+  <img src="./docs/screenshots/kanban.webp" alt="Kanban" width="420" />
+</p>
+
 ## Quickstart
 
 ```bash
@@ -17,7 +25,7 @@ Open [http://localhost:3000/leads](http://localhost:3000/leads). The app syncs o
 
 ## Demo
 
-A passwordless visitor session shows the real UI with fictional leads only. It is **off unless** `DEMO_MODE_ENABLED` is `true` or `1`, and it also needs `DEMO_SESSION_SECRET` (16+ characters). Then the login page shows **Entrar como visitante**. The signed cookie lasts 4 hours, never reads or writes Supabase, and blocks settings, automations, team, ingest, email, and live AI. Set `DEMO_MODE_ENABLED=false` (or unset it) to turn the button off without a code change. Activation in Vercel Production is still pending. The same page will also show a public **¿Qué es? / What is it?** section (specified, not built yet): text and screenshots, no session, alongside the visitor button. Details: [operations guide](./docs/04-operations-user-guide/GDW_context.md) and [what-it-is.md](./docs/02-roadmap-delivery/what-it-is.md).
+A passwordless visitor session shows the real UI with fictional leads only. It is **off unless** `DEMO_MODE_ENABLED` is `true` or `1`, and it also needs `DEMO_SESSION_SECRET` (16+ characters). Then the login page shows **Entrar como visitante**. The signed cookie lasts 4 hours, never reads or writes Supabase, and blocks settings, automations, team, ingest, email, and live AI. Set `DEMO_MODE_ENABLED=false` (or unset it) to turn the button off without a code change. The live demo is active at [https://workspace.galladev.com/login](https://workspace.galladev.com/login). The same page will also show a public **¿Qué es? / What is it?** section (specified, not built yet): text and screenshots, no session, alongside the visitor button. Details: [operations guide](./docs/04-operations-user-guide/GDW_context.md) and [what-it-is.md](./docs/02-roadmap-delivery/what-it-is.md).
 
 Minimal config:
 

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Search, Command, X, ChevronRight, Keyboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motionPresets } from "@/lib/motion/presets";
@@ -31,7 +32,9 @@ interface CommandPaletteProps {
   placeholder?: string;
 }
 
-export function CommandPalette({ sections, open, onOpenChange, placeholder = "Buscar comandos..." }: CommandPaletteProps) {
+export function CommandPalette({ sections, open, onOpenChange, placeholder }: CommandPaletteProps) {
+  const t = useTranslations("commandPalette");
+  const resolvedPlaceholder = placeholder ?? t("placeholder");
   const [query, setQuery] = React.useState("");
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [prevOpen, setPrevOpen] = React.useState(open);
@@ -144,9 +147,9 @@ export function CommandPalette({ sections, open, onOpenChange, placeholder = "Bu
                   setQuery(e.target.value);
                   setSelectedIndex(0);
                 }}
-                placeholder={placeholder}
+                placeholder={resolvedPlaceholder}
                 className="flex-1 bg-transparent text-base text-grafito dark:text-gris-100 placeholder:text-gris-400 focus:outline-none"
-                aria-label="Buscar comandos"
+                aria-label={t("searchAria")}
                 autoComplete="off"
               />
               <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-mono text-gris-500 dark:text-gris-400 bg-gris-100 dark:bg-gris-800 rounded">
@@ -156,7 +159,7 @@ export function CommandPalette({ sections, open, onOpenChange, placeholder = "Bu
               <button
                 onClick={() => onOpenChange(false)}
                 className="p-1 text-gris-400 hover:text-gris-600 dark:hover:text-gris-300 transition-colors rounded-lg hover:bg-gris-100 dark:hover:bg-gris-800"
-                aria-label="Cerrar"
+                aria-label={t("close")}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -171,11 +174,11 @@ export function CommandPalette({ sections, open, onOpenChange, placeholder = "Bu
                 exit={reduced ? undefined : { opacity: 0, y: -8 }}
                 transition={reduced ? { duration: 0 } : { duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
                 role="listbox"
-                aria-label="Resultados"
+                aria-label={t("results")}
               >
                 {filteredItems.length === 0 ? (
                   <li className="px-4 py-8 text-center text-gris-500 dark:text-gris-400">
-                    No se encontraron comandos
+                    {t("empty")}
                   </li>
                 ) : (
                   sections.map((section) => {
@@ -238,7 +241,7 @@ export function CommandPalette({ sections, open, onOpenChange, placeholder = "Bu
             </AnimatePresence>
 
             <div className="border-t border-gris-200 dark:border-gris-700 px-4 py-2 text-xs text-gris-500 dark:text-gris-400 flex items-center justify-between">
-              <span>↑↓ Navegar · Enter Ejecutar · Esc Cerrar</span>
+              <span>{t("instructions")}</span>
               <kbd className="px-2 py-0.5 font-mono bg-gris-100 dark:bg-gris-800 rounded">
                 <Keyboard className="h-3 w-3 inline" aria-hidden="true" />
                 <span className="ml-1">K</span>

@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AppError from "@/app/error";
 import GlobalError from "@/app/global-error";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 afterEach(() => {
   cleanup();
@@ -14,7 +15,7 @@ describe("error boundary", () => {
       "fallo sk-live-secret user@example.com",
     ) as Error & { digest?: string };
     error.digest = "abc123";
-    render(<AppError error={error} retry={retry} />);
+    renderWithIntl(<AppError error={error} retry={retry} />);
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(
@@ -33,12 +34,12 @@ describe("error boundary", () => {
   });
 
   it("omite la referencia si no hay digest", () => {
-    render(<AppError error={new Error("x")} retry={vi.fn()} />);
+    renderWithIntl(<AppError error={new Error("x")} retry={vi.fn()} />);
     expect(screen.queryByText(/Ref\./)).not.toBeInTheDocument();
   });
 
   it("global-error usa el mismo fallback", () => {
-    render(<GlobalError error={new Error("layout")} retry={vi.fn()} />);
+    renderWithIntl(<GlobalError error={new Error("layout")} retry={vi.fn()} />);
     expect(
       screen.getByRole("heading", { name: "Algo ha fallado" }),
     ).toBeInTheDocument();

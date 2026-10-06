@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Manrope, JetBrains_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppProviders } from "@/components/app-providers";
 import "./globals.css";
@@ -31,14 +33,17 @@ export default async function RootLayout({
   // Lee el nonce para forzar render dinámico. Next aplica ese valor a
   // los scripts del framework; el script de tema lo recibe aparte.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const locale = await getLocale();
   return (
-    <html lang="es" suppressHydrationWarning className="h-full">
+    <html lang={locale} suppressHydrationWarning className="h-full">
       <body
         className={`${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
-        <AppProviders nonce={nonce}>
-          <AppShell>{children}</AppShell>
-        </AppProviders>
+        <NextIntlClientProvider>
+          <AppProviders nonce={nonce}>
+            <AppShell>{children}</AppShell>
+          </AppProviders>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

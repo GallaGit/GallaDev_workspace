@@ -1,4 +1,5 @@
-import { PAIN_SECTION_LABELS, type PainAnalysis } from "@/lib/ai/pain-analysis";
+import { useTranslations } from "next-intl";
+import type { PainAnalysis } from "@/lib/ai/pain-analysis";
 
 const SECTION_ORDER = [
   "evidence",
@@ -7,6 +8,8 @@ const SECTION_ORDER = [
 ] as const satisfies ReadonlyArray<keyof PainAnalysis>;
 
 export function PainAnalysisBlocks({ analysis }: { analysis: PainAnalysis }) {
+  const t = useTranslations("leads.ai");
+
   return (
     <div className="divide-y divide-(--border)">
       {SECTION_ORDER.map((key) => {
@@ -22,11 +25,11 @@ export function PainAnalysisBlocks({ analysis }: { analysis: PainAnalysis }) {
           >
             <div className="flex items-center gap-1.5">
               <h4 className="text-[11px] font-semibold uppercase tracking-wide text-(--muted-fg)">
-                {PAIN_SECTION_LABELS[key]}
+                {t(key)}
               </h4>
               {key === "speculation" ? (
                 <span className="rounded border border-(--border) px-1 py-px text-[10px] leading-none text-(--muted-fg)">
-                  hipótesis
+                  {t("hypothesis")}
                 </span>
               ) : null}
             </div>
@@ -55,12 +58,14 @@ export function PainAnalysisBlocks({ analysis }: { analysis: PainAnalysis }) {
 }
 
 export function PainAnalysisSkeletons() {
+  const t = useTranslations("leads.ai");
+
   return (
     <div className="divide-y divide-(--border)">
       {SECTION_ORDER.map((key) => (
         <div key={key} className="flex h-12 flex-col justify-center">
           <h4 className="text-[11px] font-semibold uppercase tracking-wide text-(--muted-fg) opacity-60">
-            {PAIN_SECTION_LABELS[key]}
+            {t(key)}
           </h4>
           <div className="mt-1 h-4 animate-pulse rounded bg-(--muted)" />
         </div>

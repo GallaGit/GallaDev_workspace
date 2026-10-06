@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { EmailHtmlFrame } from "./thread-view";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 beforeEach(() => {
   cleanup();
@@ -8,7 +9,7 @@ beforeEach(() => {
 
 describe("EmailHtmlFrame", () => {
   it("renderiza el html en un iframe sin scripts", () => {
-    render(<EmailHtmlFrame html="<p>Hola</p>" />);
+    renderWithIntl(<EmailHtmlFrame html="<p>Hola</p>" />);
     const frame = screen.getByTitle("Contenido del correo");
     expect(frame.tagName).toBe("IFRAME");
     expect(frame).toHaveAttribute("sandbox", "");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -18,7 +19,6 @@ import {
 import type { CountRow } from "@/lib/leads/compute-stats";
 import { cn } from "@/lib/utils";
 import {
-  STATS_CHART_LABELS,
   STATS_CHART_TYPES,
   circularChartState,
   hasChartData,
@@ -57,13 +57,20 @@ function CountTooltip({
   payload?: TipEntry[];
   label?: string | number;
 }) {
+  const t = useTranslations("stats");
   if (!active || !payload?.length) return null;
   const entry = payload[0];
   const name = label || entry.payload?.label || entry.name || "";
+  const count =
+    typeof entry.value === "number"
+      ? entry.value
+      : Number(entry.value) || 0;
   return (
     <div className="rounded-md border border-(--border) bg-(--panel) px-2 py-1 text-[12px] text-(--fg) shadow-sm">
       <div>{name}</div>
-      <div className="tabular-nums text-(--muted-fg)">{entry.value} leads</div>
+      <div className="tabular-nums text-(--muted-fg)">
+        {t("leadsCount", { count })}
+      </div>
     </div>
   );
 }
@@ -82,7 +89,7 @@ function ChartFrame({ children }: { children: ReactNode }) {
   );
 }
 
-function BarView({ rows }: { rows: CountRow[] }) {
+function BarView({ rows, seriesName }: { rows: CountRow[]; seriesName: string }) {
   return (
     <ChartFrame>
       <ResponsiveContainer width="100%" height="100%">
@@ -102,7 +109,7 @@ function BarView({ rows }: { rows: CountRow[] }) {
           <Tooltip content={<CountTooltip />} />
           <Bar
             dataKey="count"
-            name="Leads"
+            name={seriesName}
             fill="var(--accent)"
             radius={[0, 4, 4, 0]}
             isAnimationActive={false}
@@ -113,7 +120,7 @@ function BarView({ rows }: { rows: CountRow[] }) {
   );
 }
 
-function AreaView({ rows }: { rows: CountRow[] }) {
+function AreaView({ rows, seriesName }: { rows: CountRow[]; seriesName: string }) {
   return (
     <ChartFrame>
       <ResponsiveContainer width="100%" height="100%">
@@ -132,7 +139,7 @@ function AreaView({ rows }: { rows: CountRow[] }) {
           <Area
             type="monotone"
             dataKey="count"
-            name="Leads"
+            name={seriesName}
             stroke="var(--accent)"
             fill="var(--accent)"
             fillOpacity={0.22}
@@ -145,7 +152,15 @@ function AreaView({ rows }: { rows: CountRow[] }) {
   );
 }
 
-function DonutView({ slices, total }: { slices: CountRow[]; total: number }) {
+function DonutView({
+  slices,
+  total,
+  leadsLabel,
+}: {
+  slices: CountRow[];
+  total: number;
+  leadsLabel: string;
+}) {
   return (
     <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
       <div className="relative h-[280px] text-(--muted-fg)">
@@ -170,7 +185,7 @@ function DonutView({ slices, total }: { slices: CountRow[]; total: number }) {
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-xl font-semibold tabular-nums text-(--fg)">{total}</span>
-          <span className="text-[11px] text-(--muted-fg)">leads</span>
+          <span className="text-[11px] text-(--muted-fg)">{leadsLabel}</span>
         </div>
       </div>
       <ul className="space-y-1.5 text-[12px]">
@@ -191,6 +206,7 @@ function DonutView({ slices, total }: { slices: CountRow[]; total: number }) {
 }
 
 export function StatusDistributionChart({ rows }: { rows: CountRow[] }) {
+  const t = useTranslations("stats");
   const chartType = useSyncExternalStore(
     subscribeStatsChartType,
     readStatsChartType,
@@ -203,6 +219,7 @@ export function StatusDistributionChart({ rows }: { rows: CountRow[] }) {
   const data = hasChartData(rows);
   const circular = circularChartState(rows);
   const total = rows.reduce((sum, row) => sum + row.count, 0);
+  const seriesName = t("leadsCount", { count: total }).replace(/^\d+\s*/, "");
 
   return (
     <section
@@ -212,16 +229,15 @@ export function StatusDistributionChart({ rows }: { rows: CountRow[] }) {
       <div className="flex flex-col gap-3 border-b border-(--border) px-3 py-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 id="stats-chart-heading" className="text-[13px] font-medium tracking-tight">
-            Distribución por estado
+            {t("chartTitle")}
           </h2>
           <p id="stats-chart-help" className="mt-0.5 max-w-xl text-[11px] text-(--muted-fg)">
-            La misma métrica que la tabla «Por estado». El área es una onda a lo
-            largo del funnel (orden de los 9 estados), no una serie por fecha.
+            {t("chartHelp")}
           </p>
         </div>
         <div
           role="radiogroup"
-          aria-label="Tipo de gráfico"
+          aria-label={t("chartType")}
           aria-describedby="stats-chart-help"
           className="flex flex-wrap gap-1"
         >
@@ -246,7 +262,7 @@ export function StatusDistributionChart({ rows }: { rows: CountRow[] }) {
                   onChange={() => setChartType(type)}
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
-                {STATS_CHART_LABELS[type]}
+                {t(`chartTypes.${type}`)}
               </label>
             );
           })}
@@ -258,17 +274,21 @@ export function StatusDistributionChart({ rows }: { rows: CountRow[] }) {
           {rows.map((row) => `${row.label}: ${row.count}`).join(", ")}
         </p>
         {!data ? (
-          <EmptyChart>Sin datos para graficar.</EmptyChart>
+          <EmptyChart>{t("chartEmpty")}</EmptyChart>
         ) : chartType === "circular" && circular.kind === "single" ? (
           <EmptyChart>
-            {`Un gráfico circular con una sola categoría no muestra composición. Todos los leads están en «${circular.label}».`}
+            {t("chartSingle", { label: circular.label })}
           </EmptyChart>
         ) : chartType === "circular" && circular.kind === "ready" ? (
-          <DonutView slices={circular.slices} total={total} />
+          <DonutView
+            slices={circular.slices}
+            total={total}
+            leadsLabel={seriesName}
+          />
         ) : chartType === "area" ? (
-          <AreaView rows={rows} />
+          <AreaView rows={rows} seriesName={seriesName} />
         ) : (
-          <BarView rows={rows} />
+          <BarView rows={rows} seriesName={seriesName} />
         )}
       </div>
     </section>

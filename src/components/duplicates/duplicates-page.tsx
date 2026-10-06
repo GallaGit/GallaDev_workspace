@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Topbar } from "@/components/layout/topbar";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,14 @@ import type {
   DuplicateGroup,
   DuplicateLeadRef,
   DuplicateReason,
+  DuplicateReasonCode,
 } from "@/lib/leads/detect-duplicates";
 import {
   buildEmptyFieldMerge,
+  type MergeableFieldKey,
   type MergeFieldPreview,
 } from "@/lib/leads/merge-leads";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 
 type Payload = {
   groups: DuplicateGroup[];
@@ -49,16 +53,10 @@ type ConfirmAction =
     }
   | { type: "archive"; archiveId: string; archiveName: string };
 
-function reasonChip(reason: DuplicateReason) {
-  return `${reason.label}${reason.value ? ` · ${reason.value}` : ""}`;
-}
-
-function leadLabel(lead: DuplicateLeadRef | Lead | null | undefined) {
-  if (!lead) return "Lead";
-  return lead.companyName || "Sin nombre";
-}
-
 export function DuplicatesPage() {
+  const t = useTranslations("duplicates");
+  const tStatus = useTranslations("leadStatus");
+  const tAuto = useTranslations("automations");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,21 +70,33 @@ export function DuplicatesPage() {
   const { canWriteLeads } = useSessionAccess();
   const [busy, setBusy] = useState(false);
 
+  function leadLabel(lead: DuplicateLeadRef | Lead | null | undefined) {
+    if (!lead) return t("fallbackLead");
+    return lead.companyName || t("unnamed");
+  }
+
+  function reasonChip(reason: DuplicateReason) {
+    const label = t(`reasons.${reason.code as DuplicateReasonCode}`);
+    return `${label}${reason.value ? ` · ${reason.value}` : ""}`;
+  }
+
+  function fieldLabel(key: string) {
+    return t(`fields.${key as MergeableFieldKey}`);
+  }
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/leads/duplicates")
       .then(async (res) => {
         const body = (await res.json()) as Payload;
         if (!res.ok) {
-          throw new Error(body.error || "Error al cargar duplicados");
+          throw new Error(body.error || t("loadError"));
         }
         if (!cancelled) setData(body);
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : "Error al cargar duplicados",
-          );
+          setError(e instanceof Error ? e.message : t("loadError"));
         }
       })
       .finally(() => {
@@ -95,7 +105,7 @@ export function DuplicatesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const refreshGroups = useCallback(async () => {
     setRefreshing(true);
@@ -104,44 +114,45 @@ export function DuplicatesPage() {
       const res = await fetch("/api/leads/duplicates");
       const body = (await res.json()) as Payload;
       if (!res.ok) {
-        throw new Error(body.error || "Error al cargar duplicados");
+        throw new Error(body.error || t("loadError"));
       }
       setData(body);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al cargar duplicados");
+      setError(e instanceof Error ? e.message : t("loadError"));
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
-  const loadPairDetails = useCallback(async (keepId: string, archiveId: string) => {
-    setPairLoading(true);
-    setPairError(null);
-    try {
-      const [keepRes, archiveRes] = await Promise.all([
-        fetch(`/api/leads/${encodeURIComponent(keepId)}`),
-        fetch(`/api/leads/${encodeURIComponent(archiveId)}`),
-      ]);
-      const keepBody = await keepRes.json();
-      const archiveBody = await archiveRes.json();
-      if (!keepRes.ok) {
-        throw new Error(keepBody.error || "No se pudo cargar el lead a conservar");
+  const loadPairDetails = useCallback(
+    async (keepId: string, archiveId: string) => {
+      setPairLoading(true);
+      setPairError(null);
+      try {
+        const [keepRes, archiveRes] = await Promise.all([
+          fetch(`/api/leads/${encodeURIComponent(keepId)}`),
+          fetch(`/api/leads/${encodeURIComponent(archiveId)}`),
+        ]);
+        const keepBody = await keepRes.json();
+        const archiveBody = await archiveRes.json();
+        if (!keepRes.ok) {
+          throw new Error(keepBody.error || t("keepLoadError"));
+        }
+        if (!archiveRes.ok) {
+          throw new Error(archiveBody.error || t("archiveLoadError"));
+        }
+        setKeepLead(keepBody.lead as Lead);
+        setArchiveLead(archiveBody.lead as Lead);
+      } catch (e: unknown) {
+        setKeepLead(null);
+        setArchiveLead(null);
+        setPairError(e instanceof Error ? e.message : t("compareError"));
+      } finally {
+        setPairLoading(false);
       }
-      if (!archiveRes.ok) {
-        throw new Error(
-          archiveBody.error || "No se pudo cargar el lead a archivar",
-        );
-      }
-      setKeepLead(keepBody.lead as Lead);
-      setArchiveLead(archiveBody.lead as Lead);
-    } catch (e: unknown) {
-      setKeepLead(null);
-      setArchiveLead(null);
-      setPairError(e instanceof Error ? e.message : "Error al comparar");
-    } finally {
-      setPairLoading(false);
-    }
-  }, []);
+    },
+    [t],
+  );
 
   const applyPair = useCallback(
     (next: PairSelection | null) => {
@@ -205,19 +216,19 @@ export function DuplicatesPage() {
         }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Error al fusionar");
+      if (!res.ok) throw new Error(body.error || t("mergeError"));
       const n = Array.isArray(body.filledKeys) ? body.filledKeys.length : 0;
       toast.success(
-        n > 0
-          ? `Fusionado: ${n} campo${n === 1 ? "" : "s"} rellenado${n === 1 ? "" : "s"}`
-          : "Fusionado: sin campos vacíos que rellenar; origen archivado",
+        n > 0 ? t("mergeSuccess", { count: n }) : t("mergeEmptySuccess"),
       );
-      toastAutomationDispatch(body.automation);
+      toastAutomationDispatch(body.automation, {
+        dispatched: tAuto("dispatched"),
+      });
       setConfirm(null);
       clearPair();
       await refreshGroups();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Error al fusionar");
+      toast.error(e instanceof Error ? e.message : t("mergeError"));
     } finally {
       setBusy(false);
     }
@@ -233,13 +244,13 @@ export function DuplicatesPage() {
         { method: "DELETE" },
       );
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Error al archivar");
-      toast.success("Lead archivado");
+      if (!res.ok) throw new Error(body.error || t("archiveError"));
+      toast.success(t("archiveSuccess"));
       setConfirm(null);
       clearPair();
       await refreshGroups();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Error al archivar");
+      toast.error(e instanceof Error ? e.message : t("archiveError"));
     } finally {
       setBusy(false);
     }
@@ -252,41 +263,39 @@ export function DuplicatesPage() {
 
   return (
     <>
-      <Topbar title="Duplicados" />
+      <Topbar title={t("title")} />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-2xl text-sm text-(--muted-fg)">
-            Grupos con el mismo email, teléfono o dominio web (también nombre o
-            dirección normalizados; incluye archivados). Elige conservar y
-            archivar para comparar; la fusión solo rellena campos vacíos del
-            lead conservado.
-          </p>
+          <p className="max-w-2xl text-sm text-(--muted-fg)">{t("description")}</p>
           <Button
             size="sm"
             variant="outline"
             disabled={loading || refreshing}
             onClick={() => void refreshGroups()}
           >
-            {refreshing ? "Actualizando…" : "Actualizar"}
+            {refreshing ? t("refreshing") : t("refresh")}
           </Button>
         </div>
 
         {loading ? (
-          <p className="text-sm text-(--muted-fg)">Detectando duplicados…</p>
+          <p className="text-sm text-(--muted-fg)">{t("detecting")}</p>
         ) : null}
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
         {data && data.groups.length === 0 ? (
           <p className="text-sm text-(--muted-fg)">
-            No hay grupos duplicados entre {data.scanned} leads escaneados.
+            {t("empty", { count: data.scanned })}
           </p>
         ) : null}
 
         {data && data.groups.length > 0 ? (
           <>
             <p className="mb-3 text-[12px] text-(--muted-fg)">
-              {data.groupCount} grupo{data.groupCount === 1 ? "" : "s"} ·{" "}
-              {data.leadCount} leads · {data.scanned} escaneados (con archivados)
+              {t("summary", {
+                groups: data.groupCount,
+                leads: data.leadCount,
+                scanned: data.scanned,
+              })}
             </p>
             <div className="space-y-3">
               {data.groups.map((group) => {
@@ -323,37 +332,42 @@ export function DuplicatesPage() {
                                 href={`/leads?lead=${encodeURIComponent(lead.id)}`}
                                 className="text-sm font-medium hover:text-(--accent)"
                               >
-                                {lead.companyName || "Sin nombre"}
+                                {lead.companyName || t("unnamed")}
                               </Link>
                               <div className="mt-0.5 text-[12px] text-(--muted-fg)">
-                                {[lead.status, lead.city, lead.email, lead.phone]
+                                {[
+                                  leadStatusLabel(tStatus, lead.status),
+                                  lead.city,
+                                  lead.email,
+                                  lead.phone,
+                                ]
                                   .filter(Boolean)
                                   .join(" · ")}
-                                {lead.archived ? " · Archivado" : ""}
+                                {lead.archived ? ` · ${t("archived")}` : ""}
                               </div>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                               <Button
                                 size="sm"
                                 variant={isKeep ? "default" : "outline"}
-                                title="Conservar este lead (destino de la fusión)"
+                                title={t("keepHint")}
                                 onClick={() => selectKeep(group.id, lead.id)}
                               >
-                                Conservar
+                                {t("keep")}
                               </Button>
                               <Button
                                 size="sm"
                                 variant={isArchive ? "destructive" : "outline"}
-                                title="Marcar como origen a archivar / fusionar desde aquí"
+                                title={t("archiveHint")}
                                 onClick={() => selectArchive(group.id, lead.id)}
                               >
-                                Archivar
+                                {t("archive")}
                               </Button>
                               <Link
                                 href={`/leads?lead=${encodeURIComponent(lead.id)}`}
                                 className="px-1 text-[12px] text-(--accent) hover:underline"
                               >
-                                Abrir
+                                {t("open")}
                               </Link>
                             </div>
                           </li>
@@ -365,24 +379,23 @@ export function DuplicatesPage() {
                       <div className="mt-4 rounded-md border border-(--border) bg-(--bg) p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <h3 className="text-sm font-semibold">
-                            Comparar · conservar «
-                            {leadLabel(
-                              group.leads.find((l) => l.id === keepId),
-                            )}
-                            » · archivar «
-                            {leadLabel(
-                              group.leads.find((l) => l.id === archiveId),
-                            )}
-                            »
+                            {t("compare", {
+                              keep: leadLabel(
+                                group.leads.find((l) => l.id === keepId),
+                              ),
+                              archive: leadLabel(
+                                group.leads.find((l) => l.id === archiveId),
+                              ),
+                            })}
                           </h3>
                           <Button size="sm" variant="ghost" onClick={clearPair}>
-                            Cerrar
+                            {t("close")}
                           </Button>
                         </div>
 
                         {pairLoading ? (
                           <p className="mt-2 text-[12px] text-(--muted-fg)">
-                            Cargando campos…
+                            {t("loadingFields")}
                           </p>
                         ) : null}
                         {pairError ? (
@@ -393,35 +406,25 @@ export function DuplicatesPage() {
                           <>
                             <p className="mt-2 text-[12px] text-(--muted-fg)">
                               {mergePreview.filledKeys.length === 0
-                                ? "Ningún campo vacío se rellenaría; el origen solo se archivaría."
-                                : `${mergePreview.filledKeys.length} campo${
-                                    mergePreview.filledKeys.length === 1
-                                      ? ""
-                                      : "s"
-                                  } vacío${
-                                    mergePreview.filledKeys.length === 1
-                                      ? ""
-                                      : "s"
-                                  } se rellenaría${
-                                    mergePreview.filledKeys.length === 1
-                                      ? ""
-                                      : "n"
-                                  } (nunca se sobrescribe).`}
+                                ? t("noFields")
+                                : t("fieldsFilled", {
+                                    count: mergePreview.filledKeys.length,
+                                  })}
                             </p>
                             <div className="mt-3 overflow-x-auto">
                               <table className="w-full min-w-[32rem] border-collapse text-left text-[12px]">
                                 <thead>
                                   <tr className="border-b border-(--border) text-(--muted-fg)">
                                     <th className="py-1.5 pr-2 font-medium">
-                                      Campo
+                                      {t("field")}
                                     </th>
                                     <th className="py-1.5 pr-2 font-medium">
-                                      Conservar
+                                      {t("keep")}
                                     </th>
                                     <th className="py-1.5 pr-2 font-medium">
-                                      Origen
+                                      {t("source")}
                                     </th>
-                                    <th className="py-1.5 font-medium">Acción</th>
+                                    <th className="py-1.5 font-medium">{t("action")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -435,7 +438,7 @@ export function DuplicatesPage() {
                                       }
                                     >
                                       <td className="py-1.5 pr-2 align-top font-medium">
-                                        {row.label}
+                                        {fieldLabel(row.key)}
                                       </td>
                                       <td className="max-w-[14rem] truncate py-1.5 pr-2 align-top text-(--muted-fg)">
                                         {row.keepValue}
@@ -446,7 +449,7 @@ export function DuplicatesPage() {
                                       <td className="py-1.5 align-top">
                                         {row.willFill ? (
                                           <span className="text-(--accent)">
-                                            Se rellena
+                                            {t("willFill")}
                                           </span>
                                         ) : (
                                           <span className="text-(--muted-fg)">
@@ -475,7 +478,7 @@ export function DuplicatesPage() {
                                   })
                                 }
                               >
-                                Fusionar
+                                {t("merge")}
                               </Button>
                               <Button
                                 size="sm"
@@ -489,12 +492,12 @@ export function DuplicatesPage() {
                                   })
                                 }
                               >
-                                Solo archivar origen
+                                {t("archiveSource")}
                               </Button>
                             </div>
                             ) : (
                               <p className="mt-3 text-[12px] text-(--muted-fg)">
-                                Solo lectura: no puedes fusionar ni archivar.
+                                {t("readOnly")}
                               </p>
                             )}
                           </>
@@ -502,8 +505,7 @@ export function DuplicatesPage() {
                       </div>
                     ) : isActive && (keepId || archiveId) ? (
                       <p className="mt-3 text-[12px] text-(--muted-fg)">
-                        Elige un lead para conservar y otro para archivar /
-                        fusionar.
+                        {t("choosePair")}
                       </p>
                     ) : null}
                   </section>
@@ -523,17 +525,16 @@ export function DuplicatesPage() {
         <DialogContent>
           {confirm?.type === "merge" ? (
             <>
-              <DialogTitle>Confirmar fusión</DialogTitle>
+              <DialogTitle>{t("mergeTitle")}</DialogTitle>
               <DialogDescription>
-                Se conservará «{confirm.keepName}». Se archivará «
-                {confirm.archiveName}». Solo se rellenarán campos vacíos del
-                conservado
-                {confirm.fillCount > 0
-                  ? ` (${confirm.fillCount} campo${
-                      confirm.fillCount === 1 ? "" : "s"
-                    })`
-                  : " (ninguno en este caso)"}
-                . Nunca se sobrescriben valores existentes.
+                {t("mergeDescription", {
+                  keep: confirm.keepName,
+                  archive: confirm.archiveName,
+                  fields:
+                    confirm.fillCount > 0
+                      ? t("fieldCountCase", { count: confirm.fillCount })
+                      : t("noFieldsCase"),
+                })}
               </DialogDescription>
               <div className="mt-4 flex justify-end gap-2">
                 <Button
@@ -541,20 +542,19 @@ export function DuplicatesPage() {
                   disabled={busy}
                   onClick={() => setConfirm(null)}
                 >
-                  Cancelar
+                  {t("cancel")}
                 </Button>
                 <Button disabled={busy} onClick={() => void runMerge()}>
-                  {busy ? "Fusionando…" : "Fusionar"}
+                  {busy ? t("merging") : t("merge")}
                 </Button>
               </div>
             </>
           ) : null}
           {confirm?.type === "archive" ? (
             <>
-              <DialogTitle>Confirmar archivo</DialogTitle>
+              <DialogTitle>{t("archiveTitle")}</DialogTitle>
               <DialogDescription>
-                Se archivará «{confirm.archiveName}» en Notion (no se elimina). No
-                se copiarán campos al otro lead.
+                {t("archiveDescription", { name: confirm.archiveName })}
               </DialogDescription>
               <div className="mt-4 flex justify-end gap-2">
                 <Button
@@ -562,14 +562,14 @@ export function DuplicatesPage() {
                   disabled={busy}
                   onClick={() => setConfirm(null)}
                 >
-                  Cancelar
+                  {t("cancel")}
                 </Button>
                 <Button
                   variant="destructive"
                   disabled={busy}
                   onClick={() => void runArchive()}
                 >
-                  {busy ? "Archivando…" : "Archivar"}
+                  {busy ? t("archiving") : t("archive")}
                 </Button>
               </div>
             </>

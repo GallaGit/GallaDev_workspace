@@ -2,21 +2,27 @@
 
 import { useMemo, useState } from "react";
 import { Star } from "lucide-react";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import type { Lead, LeadStatus } from "@/lib/domain/lead";
 import { LEAD_STATUSES } from "@/lib/domain/lead";
 import { filterLeads } from "@/lib/leads/filter-leads";
 import { useSessionAccess } from "@/components/session-access";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import { toast } from "sonner";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 
-async function patchLead(id: string, patch: Partial<Lead>) {
+async function patchLead(
+  id: string,
+  patch: Partial<Lead>,
+  fallbackError: string,
+) {
   const res = await fetch(`/api/leads/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Error al actualizar");
+  if (!res.ok) throw new Error(data.error || fallbackError);
   return data.lead as Lead;
 }
 
@@ -32,20 +38,22 @@ type ColKey =
   | "score"
   | "lastActivity";
 
-const COL_LABELS: Record<ColKey, string> = {
-  favorite: "★",
-  companyName: "Empresa",
-  status: "Estado",
-  city: "Ciudad",
-  province: "Provincia",
-  employees: "Empl.",
-  email: "Email",
-  phone: "Teléfono",
-  score: "Score",
-  lastActivity: "Actividad",
+const COL_MESSAGE_KEYS: Record<ColKey, string> = {
+  favorite: "favorite",
+  companyName: "company",
+  status: "status",
+  city: "city",
+  province: "province",
+  employees: "employees",
+  email: "email",
+  phone: "phone",
+  score: "score",
+  lastActivity: "activity",
 };
 
 export function LeadTable() {
+  const t = useTranslations("leads");
+  const locale = useLocale();
   const {
     leads,
     filters,
@@ -72,12 +80,12 @@ export function LeadTable() {
       if (av == null && bv == null) return 0;
       if (av == null) return 1;
       if (bv == null) return -1;
-      const cmp = String(av).localeCompare(String(bv), "es", {
+      const cmp = String(av).localeCompare(String(bv), locale, {
         numeric: true,
       });
       return sortDesc ? -cmp : cmp;
     });
-  }, [leads, filters, activeQueue, sortKey, sortDesc]);
+  }, [leads, filters, activeQueue, sortKey, sortDesc, locale]);
 
   function toggleSort(key: ColKey) {
     if (sortKey === key) setSortDesc(!sortDesc);
@@ -87,7 +95,7 @@ export function LeadTable() {
     }
   }
 
-  const visibleCols = (Object.keys(COL_LABELS) as ColKey[]).filter(
+  const visibleCols = (Object.keys(COL_MESSAGE_KEYS) as ColKey[]).filter(
     (k) => columnVisibility[k] !== false,
   );
 
@@ -95,9 +103,9 @@ export function LeadTable() {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap gap-2 border-b border-(--border) px-4 py-2">
         <span className="self-center text-[11px] text-(--muted-fg)">
-          Columnas
+          {t("table.columns")}
         </span>
-        {(Object.keys(COL_LABELS) as ColKey[]).map((key) => (
+        {(Object.keys(COL_MESSAGE_KEYS) as ColKey[]).map((key) => (
           <label
             key={key}
             className="flex items-center gap-1 text-[11px] text-(--muted-fg)"
@@ -112,11 +120,11 @@ export function LeadTable() {
                 })
               }
             />
-            {COL_LABELS[key]}
+            {t(`table.${COL_MESSAGE_KEYS[key]}`)}
           </label>
         ))}
         <span className="ml-auto text-[11px] text-(--muted-fg)">
-          {data.length} leads
+          {t("table.leadCount", { count: data.length })}
         </span>
       </div>
 
@@ -135,7 +143,7 @@ export function LeadTable() {
                       e.target.checked ? data.map((l) => l.id) : [],
                     )
                   }
-                  aria-label="Seleccionar todos"
+                  aria-label={t("table.selectAll")}
                 />
               </th>
               {visibleCols.map((key) => (
@@ -144,7 +152,7 @@ export function LeadTable() {
                   className="cursor-pointer px-3 py-2 font-medium text-(--muted-fg)"
                   onClick={() => toggleSort(key)}
                 >
-                  {COL_LABELS[key]}
+                  {t(`table.${COL_MESSAGE_KEYS[key]}`)}
                   {sortKey === key ? (sortDesc ? " ↓" : " ↑") : ""}
                 </th>
               ))}
@@ -157,7 +165,7 @@ export function LeadTable() {
                   colSpan={visibleCols.length + 1}
                   className="px-3 py-12 text-center text-(--muted-fg)"
                 >
-                  No hay leads. Pulsa Sincronizar o ajusta los filtros.
+                  {t("table.empty")}
                 </td>
               </tr>
             ) : (
@@ -174,7 +182,7 @@ export function LeadTable() {
                       type="checkbox"
                       checked={selectedIds.includes(lead.id)}
                       onChange={() => toggleSelectedId(lead.id)}
-                      aria-label="Seleccionar"
+                      aria-label={t("table.select")}
                     />
                   </td>
                   {visibleCols.map((key) => (
@@ -186,12 +194,20 @@ export function LeadTable() {
                         onPatch={async (patch) => {
                           if (!canWriteLeads) return;
                           try {
-                            const updated = await patchLead(lead.id, patch);
+                            const updated = await patchLead(
+                              lead.id,
+                              patch,
+                              t("toasts.updateError"),
+                            );
                             upsertLead(updated);
-                            if (patch.status) toast.success("Estado actualizado");
+                            if (patch.status) {
+                              toast.success(t("toasts.statusUpdated"));
+                            }
                           } catch (err) {
                             toast.error(
-                              err instanceof Error ? err.message : "Error",
+                              err instanceof Error
+                                ? err.message
+                                : t("toasts.error"),
                             );
                           }
                         }}
@@ -219,6 +235,8 @@ function Cell({
   canWrite: boolean;
   onPatch: (patch: Partial<Lead>) => void;
 }) {
+  const tStatus = useTranslations("leadStatus");
+  const format = useFormatter();
   switch (col) {
     case "favorite":
       if (!canWrite) {
@@ -258,7 +276,7 @@ function Cell({
       if (!canWrite) {
         return (
           <span className={`text-[11px] ${statusColor(lead.status)}`}>
-            {lead.status}
+            {leadStatusLabel(tStatus, lead.status)}
           </span>
         );
       }
@@ -277,7 +295,7 @@ function Cell({
               value={s}
               className="bg-(--panel) text-(--fg)"
             >
-              {s}
+              {leadStatusLabel(tStatus, s)}
             </option>
           ))}
         </select>
@@ -299,7 +317,17 @@ function Cell({
     case "score":
       return <>{lead.score ?? "—"}</>;
     case "lastActivity":
-      return <>{lead.lastActivity ? lead.lastActivity.slice(0, 10) : "—"}</>;
+      return (
+        <>
+          {lead.lastActivity
+            ? format.dateTime(new Date(lead.lastActivity), {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              })
+            : "—"}
+        </>
+      );
     default:
       return null;
   }

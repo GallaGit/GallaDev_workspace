@@ -1,4 +1,5 @@
 import type { Ref } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   PainAnalysisBlocks,
@@ -23,10 +24,12 @@ export function AiAnalysisPanel({
   allowRetry?: boolean;
   sectionRef?: Ref<HTMLElement>;
 }) {
+  const t = useTranslations("leads.ai");
+
   return (
     <section ref={sectionRef}>
       <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-(--muted-fg)">
-        Dolores
+        {t("title")}
       </h3>
       <div className="space-y-1.5">
         {analyzing ? <PainAnalysisSkeletons /> : null}
@@ -34,7 +37,7 @@ export function AiAnalysisPanel({
         {!analyzing && error ? (
           <div className="rounded-md border border-(--border) px-2.5 py-2">
             <p className="text-[12px] text-(--fg)">
-              No se pudo detectar dolores. {error}
+              {t("error", { error })}
             </p>
             {allowRetry ? (
               <Button
@@ -43,7 +46,7 @@ export function AiAnalysisPanel({
                 size="sm"
                 onClick={onRetry}
               >
-                Reintentar
+                {t("retry")}
               </Button>
             ) : null}
           </div>
@@ -51,12 +54,10 @@ export function AiAnalysisPanel({
 
         {!analyzing && !error && empty ? (
           <div>
-            <p className="text-[12px] text-(--muted-fg)">
-              No hay señales suficientes en este lead.
-            </p>
+            <p className="text-[12px] text-(--muted-fg)">{t("empty")}</p>
             {allowRetry ? (
               <p className="mt-1 text-[11px] text-(--muted-fg)">
-                Añade web, servicios o notas y vuelve a intentar.
+                {t("emptyHint")}
               </p>
             ) : null}
           </div>
@@ -64,9 +65,7 @@ export function AiAnalysisPanel({
 
         {!analyzing && !error && !empty && !analysis ? (
           <p className="text-[12px] text-(--muted-fg)">
-            {allowRetry
-              ? "Aún no hay análisis. Pulsa Detectar dolores."
-              : "Aún no hay análisis."}
+            {allowRetry ? t("notAnalyzed") : t("notAnalyzedReadOnly")}
           </p>
         ) : null}
 
