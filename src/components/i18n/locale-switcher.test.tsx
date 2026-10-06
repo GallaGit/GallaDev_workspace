@@ -33,11 +33,12 @@ function renderSwitcher(locale: "es" | "en") {
 }
 
 describe("LocaleSwitcher", () => {
-  it("muestra la bandera activa y al clic cambia a inglés", async () => {
+  it("muestra ES y al clic cambia a inglés", async () => {
     renderSwitcher("es");
     const button = screen.getByTestId("locale-trigger");
     expect(screen.getByTestId("locale-switcher")).toBeInTheDocument();
     expect(button).toHaveAttribute("data-locale", "es");
+    expect(button).toHaveTextContent("ES");
     expect(button).toHaveAttribute("aria-label", "Cambiar a English");
     expect(button).toHaveAttribute("title", "Cambiar a English");
     fireEvent.click(button);
@@ -47,10 +48,11 @@ describe("LocaleSwitcher", () => {
     });
   });
 
-  it("en inglés propone volver a español", () => {
+  it("en inglés muestra EN y propone volver a español", () => {
     renderSwitcher("en");
     const button = screen.getByTestId("locale-trigger");
     expect(button).toHaveAttribute("data-locale", "en");
+    expect(button).toHaveTextContent("EN");
     expect(button).toHaveAttribute("aria-label", "Switch to Español");
     expect(button).toHaveAttribute("title", "Switch to Español");
   });

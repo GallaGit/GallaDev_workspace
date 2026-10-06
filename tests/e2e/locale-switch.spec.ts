@@ -12,6 +12,7 @@ test("el selector de idioma cambia a inglés y vuelve a español", async ({
 
   const trigger = page.getByTestId("locale-trigger");
   await expect(trigger).toHaveAttribute("data-locale", "es");
+  await expect(trigger).toHaveText("ES");
   await expect(trigger).toHaveAttribute("aria-label", "Cambiar a English");
 
   await trigger.click();
@@ -22,6 +23,7 @@ test("el selector de idioma cambia a inglés y vuelve a español", async ({
     "data-locale",
     "en",
   );
+  await expect(page.getByTestId("locale-trigger")).toHaveText("EN");
   await expect(page.getByTestId("locale-trigger")).toHaveAttribute(
     "aria-label",
     "Switch to Español",
@@ -36,8 +38,5 @@ test("el selector de idioma cambia a inglés y vuelve a español", async ({
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByTestId("locale-trigger")).toHaveAttribute(
-    "data-locale",
-    "es",
-  );
+  await expect(page.getByTestId("locale-trigger")).toHaveText("ES");
 });
