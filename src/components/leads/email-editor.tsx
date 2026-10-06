@@ -2,6 +2,7 @@
 
 import { Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { openGmailCompose } from "@/lib/utils/gmail-compose";
@@ -38,13 +39,15 @@ export function EmailEditor({
   readOnly = false,
   allowCompose = true,
 }: EmailEditorProps) {
+  const t = useTranslations("leads.emailEditor");
+
   function redactarEnGmail() {
     if (!subject.trim() && !body.trim()) {
-      toast.error("Añade asunto o cuerpo antes de redactar");
+      toast.error(t("missingContent"));
       return;
     }
     if (!to?.trim()) {
-      toast.message("Sin destinatario: se abrirá Gmail sin campo Para");
+      toast.message(t("missingRecipient"));
     }
     openGmailCompose({ to, subject, body });
   }
@@ -53,7 +56,7 @@ export function EmailEditor({
     <div>
       <Input
         className="mb-2"
-        placeholder="Asunto"
+        placeholder={t("subject")}
         value={subject}
         readOnly={readOnly}
         onChange={(e) => onSubjectChange(e.target.value)}
@@ -62,21 +65,21 @@ export function EmailEditor({
         value={body}
         onChange={(e) => onBodyChange(e.target.value)}
         rows={10}
-        placeholder="Cuerpo (texto plano)"
+        placeholder={t("body")}
         readOnly={readOnly}
       />
       <div className="mt-2 flex flex-wrap gap-2">
         {allowCompose ? (
           <Button size="sm" onClick={redactarEnGmail}>
             <Mail className="h-3.5 w-3.5" />
-            Redactar email
+            {t("compose")}
           </Button>
         ) : null}
         <Button size="sm" disabled={saving || readOnly} onClick={onSave}>
-          Guardar email
+          {t("save")}
         </Button>
         <Button size="sm" variant="outline" onClick={onCopy}>
-          Copiar
+          {t("copy")}
         </Button>
         <Button
           size="sm"
@@ -84,7 +87,7 @@ export function EmailEditor({
           disabled={saving || readOnly}
           onClick={onMarkPrepared}
         >
-          Marcar preparado
+          {t("markPrepared")}
         </Button>
         {showApplyTemplate && onApplyTemplate ? (
           <Button
@@ -93,18 +96,16 @@ export function EmailEditor({
             disabled={readOnly}
             onClick={onApplyTemplate}
           >
-            Aplicar plantilla
+            {t("applyTemplate")}
           </Button>
         ) : null}
       </div>
       {to ? (
         <p className="mt-2 text-[11px] text-muted-fg">
-          Destinatario: {to}
+          {t("recipient", { email: to })}
         </p>
       ) : (
-        <p className="mt-2 text-[11px] text-amber-400">
-          Este lead no tiene correo. Añádelo o complétalo en Gmail.
-        </p>
+        <p className="mt-2 text-[11px] text-amber-400">{t("missingEmail")}</p>
       )}
     </div>
   );

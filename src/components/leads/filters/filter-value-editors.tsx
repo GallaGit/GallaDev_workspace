@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { LeadFilters } from "@/lib/domain/lead";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 import type { FilterDimension } from "./filter-config";
 
 function toggleInArray<T extends string>(arr: T[] | undefined, value: T): T[] {
@@ -25,14 +27,24 @@ function MultiSelectEditor({
   searchable?: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const t = useTranslations("leads.filters");
+  const tStatus = useTranslations("leadStatus");
+  const tProvince = useTranslations("province");
   const field = dim.arrayField!;
   const selected = (filters[field] as string[] | undefined) ?? [];
+  const optionLabel = (option: string) => {
+    if (dim.key === "status") return leadStatusLabel(tStatus, option);
+    if (dim.key === "province") {
+      return tProvince(option as "Valencia" | "Alicante" | "Castellón" | "Otra");
+    }
+    return option;
+  };
 
   const filtered = useMemo(() => {
     if (!query.trim()) return options;
     const q = query.toLowerCase();
-    return options.filter((o) => o.toLowerCase().includes(q));
-  }, [options, query]);
+    return options.filter((o) => optionLabel(o).toLowerCase().includes(q));
+  }, [options, query, dim.key, tProvince, tStatus]);
 
   return (
     <div className="flex flex-col">
@@ -41,14 +53,16 @@ function MultiSelectEditor({
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Buscar ${dim.label.toLowerCase()}…`}
+          placeholder={t("searchDimension", {
+            dimension: t(dim.key).toLocaleLowerCase(),
+          })}
           className="mb-1 h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2 text-xs text-(--fg) placeholder:text-(--muted-fg) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo"
         />
       )}
       <div className="max-h-56 overflow-y-auto">
         {filtered.length === 0 ? (
           <p className="px-2 py-3 text-center text-xs text-(--muted-fg)">
-            Sin resultados
+            {t("noResults")}
           </p>
         ) : (
           filtered.map((opt) => {
@@ -74,7 +88,7 @@ function MultiSelectEditor({
                 >
                   {active && <Check className="h-3 w-3" />}
                 </span>
-                <span className="truncate">{opt}</span>
+                <span className="truncate">{optionLabel(opt)}</span>
               </button>
             );
           })
@@ -93,12 +107,13 @@ function BooleanEditor({
   filters: LeadFilters;
   setFilters: (f: Partial<LeadFilters>) => void;
 }) {
+  const t = useTranslations("leads.filters");
   const field = dim.boolField!;
   const value = (filters[field] as boolean | null | undefined) ?? null;
   const opts: { label: string; val: boolean | null }[] = [
-    { label: "Sí", val: true },
-    { label: "No", val: false },
-    { label: "Cualquiera", val: null },
+    { label: t("yes"), val: true },
+    { label: t("no"), val: false },
+    { label: t("any"), val: null },
   ];
   return (
     <div className="flex flex-col">
@@ -131,6 +146,7 @@ function NumRangeEditor({
   filters: LeadFilters;
   setFilters: (f: Partial<LeadFilters>) => void;
 }) {
+  const t = useTranslations("leads.filters");
   const [fromField, toField] = dim.rangeFields!;
   const inputCls =
     "h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2 text-xs text-(--fg) placeholder:text-(--muted-fg) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo";
@@ -138,7 +154,7 @@ function NumRangeEditor({
     <div className="flex items-center gap-2 p-1">
       <input
         type="number"
-        placeholder="Mín"
+        placeholder={t("min")}
         className={inputCls}
         value={(filters[fromField] as number | null) ?? ""}
         onChange={(e) =>
@@ -150,7 +166,7 @@ function NumRangeEditor({
       <span className="text-(--muted-fg)">–</span>
       <input
         type="number"
-        placeholder="Máx"
+        placeholder={t("max")}
         className={inputCls}
         value={(filters[toField] as number | null) ?? ""}
         onChange={(e) =>
@@ -172,13 +188,14 @@ function DateRangeEditor({
   filters: LeadFilters;
   setFilters: (f: Partial<LeadFilters>) => void;
 }) {
+  const t = useTranslations("leads.filters");
   const [fromField, toField] = dim.rangeFields!;
   const inputCls =
     "h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2 text-xs text-(--fg) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo";
   return (
     <div className="flex flex-col gap-2 p-1">
       <label className="flex flex-col gap-1 text-[11px] text-(--muted-fg)">
-        Desde
+        {t("from")}
         <input
           type="date"
           className={inputCls}
@@ -191,7 +208,7 @@ function DateRangeEditor({
         />
       </label>
       <label className="flex flex-col gap-1 text-[11px] text-(--muted-fg)">
-        Hasta
+        {t("to")}
         <input
           type="date"
           className={inputCls}

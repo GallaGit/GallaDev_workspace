@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ListFilter } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -26,15 +27,17 @@ export function AddFilterPopover({
   /** Show only the icon (used when filters already exist). */
   compact?: boolean;
 }) {
+  const t = useTranslations("leads.filters");
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<FilterDimension | null>(null);
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return inactiveDims;
-    const q = query.toLowerCase();
-    return inactiveDims.filter((d) => d.label.toLowerCase().includes(q));
-  }, [inactiveDims, query]);
+  const q = query.trim().toLocaleLowerCase();
+  const filtered = q
+    ? inactiveDims.filter((dim) =>
+        t(dim.key).toLocaleLowerCase().includes(q),
+      )
+    : inactiveDims;
 
   function reset() {
     setTimeout(() => {
@@ -68,7 +71,7 @@ export function AddFilterPopover({
           className="gap-1.5"
         >
           <ListFilter className="h-3.5 w-3.5" aria-hidden="true" />
-          {!compact && "Filtrar"}
+          {!compact && t("filter")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-60">
@@ -76,7 +79,7 @@ export function AddFilterPopover({
           <div className="flex flex-col">
             <div className="mb-1 flex items-center gap-1.5 px-1 py-0.5 text-[11px] text-(--muted-fg)">
               <view.icon className="h-3.5 w-3.5" aria-hidden="true" />
-              {view.label}
+              {t(view.key)}
             </div>
             <FilterValueEditor
               dim={view}
@@ -91,13 +94,13 @@ export function AddFilterPopover({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filtrar por…"
+              placeholder={t("filterBy")}
               className="mb-1 h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2 text-xs text-(--fg) placeholder:text-(--muted-fg) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo"
             />
             <div className="max-h-64 overflow-y-auto">
               {filtered.length === 0 ? (
                 <p className="px-2 py-3 text-center text-xs text-(--muted-fg)">
-                  Sin filtros disponibles
+                  {t("noneAvailable")}
                 </p>
               ) : (
                 filtered.map((dim) => {
@@ -113,7 +116,7 @@ export function AddFilterPopover({
                         className="h-3.5 w-3.5 text-(--muted-fg)"
                         aria-hidden="true"
                       />
-                      {dim.label}
+                      {t(dim.key)}
                     </button>
                   );
                 })

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Lead, LeadStatus } from "@/lib/domain/lead";
 import { toast } from "sonner";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { useUiStore } from "@/store/ui-store";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 vi.mock("sonner", () => {
   const toastFn = Object.assign(vi.fn(), {
@@ -126,7 +127,7 @@ describe("KanbanBoard", () => {
   });
 
   it("does not render an add-card control", () => {
-    render(<KanbanBoard />);
+    renderWithIntl(<KanbanBoard />);
 
     expect(screen.queryByText(/añadir tarjeta/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/título de la tarjeta/i)).not.toBeInTheDocument();
@@ -135,7 +136,7 @@ describe("KanbanBoard", () => {
   });
 
   it("moves an existing card to another column on drop", async () => {
-    render(<KanbanBoard />);
+    renderWithIntl(<KanbanBoard />);
 
     fireEvent.dragStart(screen.getByText("Acme Gestoría"));
     fireEvent.drop(columnByStatus("Validado"), {
@@ -164,7 +165,7 @@ describe("KanbanBoard", () => {
 
   it("does not move a card when the session cannot write leads", () => {
     sessionAccess.canWriteLeads = false;
-    render(<KanbanBoard />);
+    renderWithIntl(<KanbanBoard />);
 
     fireEvent.dragStart(screen.getByText("Acme Gestoría"));
     fireEvent.drop(columnByStatus("Validado"), {
@@ -185,7 +186,7 @@ describe("KanbanBoard", () => {
   it("avisa en español y no guarda si el visitante suelta una tarjeta", () => {
     sessionAccess.canWriteLeads = false;
     sessionAccess.isVisitor = true;
-    render(<KanbanBoard />);
+    renderWithIntl(<KanbanBoard />);
 
     fireEvent.dragStart(screen.getByText("Acme Gestoría"));
     fireEvent.drop(columnByStatus("Validado"), {

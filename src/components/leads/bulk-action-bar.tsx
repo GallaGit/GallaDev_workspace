@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/domain/lead";
 import { useSessionAccess } from "@/components/session-access";
@@ -13,8 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 
 export function BulkActionBar() {
+  const t = useTranslations("leads.bulk");
+  const tStatus = useTranslations("leadStatus");
   const {
     selectedIds,
     setSelectedIds,
@@ -30,10 +34,10 @@ export function BulkActionBar() {
     return (
       <div className="flex items-center gap-2 border-b border-(--border) bg-(--muted) px-4 py-2">
         <span className="text-[12px] font-medium">
-          {selectedIds.length} seleccionados · solo lectura
+          {t("readOnly", { count: selectedIds.length })}
         </span>
         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-          Cancelar
+          {t("cancel")}
         </Button>
       </div>
     );
@@ -48,13 +52,13 @@ export function BulkActionBar() {
         body: JSON.stringify({ ids: selectedIds, patch }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error masivo");
+      if (!res.ok) throw new Error(data.error || t("massError"));
       for (const lead of data.leads as Lead[]) upsertLead(lead);
-      toast.success(`${data.leads.length} leads actualizados`);
+      toast.success(t("updated", { count: data.leads.length }));
       toastAutomationBulk(data.automation);
       setSelectedIds([]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error");
+      toast.error(e instanceof Error ? e.message : t("massError"));
     }
   }
 
@@ -65,15 +69,15 @@ export function BulkActionBar() {
         const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(data.error || "Error al archivar");
+          throw new Error(data.error || t("archiveError"));
         }
         removeLead(id);
       }
-      toast.success("Leads archivados");
+      toast.success(t("archived"));
       setSelectedIds([]);
       setConfirm(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error");
+      toast.error(e instanceof Error ? e.message : t("archiveError"));
     }
   }
 
@@ -81,7 +85,7 @@ export function BulkActionBar() {
     <>
       <div className="flex items-center gap-2 border-b border-(--border) bg-(--muted) px-4 py-2">
         <span className="text-[12px] font-medium">
-          {selectedIds.length} seleccionados
+          {t("selected", { count: selectedIds.length })}
         </span>
         <select
           className="h-7 rounded border border-(--border) bg-(--bg) px-2 text-[12px]"
@@ -92,10 +96,10 @@ export function BulkActionBar() {
             e.target.value = "";
           }}
         >
-          <option value="">Cambiar estado…</option>
+          <option value="">{t("changeStatus")}</option>
           {LEAD_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {leadStatusLabel(tStatus, s)}
             </option>
           ))}
         </select>
@@ -104,28 +108,28 @@ export function BulkActionBar() {
           variant="outline"
           onClick={() => void bulkPatch({ favorite: true })}
         >
-          Favorito
+          {t("favorite")}
         </Button>
         <Button size="sm" variant="destructive" onClick={() => setConfirm(true)}>
-          Archivar
+          {t("archive")}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-          Cancelar
+          {t("cancel")}
         </Button>
       </div>
 
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
-          <DialogTitle>Archivar selección</DialogTitle>
+          <DialogTitle>{t("archiveTitle")}</DialogTitle>
           <DialogDescription>
-            Se archivarán {selectedIds.length} leads en Notion.
+            {t("archiveDescription", { count: selectedIds.length })}
           </DialogDescription>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirm(false)}>
-              Cancelar
+              {t("cancel")}
             </Button>
             <Button variant="destructive" onClick={bulkArchive}>
-              Archivar
+              {t("archive")}
             </Button>
           </div>
         </DialogContent>

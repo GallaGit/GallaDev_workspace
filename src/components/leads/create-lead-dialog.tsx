@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -76,6 +77,7 @@ function Label({
 }
 
 export function CreateLeadDialog() {
+  const t = useTranslations();
   const { leads, upsertLead, setSelectedLeadId } = useUiStore();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<LeadCreateInput>(emptyForm);
@@ -130,15 +132,25 @@ export function CreateLeadDialog() {
     const result = validateLeadCreate(form);
     if (!result.ok || !result.value) {
       setErrors(result.errors);
-      toast.error("Revisa los campos del formulario");
+      toast.error(t("leads.create.reviewFields"));
       return;
     }
 
     if (duplicates.length > 0 && !forceDuplicate) {
       setErrors({
-        _form: `Posible duplicado: ${duplicates
-          .map((d) => `${d.companyName} (${d.reason})`)
-          .join("; ")}. Confirma para crear igual.`,
+        _form: t("leads.create.duplicate", {
+          duplicates: duplicates
+            .map((d) => {
+              const reasonKey =
+                d.reason === "mismo teléfono"
+                  ? "phone"
+                  : d.reason === "mismo dominio web"
+                    ? "domain"
+                    : "email";
+              return `${d.companyName} (${t(`duplicates.reasons.${reasonKey}`)})`;
+            })
+            .join("; "),
+        }),
       });
       setForceDuplicate(true);
       return;
@@ -154,18 +166,18 @@ export function CreateLeadDialog() {
       const data = await res.json();
       if (!res.ok) {
         if (data.fieldErrors) setErrors(data.fieldErrors);
-        throw new Error(data.error || "No se pudo crear el lead");
+        throw new Error(data.error || t("leads.create.createFailed"));
       }
       const lead = data.lead as Lead;
       upsertLead(lead);
       setSelectedLeadId(lead.id);
-      toast.success(`Lead creado: ${lead.companyName}`);
+      toast.success(t("leads.create.created", { company: lead.companyName }));
       toastAutomationDispatch(data.automation);
       setOpen(false);
       reset();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Error al crear el lead";
+        err instanceof Error ? err.message : t("leads.create.createError");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -183,13 +195,13 @@ export function CreateLeadDialog() {
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-3.5 w-3.5" />
-          Nuevo lead
+          {t("leads.create.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
-        <DialogTitle>Nuevo lead</DialogTitle>
+        <DialogTitle>{t("leads.create.title")}</DialogTitle>
         <DialogDescription>
-          Alta manual en Notion. Estado inicial: Nuevo · Origen: Manual.
+          {t("leads.create.description")}
         </DialogDescription>
 
         <form onSubmit={onSubmit} className="mt-3 space-y-4" noValidate>
@@ -205,7 +217,7 @@ export function CreateLeadDialog() {
               {errors._form}
               {forceDuplicate ? (
                 <p className="mt-1 text-[11px] opacity-80">
-                  Pulsa otra vez «Crear lead» para confirmar.
+                  {t("leads.create.duplicateHint")}
                 </p>
               ) : null}
             </div>
@@ -213,11 +225,11 @@ export function CreateLeadDialog() {
 
           <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">
-              Empresa
+              {t("leads.create.companySection")}
             </h3>
             <div>
               <Label htmlFor="companyName" required>
-                Empresa
+                {t("leads.create.company")}
               </Label>
               <Input
                 id="companyName"
@@ -229,17 +241,17 @@ export function CreateLeadDialog() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="website">Web</Label>
+                <Label htmlFor="website">{t("leads.create.website")}</Label>
                 <Input
                   id="website"
-                  placeholder="ejemplo.es"
+                  placeholder={t("leads.create.websitePlaceholder")}
                   value={form.website ?? ""}
                   onChange={(e) => setField("website", e.target.value)}
                 />
                 <FieldError message={errors.website} />
               </div>
               <div>
-                <Label htmlFor="linkedin">LinkedIn</Label>
+                <Label htmlFor="linkedin">{t("leads.create.linkedin")}</Label>
                 <Input
                   id="linkedin"
                   value={form.linkedin ?? ""}
@@ -252,14 +264,14 @@ export function CreateLeadDialog() {
 
           <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">
-              Contacto
+              {t("leads.create.contactSection")}
             </h3>
             <p className="text-[11px] text-(--muted-fg)">
-              Obligatorio: correo general, teléfono o web.
+              {t("leads.create.contactRequired")}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="email">Correo general</Label>
+                <Label htmlFor="email">{t("leads.create.generalEmail")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -269,7 +281,7 @@ export function CreateLeadDialog() {
                 <FieldError message={errors.email} />
               </div>
               <div>
-                <Label htmlFor="phone">Teléfono</Label>
+                <Label htmlFor="phone">{t("leads.create.phone")}</Label>
                 <Input
                   id="phone"
                   value={form.phone ?? ""}
@@ -278,7 +290,9 @@ export function CreateLeadDialog() {
                 <FieldError message={errors.phone} />
               </div>
               <div>
-                <Label htmlFor="emailCommercial">Correo comercial</Label>
+                <Label htmlFor="emailCommercial">
+                  {t("leads.create.commercialEmail")}
+                </Label>
                 <Input
                   id="emailCommercial"
                   type="email"
@@ -288,7 +302,9 @@ export function CreateLeadDialog() {
                 <FieldError message={errors.emailCommercial} />
               </div>
               <div>
-                <Label htmlFor="emailManager">Correo gerente</Label>
+                <Label htmlFor="emailManager">
+                  {t("leads.create.managerEmail")}
+                </Label>
                 <Input
                   id="emailManager"
                   type="email"
@@ -298,7 +314,7 @@ export function CreateLeadDialog() {
                 <FieldError message={errors.emailManager} />
               </div>
               <div>
-                <Label htmlFor="manager">Gerente</Label>
+                <Label htmlFor="manager">{t("leads.create.manager")}</Label>
                 <Input
                   id="manager"
                   value={form.manager ?? ""}
@@ -306,7 +322,7 @@ export function CreateLeadDialog() {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Cargo</Label>
+                <Label htmlFor="role">{t("leads.create.role")}</Label>
                 <Input
                   id="role"
                   value={form.role ?? ""}
@@ -318,11 +334,11 @@ export function CreateLeadDialog() {
 
           <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">
-              Ubicación
+              {t("leads.create.locationSection")}
             </h3>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="province">Provincia</Label>
+                <Label htmlFor="province">{t("leads.create.province")}</Label>
                 <select
                   id="province"
                   className="flex h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2.5 text-sm"
@@ -334,14 +350,14 @@ export function CreateLeadDialog() {
                   <option value="">—</option>
                   {PROVINCES.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {t(`province.${p}`)}
                     </option>
                   ))}
                 </select>
                 <FieldError message={errors.province} />
               </div>
               <div>
-                <Label htmlFor="city">Ciudad</Label>
+                <Label htmlFor="city">{t("leads.create.city")}</Label>
                 <Input
                   id="city"
                   value={form.city ?? ""}
@@ -349,7 +365,9 @@ export function CreateLeadDialog() {
                 />
               </div>
               <div>
-                <Label htmlFor="postalCode">CP</Label>
+                <Label htmlFor="postalCode">
+                  {t("leads.create.postalCode")}
+                </Label>
                 <Input
                   id="postalCode"
                   value={form.postalCode ?? ""}
@@ -357,7 +375,7 @@ export function CreateLeadDialog() {
                 />
               </div>
               <div>
-                <Label htmlFor="employees">Empleados</Label>
+                <Label htmlFor="employees">{t("leads.create.employees")}</Label>
                 <Input
                   id="employees"
                   type="number"
@@ -375,7 +393,7 @@ export function CreateLeadDialog() {
               </div>
             </div>
             <div>
-              <Label htmlFor="address">Dirección</Label>
+              <Label htmlFor="address">{t("leads.create.address")}</Label>
               <Input
                 id="address"
                 value={form.address ?? ""}
@@ -386,10 +404,10 @@ export function CreateLeadDialog() {
 
           <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">
-              CRM
+              {t("leads.create.crmSection")}
             </h3>
             <div>
-              <Label>Servicios</Label>
+              <Label>{t("leads.create.services")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {SERVICES.map((s) => {
                   const active = form.services?.includes(s);
@@ -405,7 +423,7 @@ export function CreateLeadDialog() {
                           : "border-(--border) text-(--muted-fg)",
                       )}
                     >
-                      {s}
+                      {t(`service.${s}`)}
                     </button>
                   );
                 })}
@@ -414,7 +432,9 @@ export function CreateLeadDialog() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="confidence">Confianza</Label>
+                <Label htmlFor="confidence">
+                  {t("leads.create.confidence")}
+                </Label>
                 <select
                   id="confidence"
                   className="flex h-8 w-full rounded-md border border-(--border) bg-(--bg) px-2.5 text-sm"
@@ -426,14 +446,14 @@ export function CreateLeadDialog() {
                   <option value="">—</option>
                   {CONFIDENCE_LEVELS.map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {t(`confidence.${c}`)}
                     </option>
                   ))}
                 </select>
                 <FieldError message={errors.confidence} />
               </div>
               <div>
-                <Label htmlFor="software">Software</Label>
+                <Label htmlFor="software">{t("leads.create.software")}</Label>
                 <Input
                   id="software"
                   value={form.software ?? ""}
@@ -447,19 +467,19 @@ export function CreateLeadDialog() {
                 checked={Boolean(form.favorite)}
                 onChange={(e) => setField("favorite", e.target.checked)}
               />
-              Favorito
+              {t("leads.create.favorite")}
             </label>
           </section>
 
           <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">
-              Notas
+              {t("leads.create.notesSection")}
             </h3>
             <Textarea
               id="notes"
               value={form.notes ?? ""}
               onChange={(e) => setField("notes", e.target.value)}
-              placeholder="Observaciones…"
+              placeholder={t("leads.create.notesPlaceholder")}
             />
           </section>
 
@@ -470,14 +490,14 @@ export function CreateLeadDialog() {
               disabled={saving}
               onClick={() => setOpen(false)}
             >
-              Cancelar
+              {t("leads.create.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving
-                ? "Creando…"
+                ? t("leads.create.creating")
                 : forceDuplicate
-                  ? "Crear de todos modos"
-                  : "Crear lead"}
+                  ? t("leads.create.createAnyway")
+                  : t("leads.create.submit")}
             </Button>
           </div>
         </form>

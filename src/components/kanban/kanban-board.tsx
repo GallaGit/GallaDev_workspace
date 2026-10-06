@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { useEnsureLeadsSynced } from "@/hooks/use-ensure-leads-synced";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/domain/lead";
@@ -13,15 +14,20 @@ import { statusColor, useUiStore } from "@/store/ui-store";
 import { motionPresets } from "@/lib/motion/presets";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
+import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 
-async function patchStatus(id: string, status: LeadStatus): Promise<Lead> {
+async function patchStatus(
+  id: string,
+  status: LeadStatus,
+  fallbackError: string,
+): Promise<Lead> {
   const res = await fetch(`/api/leads/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Error al actualizar estado");
+  if (!res.ok) throw new Error(data.error || fallbackError);
   return data.lead as Lead;
 }
 
@@ -29,6 +35,7 @@ interface KanbanCardProps {
   lead: Lead;
   draggingId: string | null;
   canWrite: boolean;
+  favoriteLabel: string;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   onClick: () => void;
@@ -38,6 +45,7 @@ function KanbanCard({
   lead,
   draggingId,
   canWrite,
+  favoriteLabel,
   onDragStart,
   onDragEnd,
   onClick,
@@ -74,7 +82,10 @@ function KanbanCard({
           {lead.companyName}
         </span>
         {lead.favorite && (
-          <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" aria-label="Favorito" />
+          <Star
+            className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400"
+            aria-label={favoriteLabel}
+          />
         )}
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-gris-500 dark:text-gris-400">
@@ -114,9 +125,11 @@ function DropIndicator({ isOver }: DropIndicatorProps) {
 
 interface KanbanColumnProps {
   status: LeadStatus;
+  statusLabel: string;
   leads: Lead[];
   overStatus: LeadStatus | null;
   draggingId: string | null;
+  favoriteLabel: string;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent<HTMLDivElement>, status: LeadStatus) => void;
@@ -128,9 +141,11 @@ interface KanbanColumnProps {
 
 function KanbanColumn({
   status,
+  statusLabel,
   leads,
   overStatus,
   draggingId,
+  favoriteLabel,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -162,7 +177,7 @@ function KanbanColumn({
     >
       <div className="flex items-center justify-between border-b border-gris-200 dark:border-gris-700 px-3 py-2.5">
         <h3 className={cn("text-sm font-semibold", statusColor(status))}>
-          {status}
+          {statusLabel}
         </h3>
         <span className="text-xs font-mono tabular-nums text-gris-500 dark:text-gris-400 bg-gris-100 dark:bg-gris-800 px-2 py-0.5 rounded-full">
           {leads.length}
@@ -181,6 +196,7 @@ function KanbanColumn({
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               canWrite={canWrite}
+              favoriteLabel={favoriteLabel}
               onClick={() => onOpenLead(lead)}
             />
           ))}
@@ -192,6 +208,8 @@ function KanbanColumn({
 
 export function KanbanBoard() {
   useEnsureLeadsSynced();
+  const t = useTranslations("kanban");
+  const tStatus = useTranslations("leadStatus");
   const router = useRouter();
   const leads = useUiStore((s) => s.leads);
   const upsertLead = useUiStore((s) => s.upsertLead);
@@ -215,8 +233,6 @@ export function KanbanBoard() {
 
   const handleDragStart = useCallback((id: string) => {
     setDraggingId(id);
-    // Note: With framer-motion's drag, we need to manually set dataTransfer
-    // This is a limitation - we'll handle it in the drop zone
   }, []);
 
   const handleDragEnd = useCallback(() => {
@@ -235,8 +251,8 @@ export function KanbanBoard() {
 
   const moveLead = async (leadId: string, status: LeadStatus) => {
     if (isVisitor) {
-      toast("En la demo los cambios no se guardan", {
-        description: "Los datos son ficticios y de solo lectura.",
+      toast(t("demoReadonlyTitle"), {
+        description: t("demoReadonlyDesc"),
       });
       return;
     }
@@ -247,12 +263,14 @@ export function KanbanBoard() {
     const previous = { ...current };
     upsertLead({ ...current, status });
     try {
-      const updated = await patchStatus(leadId, status);
+      const updated = await patchStatus(leadId, status, t("updateError"));
       upsertLead(updated);
-      toast.success("Estado actualizado", { description: `${updated.companyName} → ${status}` });
+      toast.success(t("statusUpdated"), {
+        description: `${updated.companyName} → ${leadStatusLabel(tStatus, status)}`,
+      });
     } catch (e) {
       upsertLead(previous);
-      toast.error(e instanceof Error ? e.message : "Error al mover");
+      toast.error(e instanceof Error ? e.message : t("moveError"));
     }
   };
 
@@ -260,9 +278,14 @@ export function KanbanBoard() {
     router.push(`/leads?lead=${lead.id}`);
   };
 
+  const activeCount = leads.filter((l) => !l.archived).length;
+
   return (
     <>
-      <Topbar title="Kanban" subtitle={`${leads.filter(l => !l.archived).length} leads activos`} />
+      <Topbar
+        title={t("title")}
+        subtitle={t("activeCount", { count: activeCount })}
+      />
       <div className="min-h-0 flex-1 overflow-x-auto p-4">
         <motion.div
           className="flex h-full min-w-max gap-3"
@@ -274,9 +297,11 @@ export function KanbanBoard() {
             <KanbanColumn
               key={status}
               status={status}
+              statusLabel={leadStatusLabel(tStatus, status)}
               leads={byStatus[status]}
               overStatus={overStatus}
               draggingId={draggingId}
+              favoriteLabel={t("favorite")}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onDragOver={handleDragOver}
