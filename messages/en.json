@@ -736,5 +736,8 @@
     "yes": "Yes",
     "no": "No",
     "any": "Any"
+  },
+  "common": {
+    "loading": "Loading…"
   }
 }

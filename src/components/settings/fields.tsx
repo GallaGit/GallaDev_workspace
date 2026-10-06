@@ -1,8 +1,24 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { sourceLabel } from "@/lib/settings/catalog";
-import type { MaskedField } from "@/lib/settings/types";
+import type { MaskedField, ValueSource } from "@/lib/settings/types";
+
+function useSourceLabel() {
+  const t = useTranslations("settings.sources");
+  return (source: ValueSource) => {
+    switch (source) {
+      case "file":
+        return t("file");
+      case "env":
+        return t("env");
+      case "default":
+        return t("default");
+      default:
+        return t("none");
+    }
+  };
+}
 
 export function SecretField({
   id,
@@ -11,7 +27,7 @@ export function SecretField({
   field,
   value,
   onChange,
-  placeholder = "Nuevo valor (opcional)",
+  placeholder,
   disabled = false,
 }: {
   id: string;
@@ -23,6 +39,8 @@ export function SecretField({
   placeholder?: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("settings");
+  const sourceLabel = useSourceLabel();
   return (
     <div>
       <label
@@ -33,10 +51,13 @@ export function SecretField({
       </label>
       {field.configured ? (
         <p className="mb-1 text-[11px] text-(--muted-fg)">
-          Configurado {field.preview} · origen: {sourceLabel(field.source)}
+          {t("configured", {
+            preview: field.preview ?? "",
+            source: sourceLabel(field.source),
+          })}
         </p>
       ) : (
-        <p className="mb-1 text-[11px] text-(--muted-fg)">Sin configurar</p>
+        <p className="mb-1 text-[11px] text-(--muted-fg)">{t("notConfigured")}</p>
       )}
       <Input
         id={id}
@@ -44,11 +65,11 @@ export function SecretField({
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("newValue")}
         disabled={disabled}
       />
       <p className="mt-1 text-[11px] text-(--muted-fg)">
-        {hint ?? "Vacío = no cambiar el secreto actual."}
+        {hint ?? t("emptySecret")}
       </p>
     </div>
   );

@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
 
 export function SettingsSecurity() {
+  const t = useTranslations("settings");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,7 @@ export function SettingsSecurity() {
         scope: "global",
       });
       if (signOutError) {
-        setError("No se pudo cerrar las sesiones");
+        setError(t("securityPanel.logoutError"));
         return;
       }
       setDone(true);
@@ -31,7 +33,7 @@ export function SettingsSecurity() {
       router.push("/login");
       router.refresh();
     } catch {
-      setError("Error de red al cerrar las sesiones");
+      setError(t("securityPanel.networkError"));
     } finally {
       setLoading(false);
     }
@@ -40,15 +42,12 @@ export function SettingsSecurity() {
   return (
     <section aria-labelledby="seguridad-heading" className="rounded-lg border border-border bg-panel p-4">
       <h3 id="seguridad-heading" className="text-sm font-semibold text-fg">
-        Seguridad
+        {t("security")}
       </h3>
-      <p className="mt-1 text-sm text-muted-fg">
-        Botón de emergencia: cierra tu sesión en todos los dispositivos.
-        Úsalo si sospechas que tus credenciales se han comprometido.
-      </p>
+      <p className="mt-1 text-sm text-muted-fg">{t("securityPanel.description")}</p>
       {done && (
         <p role="status" className="mt-2 text-sm text-muted-fg">
-          Sesiones cerradas en todos los dispositivos. Vuelve a entrar.
+          {t("securityPanel.done")}
         </p>
       )}
       {error && (
@@ -64,13 +63,11 @@ export function SettingsSecurity() {
           className="mt-3"
           onClick={() => setConfirming(true)}
         >
-          Cerrar todas las sesiones
+          {t("securityPanel.logoutAll")}
         </Button>
       ) : (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <p className="w-full text-sm text-fg">
-            ¿Seguro? Expulsará todos los dispositivos, incluido este.
-          </p>
+          <p className="w-full text-sm text-fg">{t("securityPanel.confirm")}</p>
           <Button
             type="button"
             variant="destructive"
@@ -78,7 +75,7 @@ export function SettingsSecurity() {
             loading={loading}
             onClick={handleLogoutAll}
           >
-            Confirmar cierre global
+            {t("securityPanel.confirmGlobal")}
           </Button>
           <Button
             type="button"
@@ -87,7 +84,7 @@ export function SettingsSecurity() {
             disabled={loading}
             onClick={() => setConfirming(false)}
           >
-            Cancelar
+            {t("securityPanel.cancel")}
           </Button>
         </div>
       )}

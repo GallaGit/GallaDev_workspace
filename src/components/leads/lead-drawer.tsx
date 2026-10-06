@@ -113,6 +113,7 @@ function LeadDrawerBody({
   const tConfidence = useTranslations("confidence");
   const tProvince = useTranslations("province");
   const tService = useTranslations("service");
+  const tAuto = useTranslations("automations");
   const locale = useLocale();
   const base = leads.find((l) => l.id === selectedLeadId) ?? null;
   const [lead, setLead] = useState<Lead | null>(base);
@@ -197,7 +198,9 @@ function LeadDrawerBody({
       setLead(data.lead);
       upsertLead(data.lead);
       toast.success(t("saved"));
-      toastAutomationDispatch(data.automation);
+      toastAutomationDispatch(data.automation, {
+        dispatched: tAuto("dispatched"),
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("saveError"));
     } finally {
@@ -252,7 +255,9 @@ function LeadDrawerBody({
       if (data.notionUpdated) {
         toast.success(t("analysisSaved"));
       }
-      toastAutomationDispatch(data.automation);
+      toastAutomationDispatch(data.automation, {
+        dispatched: tAuto("dispatched"),
+      });
     } catch (e) {
       const message =
         e instanceof Error ? e.message : tAi("genericError");

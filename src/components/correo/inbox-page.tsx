@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { PenSquare, Trash2 } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
@@ -61,22 +62,16 @@ export interface EmailAttachment {
 type ListMode = "threads" | "drafts";
 type MailboxFilter = "all" | CompanyMailbox;
 
-const FILTER_OPTIONS: { id: MailboxFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
-  ...COMPANY_MAILBOXES.map((m) => ({
-    id: m as MailboxFilter,
-    label: m.split("@")[0] + "@",
-  })),
-];
-
-function formatDraftDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-ES", {
+function formatDraftDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
   });
 }
 
 export function InboxPage() {
+  const t = useTranslations("correo");
+  const locale = useLocale();
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +81,14 @@ export function InboxPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<EmailDraft | null>(null);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
+
+  const filterOptions: { id: MailboxFilter; label: string }[] = [
+    { id: "all", label: t("all") },
+    ...COMPANY_MAILBOXES.map((m) => ({
+      id: m as MailboxFilter,
+      label: m.split("@")[0] + "@",
+    })),
+  ];
 
   useEffect(() => {
     if (listMode !== "threads") return;
@@ -103,7 +106,7 @@ export function InboxPage() {
         );
         const data = await readJsonResponse<{ threads?: EmailThread[] }>(
           res,
-          "Error al cargar hilos",
+          t("loadThreadsError"),
         );
         if (cancelled) return;
         setThreads(data.threads ?? []);
@@ -111,7 +114,7 @@ export function InboxPage() {
       } catch (e) {
         if (!cancelled) {
           toast.error(
-            e instanceof Error ? e.message : "Error al cargar el buzón",
+            e instanceof Error ? e.message : t("loadMailboxError"),
           );
         }
       } finally {
@@ -122,7 +125,7 @@ export function InboxPage() {
     return () => {
       cancelled = true;
     };
-  }, [mailboxFilter, listMode, threadsReloadKey]);
+  }, [mailboxFilter, listMode, threadsReloadKey, t]);
 
   useEffect(() => {
     if (listMode !== "drafts") return;
@@ -133,7 +136,7 @@ export function InboxPage() {
         const res = await fetch("/api/email/drafts");
         const data = await readJsonResponse<{ drafts?: EmailDraft[] }>(
           res,
-          "Error al cargar borradores",
+          t("loadDraftsError"),
         );
         if (cancelled) return;
         let list = data.drafts ?? [];
@@ -145,7 +148,7 @@ export function InboxPage() {
       } catch (e) {
         if (!cancelled) {
           toast.error(
-            e instanceof Error ? e.message : "Error al cargar borradores",
+            e instanceof Error ? e.message : t("loadDraftsError"),
           );
         }
       } finally {
@@ -156,18 +159,22 @@ export function InboxPage() {
     return () => {
       cancelled = true;
     };
-  }, [listMode, mailboxFilter, composeOpen]);
+  }, [listMode, mailboxFilter, composeOpen, t]);
 
   const handleMarkRead = useCallback((threadId: string) => {
     setThreads((prev) =>
-      prev.map((t) => (t.id === threadId ? { ...t, is_read: true } : t)),
+      prev.map((thread) =>
+        thread.id === threadId ? { ...thread, is_read: true } : thread,
+      ),
     );
   }, []);
 
   const handleLinkLead = useCallback(
     (threadId: string, leadId: string | null) => {
       setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, lead_id: leadId } : t)),
+        prev.map((thread) =>
+          thread.id === threadId ? { ...thread, lead_id: leadId } : thread,
+        ),
       );
     },
     [],
@@ -199,24 +206,27 @@ export function InboxPage() {
     setSelectedId(threadId);
   }, []);
 
-  const handleDeleteDraft = useCallback(async (draftId: string) => {
-    try {
-      const res = await fetch(`/api/email/drafts/${draftId}`, {
-        method: "DELETE",
-      });
-      await readJsonResponse(res, "Error al eliminar");
-      setDrafts((prev) => prev.filter((d) => d.id !== draftId));
-      toast.success("Borrador eliminado");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al eliminar");
-    }
-  }, []);
+  const handleDeleteDraft = useCallback(
+    async (draftId: string) => {
+      try {
+        const res = await fetch(`/api/email/drafts/${draftId}`, {
+          method: "DELETE",
+        });
+        await readJsonResponse(res, t("deleteError"));
+        setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+        toast.success(t("draftDeleted"));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t("deleteError"));
+      }
+    },
+    [t],
+  );
 
-  const selectedThread = threads.find((t) => t.id === selectedId) ?? null;
+  const selectedThread = threads.find((thread) => thread.id === selectedId) ?? null;
 
   return (
     <>
-      <Topbar title="Correo" subtitle="hola@ · ociel@" />
+      <Topbar title={t("title")} subtitle={t("subtitle")} />
       <div className="flex min-h-0 flex-1">
         <aside className="w-80 shrink-0 overflow-y-auto border-r border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito">
           <div className="border-b border-gris-200 dark:border-gris-700 px-3 py-2 space-y-2">
@@ -227,14 +237,14 @@ export function InboxPage() {
               onClick={openNewCompose}
             >
               <PenSquare className="mr-1.5 h-3.5 w-3.5" />
-              Nuevo
+              {t("new")}
             </Button>
             <div
               className="flex flex-wrap gap-1"
               role="group"
-              aria-label="Filtrar por buzón"
+              aria-label={t("mailboxFilter")}
             >
-              {FILTER_OPTIONS.map((opt) => {
+              {filterOptions.map((opt) => {
                 const active =
                   listMode === "threads" && mailboxFilter === opt.id;
                 return (
@@ -268,13 +278,13 @@ export function InboxPage() {
                 )}
                 aria-pressed={listMode === "drafts"}
               >
-                Borradores
+                {t("drafts")}
               </button>
             </div>
             <p className="text-[11px] text-gris-500 dark:text-gris-400">
               {listMode === "drafts"
-                ? `Borradores · ${drafts.length}`
-                : `Hilos · ${threads.length}`}
+                ? t("draftCount", { count: drafts.length })
+                : t("threadCount", { count: threads.length })}
             </p>
           </div>
 
@@ -287,10 +297,10 @@ export function InboxPage() {
           ) : listMode === "drafts" ? (
             drafts.length === 0 ? (
               <p className="p-4 text-[13px] text-gris-500 dark:text-gris-400">
-                No hay borradores. Usa Nuevo para redactar.
+                {t("emptyDrafts")}
               </p>
             ) : (
-              <ul role="listbox" aria-label="Borradores">
+              <ul role="listbox" aria-label={t("drafts")}>
                 {drafts.map((draft) => (
                   <li key={draft.id}>
                     <div className="flex items-start gap-1 border-b border-gris-200 dark:border-gris-700">
@@ -301,14 +311,14 @@ export function InboxPage() {
                       >
                         <div className="flex items-baseline justify-between gap-2">
                           <span className="truncate text-[13px] font-medium text-grafito dark:text-gris-100">
-                            {draft.to_address || "(sin destinatario)"}
+                            {draft.to_address || t("noRecipient")}
                           </span>
                           <span className="shrink-0 text-[11px] text-gris-500">
-                            {formatDraftDate(draft.updated_at)}
+                            {formatDraftDate(draft.updated_at, locale)}
                           </span>
                         </div>
                         <p className="mt-0.5 truncate text-[12px] text-gris-500 dark:text-gris-400">
-                          {draft.subject || "(sin asunto)"}
+                          {draft.subject || t("noSubject")}
                         </p>
                         <span className="mt-0.5 inline-block rounded bg-gris-100 dark:bg-gris-800 px-1.5 text-[10px] font-medium text-gris-600 dark:text-gris-300">
                           {mailboxChipLabel(draft.mailbox_address)}
@@ -317,7 +327,7 @@ export function InboxPage() {
                       <button
                         type="button"
                         className="shrink-0 p-2 text-gris-400 hover:text-rojo"
-                        aria-label="Eliminar borrador"
+                        aria-label={t("deleteDraft")}
                         onClick={() => void handleDeleteDraft(draft.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -329,10 +339,9 @@ export function InboxPage() {
             )
           ) : threads.length === 0 ? (
             <p className="p-4 text-[13px] text-gris-500 dark:text-gris-400">
-              No hay correos
               {mailboxFilter === "all"
-                ? " para hola@ u ociel@."
-                : ` en ${mailboxFilter}.`}
+                ? t("emptyAll")
+                : t("emptyMailbox", { mailbox: mailboxFilter })}
             </p>
           ) : (
             <ThreadList
@@ -346,13 +355,13 @@ export function InboxPage() {
           {listMode === "drafts" ? (
             <div className="flex h-full items-center justify-center p-6">
               <p className="text-sm text-gris-500 dark:text-gris-400">
-                Abre un borrador o pulsa Nuevo para redactar.
+                {t("openDraftHint")}
               </p>
             </div>
           ) : !selectedThread ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-sm text-gris-500 dark:text-gris-400">
-                Selecciona un hilo para leer los mensajes.
+                {t("selectThread")}
               </p>
             </div>
           ) : (

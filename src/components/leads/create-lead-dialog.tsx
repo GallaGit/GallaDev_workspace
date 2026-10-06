@@ -172,7 +172,9 @@ export function CreateLeadDialog() {
       upsertLead(lead);
       setSelectedLeadId(lead.id);
       toast.success(t("leads.create.created", { company: lead.companyName }));
-      toastAutomationDispatch(data.automation);
+      toastAutomationDispatch(data.automation, {
+        dispatched: t("automations.dispatched"),
+      });
       setOpen(false);
       reset();
     } catch (err) {

@@ -736,5 +736,8 @@
     "yes": "Sí",
     "no": "No",
     "any": "Cualquiera"
+  },
+  "common": {
+    "loading": "Cargando…"
   }
 }

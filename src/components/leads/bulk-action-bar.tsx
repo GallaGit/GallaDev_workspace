@@ -19,6 +19,7 @@ import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
 export function BulkActionBar() {
   const t = useTranslations("leads.bulk");
   const tStatus = useTranslations("leadStatus");
+  const tAuto = useTranslations("automations");
   const {
     selectedIds,
     setSelectedIds,
@@ -55,7 +56,10 @@ export function BulkActionBar() {
       if (!res.ok) throw new Error(data.error || t("massError"));
       for (const lead of data.leads as Lead[]) upsertLead(lead);
       toast.success(t("updated", { count: data.leads.length }));
-      toastAutomationBulk(data.automation);
+      toastAutomationBulk(data.automation, {
+        dispatched: tAuto("dispatched"),
+        dispatchedMany: (count) => tAuto("dispatchedMany", { count }),
+      });
       setSelectedIds([]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("massError"));

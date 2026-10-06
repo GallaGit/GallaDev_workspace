@@ -1,6 +1,7 @@
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 import { ThreadView } from "./thread-view";
 import type { EmailThread } from "./inbox-page";
 
@@ -35,7 +36,7 @@ describe("ThreadView con 500 vacío", () => {
   });
 
   it("muestra el error en español y no Unexpected end of JSON input", async () => {
-    render(
+    renderWithIntl(
       <ThreadView
         thread={thread}
         onMarkRead={() => {}}

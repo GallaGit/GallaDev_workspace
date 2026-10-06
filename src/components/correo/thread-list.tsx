@@ -1,24 +1,25 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Mail, MailOpen } from "lucide-react";
 import { mailboxChipLabel } from "@/lib/email/mailboxes";
 import type { EmailThread } from "./inbox-page";
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string, yesterday: string): string {
   const date = new Date(iso);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / 86_400_000);
 
   if (diffDays === 0) {
-    return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   }
-  if (diffDays === 1) return "Ayer";
+  if (diffDays === 1) return yesterday;
   if (diffDays < 7) {
-    return date.toLocaleDateString("es-ES", { weekday: "short" });
+    return date.toLocaleDateString(locale, { weekday: "short" });
   }
-  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 export function ThreadList({
@@ -30,8 +31,11 @@ export function ThreadList({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("correo");
+  const locale = useLocale();
+
   return (
-    <ul role="listbox" aria-label="Hilos de correo">
+    <ul role="listbox" aria-label={t("threadList")}>
       {threads.map((thread) => {
         const active = thread.id === selectedId;
         const unread = !thread.is_read;
@@ -50,9 +54,9 @@ export function ThreadList({
               <div className="flex items-start gap-2">
                 <div className="mt-0.5 shrink-0">
                   {unread ? (
-                    <Mail className="h-4 w-4 text-rojo" aria-label="No leído" />
+                    <Mail className="h-4 w-4 text-rojo" aria-label={t("unread")} />
                   ) : (
-                    <MailOpen className="h-4 w-4 text-gris-400 dark:text-gris-500" aria-label="Leído" />
+                    <MailOpen className="h-4 w-4 text-gris-400 dark:text-gris-500" aria-label={t("read")} />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -68,7 +72,7 @@ export function ThreadList({
                       {thread.from_name ?? thread.from_address}
                     </span>
                     <span className="shrink-0 text-[11px] text-gris-500 dark:text-gris-400">
-                      {formatDate(thread.last_message_at)}
+                      {formatDate(thread.last_message_at, locale, t("yesterday"))}
                     </span>
                   </div>
                   <p
@@ -87,7 +91,7 @@ export function ThreadList({
                     </span>
                     {thread.message_count > 1 && (
                       <span className="inline-block rounded-full bg-gris-100 dark:bg-gris-800 px-1.5 text-[10px] text-gris-500 dark:text-gris-400">
-                        {thread.message_count} mensajes
+                        {t("messageCount", { count: thread.message_count })}
                       </span>
                     )}
                   </div>

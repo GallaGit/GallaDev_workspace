@@ -1,14 +1,8 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import type { IntegrationConnectionState } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
-
-const LABELS: Record<IntegrationConnectionState["status"], string> = {
-  never: "Nunca",
-  syncing: "Comprobando…",
-  ok: "OK",
-  error: "Error",
-};
 
 export function ConnectionBadge({
   connection,
@@ -17,6 +11,8 @@ export function ConnectionBadge({
   connection: IntegrationConnectionState;
   pending?: boolean;
 }) {
+  const t = useTranslations("settings.connection");
+  const format = useFormatter();
   const status = pending ? "syncing" : connection.status;
   return (
     <div className="flex flex-wrap items-center gap-2 text-[11px]">
@@ -29,14 +25,15 @@ export function ConnectionBadge({
           status === "never" && "bg-(--muted) text-(--muted-fg)",
         )}
       >
-        {LABELS[status]}
+        {t(status)}
       </span>
       {connection.lastSyncedAt ? (
         <span className="text-(--muted-fg)">
-          Última sync:{" "}
-          {new Date(connection.lastSyncedAt).toLocaleString("es-ES", {
-            dateStyle: "short",
-            timeStyle: "short",
+          {t("lastSync", {
+            date: format.dateTime(new Date(connection.lastSyncedAt), {
+              dateStyle: "short",
+              timeStyle: "short",
+            }),
           })}
         </span>
       ) : null}

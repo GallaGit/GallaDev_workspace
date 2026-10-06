@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsIntegrations } from "./settings-integrations";
 import { AutomationsPanel } from "@/components/automations/automations-panel";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 const access = vi.hoisted(() => ({
   isAdmin: false,
@@ -30,7 +31,7 @@ function renderWithQuery(node: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  return renderWithIntl(
     <QueryClientProvider client={client}>{node}</QueryClientProvider>,
   );
 }
