@@ -2,7 +2,8 @@
   "locale": {
     "label": "Language",
     "es": "ES",
-    "en": "EN"
+    "en": "EN",
+    "switchTo": "Switch to Español"
   },
   "nav": {
     "dashboard": "Dashboard",

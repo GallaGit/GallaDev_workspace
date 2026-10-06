@@ -33,37 +33,25 @@ function renderSwitcher(locale: "es" | "en") {
 }
 
 describe("LocaleSwitcher", () => {
-  it("muestra la bandera activa y cambia a inglés desde el menú", async () => {
+  it("muestra la bandera activa y al clic cambia a inglés", async () => {
     renderSwitcher("es");
+    const button = screen.getByTestId("locale-trigger");
     expect(screen.getByTestId("locale-switcher")).toBeInTheDocument();
-    expect(screen.getByTestId("locale-trigger")).toHaveAttribute(
-      "aria-label",
-      "Idioma",
-    );
-    fireEvent.click(screen.getByTestId("locale-trigger"));
-    expect(screen.getByTestId("locale-es")).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.getByTestId("locale-es")).toHaveTextContent("ES");
-    expect(screen.getByTestId("locale-en")).toHaveTextContent("EN");
-    fireEvent.click(screen.getByTestId("locale-en"));
+    expect(button).toHaveAttribute("data-locale", "es");
+    expect(button).toHaveAttribute("aria-label", "Cambiar a English");
+    expect(button).toHaveAttribute("title", "Cambiar a English");
+    fireEvent.click(button);
     await waitFor(() => {
       expect(setLocaleMock).toHaveBeenCalledWith("en");
       expect(refresh).toHaveBeenCalled();
     });
   });
 
-  it("en inglés marca EN como seleccionado en el menú", () => {
+  it("en inglés propone volver a español", () => {
     renderSwitcher("en");
-    fireEvent.click(screen.getByTestId("locale-trigger"));
-    expect(screen.getByTestId("locale-en")).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.getByTestId("locale-es")).toHaveAttribute(
-      "aria-selected",
-      "false",
-    );
+    const button = screen.getByTestId("locale-trigger");
+    expect(button).toHaveAttribute("data-locale", "en");
+    expect(button).toHaveAttribute("aria-label", "Switch to Español");
+    expect(button).toHaveAttribute("title", "Switch to Español");
   });
 });

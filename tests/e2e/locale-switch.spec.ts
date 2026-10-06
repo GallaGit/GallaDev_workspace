@@ -9,17 +9,23 @@ test("el selector de idioma cambia a inglés y vuelve a español", async ({
   await page.goto("/login");
   await expect(page.getByTestId("locale-switcher")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
-  await expect(page.getByTestId("locale-trigger")).toBeVisible();
 
-  await page.getByTestId("locale-trigger").click();
-  await expect(page.getByTestId("locale-es")).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.getByTestId("locale-en").click();
+  const trigger = page.getByTestId("locale-trigger");
+  await expect(trigger).toHaveAttribute("data-locale", "es");
+  await expect(trigger).toHaveAttribute("aria-label", "Cambiar a English");
+
+  await trigger.click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible({
     timeout: 10000,
   });
+  await expect(page.getByTestId("locale-trigger")).toHaveAttribute(
+    "data-locale",
+    "en",
+  );
+  await expect(page.getByTestId("locale-trigger")).toHaveAttribute(
+    "aria-label",
+    "Switch to Español",
+  );
 
   const cookies = await page.context().cookies();
   expect(cookies.some((c) => c.name === "NEXT_LOCALE" && c.value === "en")).toBe(
@@ -27,12 +33,11 @@ test("el selector de idioma cambia a inglés y vuelve a español", async ({
   );
 
   await page.getByTestId("locale-trigger").click();
-  await expect(page.getByTestId("locale-en")).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.getByTestId("locale-es").click();
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible({
     timeout: 10000,
   });
+  await expect(page.getByTestId("locale-trigger")).toHaveAttribute(
+    "data-locale",
+    "es",
+  );
 });
