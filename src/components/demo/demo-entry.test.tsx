@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { LoginForm } from "@/app/login/login-form";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { SessionAccessProvider } from "@/components/session-access";
+import { renderWithIntl } from "@/test/i18n-wrapper";
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -28,7 +29,7 @@ beforeEach(() => {
 
 describe("botón de demo en el login", () => {
   it("muestra Entrar como visitante cuando la demo está configurada", () => {
-    render(<LoginForm demoEnabled />);
+    renderWithIntl(<LoginForm demoEnabled />);
     expect(
       screen.getByRole("button", { name: "Entrar como visitante" }),
     ).toBeInTheDocument();
@@ -36,7 +37,7 @@ describe("botón de demo en el login", () => {
   });
 
   it("oculta el botón si la demo está apagada", () => {
-    render(<LoginForm demoEnabled={false} />);
+    renderWithIntl(<LoginForm demoEnabled={false} />);
     expect(
       screen.queryByRole("button", { name: "Entrar como visitante" }),
     ).not.toBeInTheDocument();
@@ -51,7 +52,7 @@ describe("banner de demo", () => {
         jsonResponse({ id: "visitor", email: null, role: null, visitor: true }),
       ),
     );
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <DemoBanner />
       </SessionAccessProvider>,
@@ -69,7 +70,7 @@ describe("banner de demo", () => {
       jsonResponse({ id: "u1", email: "a@b.c", role: "Seller", visitor: false }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(
+    renderWithIntl(
       <SessionAccessProvider>
         <DemoBanner />
       </SessionAccessProvider>,
