@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` in `.env.local`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same public URL and publishable key; Next inlines them at build time). For the Correo module, add `RESEND_API_KEY` and `RESEND_INBOUND_WEBHOOK_SECRET` (Svix signing secret from the Resend inbound webhook). Use `AUTH_DISABLED=true` only for local development. Never commit credentials. There is no self-signup: leave public sign-up off and create accounts in Authentication → Users. The `on_auth_user_created` trigger inserts a profile with no role. An Admin assigns Admin, Seller, or Viewer in Settings → Equipo.
+Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` in `.env.local`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same public URL and publishable key; Next inlines them at build time). For the Correo module, add `RESEND_API_KEY` (**full access**, not sending-only) and `RESEND_INBOUND_WEBHOOK_SECRET` (Svix signing secret from the Resend inbound webhook). If messages were stored without bodies, an Admin can backfill them with `POST /api/email/backfill-bodies` (see [company-email.md](../02-roadmap-delivery/company-email.md)). Use `AUTH_DISABLED=true` only for local development. Never commit credentials. There is no self-signup: leave public sign-up off and create accounts in Authentication → Users. The `on_auth_user_created` trigger inserts a profile with no role. An Admin assigns Admin, Seller, or Viewer in Settings → Equipo.
 
 ## Main routes
 

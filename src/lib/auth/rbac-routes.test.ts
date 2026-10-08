@@ -345,6 +345,7 @@ describe("correo: solo Admin", () => {
     const threads = await import("@/app/api/email/threads/route");
     const item = await import("@/app/api/email/threads/[id]/route");
     const reply = await import("@/app/api/email/threads/[id]/reply/route");
+    const backfill = await import("@/app/api/email/backfill-bodies/route");
     const ctx = {
       params: Promise.resolve({
         id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
@@ -362,6 +363,11 @@ describe("correo: solo Admin", () => {
           text: "hola",
         }),
         ctx,
+      ),
+    );
+    await expectForbidden(
+      await backfill.POST(
+        jsonRequest("http://localhost/api/email/backfill-bodies", "POST", {}),
       ),
     );
     expect(adminClient).not.toHaveBeenCalled();

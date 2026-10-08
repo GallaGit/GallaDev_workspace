@@ -8,6 +8,7 @@ import {
   isValidExternalEmail,
   type CompanyMailbox,
 } from "./mailboxes";
+import { createOutboundMessageId } from "./receiving-fetch";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
@@ -71,6 +72,7 @@ export async function sendCompose(
   const fromMeta = displayFrom(input.mailbox);
 
   let resendEmailId: string | undefined;
+  const outboundMessageId = createOutboundMessageId();
   try {
     const result = await client.emails.send({
       from: fromMeta.from,
@@ -78,6 +80,9 @@ export async function sendCompose(
       subject,
       text: stored.text ?? bodyText,
       ...(stored.html ? { html: stored.html } : {}),
+      headers: {
+        "Message-ID": outboundMessageId,
+      },
     });
 
     if (result.error) {
@@ -122,7 +127,7 @@ export async function sendCompose(
     .insert({
       thread_id: thread.id,
       resend_email_id: resendEmailId,
-      message_id: null,
+      message_id: outboundMessageId,
       in_reply_to: null,
       references: null,
       direction: "outbound",

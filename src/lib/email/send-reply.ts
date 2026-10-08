@@ -8,6 +8,7 @@ import {
   isValidExternalEmail,
 } from "./mailboxes";
 import { MAX_EMAIL_BODY_CHARS } from "./limits";
+import { createOutboundMessageId } from "./receiving-fetch";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
@@ -108,7 +109,9 @@ export async function sendReply(
   const stored = prepareStoredEmailBodies(input.bodyHtml, bodyText);
 
   let resendEmailId: string | undefined;
-  let resendMessageId: string | undefined;
+  // Resend send() only returns its own id, not the RFC Message-ID. Set ours
+  // so a later inbound reply's In-Reply-To can join this thread.
+  const outboundMessageId = createOutboundMessageId();
 
   try {
     const result = await client.emails.send({
@@ -118,6 +121,7 @@ export async function sendReply(
       text: stored.text ?? bodyText,
       ...(stored.html ? { html: stored.html } : {}),
       headers: {
+        "Message-ID": outboundMessageId,
         ...(inReplyTo ? { "In-Reply-To": inReplyTo } : {}),
         ...(references ? { References: references } : {}),
       },
@@ -128,7 +132,6 @@ export async function sendReply(
     }
 
     resendEmailId = result.data?.id;
-    resendMessageId = undefined;
   } catch (e) {
     return {
       sent: false,
@@ -146,7 +149,7 @@ export async function sendReply(
     .insert({
       thread_id: input.threadId,
       resend_email_id: resendEmailId,
-      message_id: resendMessageId ?? null,
+      message_id: outboundMessageId,
       in_reply_to: inReplyTo ?? null,
       references: references ?? null,
       direction: "outbound",

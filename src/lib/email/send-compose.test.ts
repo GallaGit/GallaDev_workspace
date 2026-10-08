@@ -94,6 +94,10 @@ describe("sendCompose", () => {
       expect(result.threadId).toBe("thread-new-1");
       expect(result.messageId).toBe("msg-new-1");
     }
+    const call = sendMock.mock.calls[0][0];
+    expect(call.headers["Message-ID"]).toMatch(
+      /^<[0-9a-f-]{36}@galladev\.com>$/i,
+    );
     expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "Ociel <ociel@galladev.com>",
