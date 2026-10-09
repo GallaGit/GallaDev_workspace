@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY`, más `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (la misma URL pública y la clave publishable; Next las incrusta en el build). Para el módulo Correo, añade `RESEND_API_KEY` y `RESEND_INBOUND_WEBHOOK_SECRET` (secreto de firma Svix del webhook de Resend). Usa `AUTH_DISABLED=true` solo en desarrollo local. Nunca subas credenciales al repositorio. No hay alta pública: déjala apagada en el dashboard y crea las cuentas en Authentication → Users. El trigger `on_auth_user_created` inserta el perfil sin rol. El Admin asigna Admin, Seller o Viewer en Settings → Equipo.
+Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY`, más `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (la misma URL pública y la clave publishable; Next las incrusta en el build). Para el módulo Correo, añade `RESEND_API_KEY` (**full access**, no solo envío) y `RESEND_INBOUND_WEBHOOK_SECRET` (secreto de firma Svix del webhook de Resend). Si hubo correos guardados sin cuerpo, un Admin puede rellenarlos con `POST /api/email/backfill-bodies` (ver [company-email.es.md](../02-roadmap-delivery/company-email.es.md)). Usa `AUTH_DISABLED=true` solo en desarrollo local. Nunca subas credenciales al repositorio. No hay alta pública: déjala apagada en el dashboard y crea las cuentas en Authentication → Users. El trigger `on_auth_user_created` inserta el perfil sin rol. El Admin asigna Admin, Seller o Viewer en Settings → Equipo.
 
 ## Rutas principales
 

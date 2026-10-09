@@ -73,9 +73,23 @@ Solo nombres. Los valores viven en Vercel (y en Resend). Nunca en git, nunca en 
 | Nombre | Uso |
 | --- | --- |
 | `RESEND_INBOUND_WEBHOOK_SECRET` | Secreto de firma del webhook de entrada. Los ejemplos de Resend llaman al mismo tipo de secreto `RESEND_WEBHOOK_SECRET`. Esta spec usa `RESEND_INBOUND_WEBHOOK_SECRET` para no mezclarlo con un webhook futuro de eventos de envío. |
-| `RESEND_API_KEY` | Ya está definida. Se reutiliza para las respuestas salientes y para la Receiving API (leer el mensaje, listar adjuntos) cuando esa clave pueda llamarlas. Se puede usar una clave dedicada de Resend en lugar de reutilizar esta. La clave dedicada también es solo un secreto de Vercel; esta spec no exige un segundo nombre, y no se commitea. |
+| `RESEND_API_KEY` | Clave de Resend con **full access**. Hace falta para enviar y para la Receiving API (`GET /emails/receiving/{id}`: cuerpo HTML/texto y cabeceras). Una clave solo `sending_access` responde 401 al leer recibidos y los cuerpos quedan vacíos. Se puede usar una clave dedicada full access en Vercel con el mismo nombre; no se commitea. |
 
 `EMAIL_FROM_CLIENTS` y `EMAIL_NOTIFY_TO` se quedan como están. Son el envío transaccional que ya existe, no el buzón.
+
+### Relleno de cuerpos (Fase 0)
+
+Si hubo mensajes guardados sin cuerpo (p. ej. clave sin permiso de lectura), tras poner una `RESEND_API_KEY` full access y redesplegar, un Admin puede rellenar los cuerpos desde Resend (retención ~30 días):
+
+```bash
+# Sesión Admin (cookie de la app). Opcional: {"limit":100} (1–500).
+curl -X POST "https://workspace.galladev.com/api/email/backfill-bodies" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <sesión-admin>" \
+  -d '{"limit":100}'
+```
+
+La ruta exige `requireAdmin`, es idempotente (solo filas inbound con `body_html` y `body_text` null) y responde `{ ok, scanned, updated, skipped, failed }`. Repetir hasta `scanned: 0` o `updated: 0` con `failed` estable. No registra cuerpos ni direcciones.
 
 ## 5. Fases
 

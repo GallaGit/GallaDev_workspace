@@ -80,7 +80,7 @@ describe("sendReply", () => {
     sendMock.mockResolvedValue({ data: { id: "re_sent_123" }, error: null });
   });
 
-  it("sends reply with In-Reply-To and References headers", async () => {
+  it("sends reply with In-Reply-To, References, and own Message-ID", async () => {
     const admin = mockAdmin();
     const result = await sendReply(admin, {
       threadId: "t-1",
@@ -97,6 +97,41 @@ describe("sendReply", () => {
     expect(call.text).toBe("Thanks for writing!");
     expect(call.headers["In-Reply-To"]).toBe("<msg-1@example.com>");
     expect(call.headers.References).toBe("<msg-1@example.com>");
+    expect(call.headers["Message-ID"]).toMatch(
+      /^<[0-9a-f-]{36}@galladev\.com>$/i,
+    );
+    expect(result.sent && result.messageId).toBe("new-msg-1");
+  });
+
+  it("persists the outbound Message-ID on the stored message", async () => {
+    let inserted: Record<string, unknown> | undefined;
+    const base = mockAdmin();
+    const baseFrom = base.from as unknown as (table: string) => {
+      insert?: (row: Record<string, unknown>) => unknown;
+      [key: string]: unknown;
+    };
+    const admin = {
+      from: vi.fn().mockImplementation((table: string) => {
+        const inner = baseFrom(table);
+        if (table === "email_messages" && typeof inner.insert === "function") {
+          const originalInsert = inner.insert.bind(inner);
+          return {
+            ...inner,
+            insert: (row: Record<string, unknown>) => {
+              inserted = row;
+              return originalInsert(row);
+            },
+          };
+        }
+        return inner;
+      }),
+    } as unknown as Parameters<typeof sendReply>[0];
+
+    await sendReply(admin, { threadId: "t-1", bodyText: "Thanks" });
+    expect(inserted?.message_id).toMatch(/^<[0-9a-f-]{36}@galladev\.com>$/i);
+    expect(sendMock.mock.calls[0][0].headers["Message-ID"]).toBe(
+      inserted?.message_id,
+    );
   });
 
   it("sends from ociel@ when thread mailbox is ociel@", async () => {
