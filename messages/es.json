@@ -21,7 +21,8 @@
     "principalAria": "Principal",
     "logout": "Cerrar sesión",
     "exitDemo": "Salir de la demo",
-    "developedBy": "developed by GallaDev"
+    "developedBy": "developed by GallaDev",
+    "correoUnread": "{count} sin leer"
   },
   "topbar": {
     "openMenu": "Abrir menú",
@@ -532,6 +533,11 @@
     "sanitizedHtml": "HTML saneado",
     "noText": "Sin contenido de texto disponible.",
     "attachmentCount": "{count, plural, one {# adjunto} other {# adjuntos}}",
+    "attachmentOpen": "Abrir {filename}",
+    "attachmentDownload": "Descargar {filename}",
+    "attachmentOpening": "Abriendo…",
+    "attachmentExpired": "Resend ya no conserva este adjunto (más de ~30 días). No se puede abrir ni descargar.",
+    "attachmentUnavailable": "No se pudo obtener el adjunto",
     "markReadError": "No se pudo marcar como leído",
     "replyAs": "Responder como hola@galladev.com",
     "replyPlaceholder": "Escribe tu respuesta…",
@@ -570,7 +576,34 @@
       "error": "Error al vincular",
       "linked": "Lead vinculado al hilo",
       "unlinked": "Vinculación eliminada"
-    }
+    },
+    "views": {
+      "label": "Bandejas",
+      "inbox": "Recibidos",
+      "archived": "Archivados",
+      "trash": "Papelera"
+    },
+    "unreadBadge": "{count} sin leer",
+    "hasAttachments": "Tiene adjuntos",
+    "selectThreadRow": "Seleccionar hilo de {sender}",
+    "selectAll": "Seleccionar todos",
+    "selectedCount": "{count, plural, one {# seleccionado} other {# seleccionados}}",
+    "markRead": "Marcar como leído",
+    "markUnread": "Marcar como no leído",
+    "archive": "Archivar",
+    "moveToInbox": "Mover a Recibidos",
+    "moveToTrash": "Mover a la papelera",
+    "restore": "Restaurar",
+    "actionsLabel": "Acciones del hilo",
+    "bulkActionsLabel": "Acciones sobre la selección",
+    "actionError": "No se pudo actualizar el hilo",
+    "archivedToast": "{count, plural, one {Hilo archivado} other {# hilos archivados}}",
+    "trashedToast": "{count, plural, one {Hilo movido a la papelera} other {# hilos movidos a la papelera}}",
+    "restoredToast": "{count, plural, one {Hilo restaurado} other {# hilos restaurados}}",
+    "inboxToast": "{count, plural, one {Hilo movido a Recibidos} other {# hilos movidos a Recibidos}}",
+    "emptyArchived": "No hay hilos archivados.",
+    "emptyTrash": "La papelera está vacía.",
+    "trashNotice": "Los hilos de la papelera se podrán borrar definitivamente a los {days} días."
   },
   "email": {
     "title": "Email",

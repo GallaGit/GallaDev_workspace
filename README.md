@@ -79,7 +79,7 @@ After a successful `POST /api/ingest/lead` (created or deduped), the app sends w
 
 Fail-open: if the key is missing or Resend fails, the lead **is still saved** and the API answers 201/200.
 
-Variables (names; values in Vercel, never in git): `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, optional `EMAIL_REPLY_TO`.
+Variables (names; values in Vercel, never in git): `RESEND_API_KEY` (**full access** — required to read inbound bodies via the Receiving API; `sending_access` alone yields empty bodies), `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO`, optional `EMAIL_REPLY_TO`. Company mailbox setup and the one-shot body backfill (`POST /api/email/backfill-bodies`, Admin only): [company-email.md](./docs/02-roadmap-delivery/company-email.md).
 
 Not used for marketing or nurturing lists.
 

@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Resend } from "resend";
 import type { InboundEmailEvent } from "./inbound-verify";
 import {
   defaultMailbox,
@@ -9,29 +8,13 @@ import {
   resolveMailbox,
   type CompanyMailbox,
 } from "./mailboxes";
-import { getResendClient } from "./resend-client";
+import {
+  fetchReceivingEmail,
+  threadingFromHeaders,
+  type ReceivingAttachmentMeta,
+  type ReceivingEmailContent,
+} from "./receiving-fetch";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
-
-/** Resend Receiving API shape (not fully typed in the SDK). */
-interface ReceivingGetResponse {
-  data?: {
-    html?: string;
-    text?: string;
-    in_reply_to?: string;
-    references?: string;
-  };
-}
-
-/** Access the Receiving API on a Resend client. */
-function receivingGet(
-  client: Resend,
-  emailId: string,
-): Promise<ReceivingGetResponse> {
-  const r = client as unknown as {
-    emails: { receiving: { get: (id: string) => Promise<ReceivingGetResponse> } };
-  };
-  return r.emails.receiving.get(emailId);
-}
 
 /**
  * Persiste un email inbound verificado en Supabase (email_threads + email_messages).
@@ -43,11 +26,8 @@ function receivingGet(
  * sesión y RLS (solo Admin).
  *
  * Tras guardar metadatos, intenta cargar el cuerpo completo del mensaje
- * vía la Receiving API de Resend.
+ * vía la Receiving API de Resend (una sola llamada; error del SDK se registra).
  */
-
-// 50 MB cap per attachment — enforced when Storage bucket exists.
-// const MAX_ATTACHMENT_BYTES = 52_428_800;
 
 export type StoreResult =
   | { stored: true; threadId: string; messageId: string }
@@ -75,9 +55,15 @@ export async function storeInboundEmail(
     resolveMailbox(data.to ?? [], data.cc ?? [], data.bcc ?? []) ??
     defaultMailbox();
 
+  // Una sola llamada a Receiving API: cuerpo + cabeceras de hilo + adjuntos.
+  const receiving = await fetchReceivingEmail(data.email_id);
+  const full: ReceivingEmailContent | null = receiving.ok ? receiving.data : null;
+  const { inReplyTo, references } = threadingFromHeaders(full?.headers);
+
   const threadId = await findOrCreateThread(admin, {
-    emailId: data.email_id,
     messageId: data.message_id,
+    inReplyTo,
+    references,
     subject: data.subject ?? "(sin asunto)",
     fromAddress,
     fromName,
@@ -88,25 +74,8 @@ export async function storeInboundEmail(
     return { stored: false, reason: "db-error", detail: "thread creation failed" };
   }
 
-  let bodyHtml: string | null = null;
-  let bodyText: string | null = null;
-  let inReplyTo: string | null = null;
-  let references: string | null = null;
-
-  try {
-    const resend = getResendClient();
-    if (resend) {
-      const full = await receivingGet(resend, data.email_id);
-      if (full?.data) {
-        bodyHtml = full.data.html ?? null;
-        bodyText = full.data.text ?? null;
-        inReplyTo = full.data.in_reply_to ?? null;
-        references = full.data.references ?? null;
-      }
-    }
-  } catch (e) {
-    console.warn("[inbound-store] Could not fetch full message body", data.email_id, e);
-  }
+  let bodyHtml: string | null = full?.html ?? null;
+  let bodyText: string | null = full?.text ?? null;
 
   const prepared = prepareStoredEmailBodies(bodyHtml, bodyText);
   bodyHtml = prepared.html;
@@ -142,6 +111,7 @@ export async function storeInboundEmail(
   }
 
   if (data.attachments?.length) {
+    const sizeByResendId = sizeMapFromReceiving(full?.attachments);
     const attachmentRows = data.attachments
       .filter((a) => a.id && a.filename)
       .map((a) => ({
@@ -149,6 +119,7 @@ export async function storeInboundEmail(
         resend_attachment_id: a.id,
         filename: a.filename,
         content_type: a.content_type || "application/octet-stream",
+        size_bytes: sizeByResendId.get(a.id) ?? null,
       }));
 
     if (attachmentRows.length > 0) {
@@ -176,35 +147,19 @@ export async function storeInboundEmail(
 async function findOrCreateThread(
   admin: SupabaseClient,
   opts: {
-    emailId: string;
     messageId?: string;
+    inReplyTo: string | null;
+    references: string | null;
     subject: string;
     fromAddress: string;
     fromName?: string | null;
     mailboxAddress: CompanyMailbox;
   },
 ): Promise<string | null> {
-  // Try to fetch in_reply_to/references from the full message for threading.
-  let inReplyTo: string | null = null;
-  let referencesHeader: string | null = null;
-  try {
-    const resend = getResendClient();
-    if (resend) {
-      const full = await receivingGet(resend, opts.emailId);
-      if (full?.data) {
-        inReplyTo = full.data.in_reply_to ?? null;
-        referencesHeader = full.data.references ?? null;
-      }
-    }
-  } catch {
-    // Non-critical: we'll create a new thread if we can't match.
-  }
-
-  // Collect all message_ids to search for an existing thread.
   const searchIds: string[] = [];
-  if (inReplyTo) searchIds.push(inReplyTo);
-  if (referencesHeader) {
-    for (const ref of referencesHeader.split(/\s+/)) {
+  if (opts.inReplyTo) searchIds.push(opts.inReplyTo);
+  if (opts.references) {
+    for (const ref of opts.references.split(/\s+/)) {
       if (ref && !searchIds.includes(ref)) searchIds.push(ref);
     }
   }
@@ -212,7 +167,6 @@ async function findOrCreateThread(
     searchIds.push(opts.messageId);
   }
 
-  // Search for any existing message that has one of these message_ids.
   for (const searchId of searchIds) {
     const { data: existingByRef } = await admin
       .from("email_messages")
@@ -243,6 +197,19 @@ async function findOrCreateThread(
   }
 
   return thread.id;
+}
+
+function sizeMapFromReceiving(
+  attachments: ReceivingAttachmentMeta[] | undefined,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  if (!attachments) return map;
+  for (const a of attachments) {
+    if (a.id && typeof a.size === "number" && Number.isFinite(a.size)) {
+      map.set(a.id, a.size);
+    }
+  }
+  return map;
 }
 
 async function countMessages(

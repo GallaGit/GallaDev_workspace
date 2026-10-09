@@ -73,9 +73,27 @@ Solo nombres. Los valores viven en Vercel (y en Resend). Nunca en git, nunca en 
 | Nombre | Uso |
 | --- | --- |
 | `RESEND_INBOUND_WEBHOOK_SECRET` | Secreto de firma del webhook de entrada. Los ejemplos de Resend llaman al mismo tipo de secreto `RESEND_WEBHOOK_SECRET`. Esta spec usa `RESEND_INBOUND_WEBHOOK_SECRET` para no mezclarlo con un webhook futuro de eventos de envío. |
-| `RESEND_API_KEY` | Ya está definida. Se reutiliza para las respuestas salientes y para la Receiving API (leer el mensaje, listar adjuntos) cuando esa clave pueda llamarlas. Se puede usar una clave dedicada de Resend en lugar de reutilizar esta. La clave dedicada también es solo un secreto de Vercel; esta spec no exige un segundo nombre, y no se commitea. |
+| `RESEND_API_KEY` | Clave de Resend con **full access**. Hace falta para enviar y para la Receiving API (`GET /emails/receiving/{id}`: cuerpo HTML/texto y cabeceras). Una clave solo `sending_access` responde 401 al leer recibidos y los cuerpos quedan vacíos. Se puede usar una clave dedicada full access en Vercel con el mismo nombre; no se commitea. |
 
 `EMAIL_FROM_CLIENTS` y `EMAIL_NOTIFY_TO` se quedan como están. Son el envío transaccional que ya existe, no el buzón.
+
+### Relleno de cuerpos (Fase 0)
+
+Si hubo mensajes guardados sin cuerpo (p. ej. clave sin permiso de lectura), tras poner una `RESEND_API_KEY` full access y redesplegar, un Admin puede rellenar los cuerpos desde Resend (retención ~30 días):
+
+```bash
+# Sesión Admin (cookie de la app). Opcional: {"limit":100} (1–500).
+curl -X POST "https://workspace.galladev.com/api/email/backfill-bodies" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <sesión-admin>" \
+  -d '{"limit":100}'
+```
+
+La ruta exige `requireAdmin`, es idempotente (solo filas inbound con `body_html` y `body_text` null) y responde `{ ok, scanned, updated, skipped, failed }`. Repetir hasta `scanned: 0` o `updated: 0` con `failed` estable. No registra cuerpos ni direcciones.
+
+### Adjuntos (descarga)
+
+`GET /api/email/attachments/[id]` (UUID de `email_attachments`, solo Admin) pide a Resend una URL firmada temporal (`emails.receiving.attachments.get` o `emails.attachments.get` si el mensaje es saliente) y la devuelve en JSON. No hace proxy del fichero ni expone la API key. Si Resend ya no tiene el correo (~30 días), responde 410. La vista de hilo abre PDF/imagen en pestaña nueva y descarga el resto.
 
 ## 5. Fases
 
@@ -146,7 +164,16 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 ## 8. Futuro: bandejas (parcial)
 
-**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Un lista unificada (filtrable por `mailbox_address`), leído/no leído, compose/reply vía Resend. No hay carpetas Entrada / Enviados / Spam. Los borradores de **respuesta** en un hilo abierto aún no existen (solo enviar).
+**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Archivados / Papelera** con contador de no leídos por vista y en la entrada Correo de la barra lateral. Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Enviados ni Spam. Los borradores de **respuesta** en un hilo abierto aún no existen (solo enviar).
+
+**Bandejas (9 Oct 2026).** Migración `20261009180000_email_thread_inbox_state.sql` (aplicar a mano en el SQL editor **antes** de desplegar):
+
+- `email_threads.archived_at` / `trashed_at` (timestamptz). Recibidos = ambos nulos; Archivados = `archived_at` con fecha; Papelera = `trashed_at` con fecha. Restaurar desde Papelera devuelve el hilo a donde estaba.
+- `email_threads.last_snippet` (200 caracteres) y `has_attachments`, mantenidos por triggers sobre `email_messages` y `email_attachments` (con relleno de filas existentes). Un entrante nuevo saca el hilo de Archivados; uno en Papelera se queda allí.
+- Leído/no leído sigue en `email_threads.is_read`.
+- RLS sin cambios (SELECT/UPDATE de hilos solo Admin, FORCE RLS).
+- API: `GET /api/email/threads?view=inbox|archived|trash`, `PATCH /api/email/threads` (en bloque: `{ ids, is_read?, archived?, trashed? }`, máx. 100), `PATCH /api/email/threads/[id]` (acepta también `archived` y `trashed`), `GET /api/email/threads/unread-count`. Todo con `requireAdmin` y zod.
+- **Pendiente:** purga de la Papelera a los 30 días (`DELETE FROM email_threads WHERE trashed_at < now() - interval '30 days'`, tarea programada por decidir). Hoy no se borra nada.
 
 **Camino de diseño (cuando se aborde).** Vocabulario propuesto:
 

@@ -51,7 +51,26 @@ export type DraftPayload = {
 export type ThreadPatch = {
   is_read?: boolean;
   lead_id?: string | null;
+  /** true = Archivados; false = vuelve a Recibidos. */
+  archived?: boolean;
+  /** true = Papelera; false = restaurar. */
+  trashed?: boolean;
 };
+
+/** Estado de bandeja que se puede aplicar a varios hilos a la vez. */
+export type ThreadStatePatch = Pick<ThreadPatch, "is_read" | "archived" | "trashed">;
+
+export type ThreadBulkPatch = {
+  ids: string[];
+  patch: ThreadStatePatch;
+};
+
+export type ThreadBulkPatchResult =
+  | { ok: true; value: ThreadBulkPatch }
+  | { ok: false; error: string };
+
+/** Tope de hilos por PATCH masivo (una página de la lista). */
+export const MAX_BULK_THREAD_IDS = 100;
 
 export type ThreadPatchResult =
   | { ok: true; patch: ThreadPatch }
@@ -143,9 +162,26 @@ const draftSchema = z.strictObject(
   { error: objectError },
 );
 
+const threadStateFields = {
+  is_read: z.boolean({ error: "is_read debe ser sí o no" }).optional(),
+  archived: z.boolean({ error: "archived debe ser sí o no" }).optional(),
+  trashed: z.boolean({ error: "trashed debe ser sí o no" }).optional(),
+};
+
+const threadBulkPatchSchema = z.strictObject(
+  {
+    ids: z
+      .array(uuidField, { error: "ids debe ser una lista de hilos" })
+      .min(1, { error: "Selecciona al menos un hilo" })
+      .max(MAX_BULK_THREAD_IDS, { error: "Demasiados hilos a la vez" }),
+    ...threadStateFields,
+  },
+  { error: objectError },
+);
+
 const threadPatchSchema = z.strictObject(
   {
-    is_read: z.boolean({ error: "is_read debe ser sí o no" }).optional(),
+    ...threadStateFields,
     lead_id: z
       .union(
         [
@@ -296,8 +332,26 @@ export function parseThreadPatch(raw: unknown): ThreadPatchResult {
   const patch: ThreadPatch = {};
   if (parsed.data.is_read !== undefined) patch.is_read = parsed.data.is_read;
   if (parsed.data.lead_id !== undefined) patch.lead_id = parsed.data.lead_id;
+  if (parsed.data.archived !== undefined) patch.archived = parsed.data.archived;
+  if (parsed.data.trashed !== undefined) patch.trashed = parsed.data.trashed;
   if (Object.keys(patch).length === 0) {
     return { ok: false, error: "Nada que actualizar" };
   }
   return { ok: true, patch };
+}
+
+/** PATCH masivo: `ids` (UUID, 1–100, sin duplicados) y estado de bandeja. */
+export function parseThreadBulkPatch(raw: unknown): ThreadBulkPatchResult {
+  if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };
+  const parsed = threadBulkPatchSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  const patch: ThreadStatePatch = {};
+  if (parsed.data.is_read !== undefined) patch.is_read = parsed.data.is_read;
+  if (parsed.data.archived !== undefined) patch.archived = parsed.data.archived;
+  if (parsed.data.trashed !== undefined) patch.trashed = parsed.data.trashed;
+  if (Object.keys(patch).length === 0) {
+    return { ok: false, error: "Nada que actualizar" };
+  }
+  const ids = Array.from(new Set(parsed.data.ids.map((id) => id.toLowerCase())));
+  return { ok: true, value: { ids, patch } };
 }

@@ -3,14 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Link2, Paperclip, Shield } from "lucide-react";
+import { Download, ExternalLink, Link2, Paperclip, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LinkLeadDialog } from "@/components/correo/link-lead-dialog";
 import { ReplyForm } from "@/components/correo/reply-form";
 import { cn } from "@/lib/utils";
+import {
+  formatAttachmentSize,
+  isPreviewableContentType,
+} from "@/lib/email/attachment-meta";
 import { emailHtmlSrcDoc } from "@/lib/email/email-srcdoc";
 import { readJsonResponse } from "@/lib/http/read-json";
+import type { ThreadStatePatch } from "@/lib/email/email-payload";
+import { threadViewOf } from "@/lib/email/thread-state";
+import { StateActionButtons } from "./thread-actions";
 import type { EmailThread, EmailMessage, EmailAttachment } from "./inbox-page";
 
 /**
@@ -41,10 +48,13 @@ export function ThreadView({
   thread,
   onMarkRead,
   onLinkLead,
+  onStateChange,
 }: {
   thread: EmailThread;
   onMarkRead: (threadId: string) => void;
   onLinkLead: (threadId: string, leadId: string | null) => void;
+  /** Leído/no leído, archivar, papelera, restaurar desde el hilo abierto. */
+  onStateChange?: (patch: ThreadStatePatch) => void;
 }) {
   const t = useTranslations("correo");
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -120,6 +130,19 @@ export function ThreadView({
             )}
           </p>
         </div>
+        {onStateChange ? (
+          <div
+            role="toolbar"
+            aria-label={t("actionsLabel")}
+            className="flex items-center gap-0.5"
+          >
+            <StateActionButtons
+              view={threadViewOf(thread)}
+              isRead={thread.is_read}
+              onAction={onStateChange}
+            />
+          </div>
+        ) : null}
         <Button variant="secondary" size="sm" onClick={() => setLinkOpen(true)}>
           <Link2 className="mr-1 h-3.5 w-3.5" />
           {thread.lead_id ? t("changeLead") : t("linkLead")}
@@ -237,18 +260,97 @@ function MessageCard({
           </p>
           <div className="flex flex-wrap gap-2">
             {attachments.map((att) => (
-              <span
-                key={att.id}
-                className="inline-flex items-center gap-1 rounded border border-gris-200 dark:border-gris-700 bg-gris-50 dark:bg-gris-800 px-2 py-1 text-[11px] text-gris-600 dark:text-gris-300"
-                title={`${att.content_type}${att.size_bytes ? ` · ${(att.size_bytes / 1024).toFixed(0)} KB` : ""}`}
-              >
-                {att.filename}
-              </span>
+              <AttachmentButton key={att.id} attachment={att} />
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function AttachmentButton({ attachment }: { attachment: EmailAttachment }) {
+  const t = useTranslations("correo");
+  const [pending, setPending] = useState(false);
+  const previewable = isPreviewableContentType(attachment.content_type);
+  const sizeLabel = formatAttachmentSize(attachment.size_bytes);
+  const meta = [attachment.content_type, sizeLabel].filter(Boolean).join(" · ");
+
+  const onActivate = async () => {
+    if (pending) return;
+    setPending(true);
+    try {
+      const res = await fetch(`/api/email/attachments/${attachment.id}`);
+      if (res.status === 410) {
+        toast.error(t("attachmentExpired"));
+        return;
+      }
+      const data = await readJsonResponse<{
+        url: string;
+        filename: string;
+        previewable?: boolean;
+        reason?: string;
+      }>(res, t("attachmentUnavailable"));
+
+      const openInline = data.previewable ?? previewable;
+      if (openInline) {
+        const win = window.open(data.url, "_blank", "noopener,noreferrer");
+        if (!win) {
+          window.location.assign(data.url);
+        }
+        return;
+      }
+
+      const a = document.createElement("a");
+      a.href = data.url;
+      a.download = data.filename || attachment.filename;
+      a.rel = "noopener noreferrer";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : t("attachmentUnavailable");
+      if (/410|expir|conserva|30\s*d[ií]as|no longer/i.test(message)) {
+        toast.error(t("attachmentExpired"));
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onActivate}
+      disabled={pending}
+      title={meta}
+      aria-label={
+        previewable
+          ? t("attachmentOpen", { filename: attachment.filename })
+          : t("attachmentDownload", { filename: attachment.filename })
+      }
+      className={cn(
+        "inline-flex max-w-full items-center gap-1.5 rounded border border-gris-200 dark:border-gris-700 bg-gris-50 dark:bg-gris-800 px-2 py-1 text-left text-[11px] text-gris-700 dark:text-gris-200",
+        "hover:border-rojo/40 hover:bg-rojo/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo/40",
+        "disabled:cursor-wait disabled:opacity-60",
+      )}
+    >
+      {previewable ? (
+        <ExternalLink className="h-3 w-3 shrink-0 text-gris-500" aria-hidden />
+      ) : (
+        <Download className="h-3 w-3 shrink-0 text-gris-500" aria-hidden />
+      )}
+      <span className="min-w-0 truncate font-medium">{attachment.filename}</span>
+      {sizeLabel ? (
+        <span className="shrink-0 text-gris-500 dark:text-gris-400">{sizeLabel}</span>
+      ) : null}
+      {pending ? (
+        <span className="sr-only">{t("attachmentOpening")}</span>
+      ) : null}
+    </button>
   );
 }
 

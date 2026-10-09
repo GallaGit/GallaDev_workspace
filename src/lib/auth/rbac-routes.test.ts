@@ -345,6 +345,8 @@ describe("correo: solo Admin", () => {
     const threads = await import("@/app/api/email/threads/route");
     const item = await import("@/app/api/email/threads/[id]/route");
     const reply = await import("@/app/api/email/threads/[id]/reply/route");
+    const backfill = await import("@/app/api/email/backfill-bodies/route");
+    const attachments = await import("@/app/api/email/attachments/[id]/route");
     const ctx = {
       params: Promise.resolve({
         id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
@@ -362,6 +364,39 @@ describe("correo: solo Admin", () => {
           text: "hola",
         }),
         ctx,
+      ),
+    );
+    await expectForbidden(
+      await backfill.POST(
+        jsonRequest("http://localhost/api/email/backfill-bodies", "POST", {}),
+      ),
+    );
+    await expectForbidden(
+      await attachments.GET(
+        new Request(
+          "http://localhost/api/email/attachments/ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+        ),
+        ctx,
+      ),
+    );
+    expect(adminClient).not.toHaveBeenCalled();
+  });
+
+  it("Seller recibe 403 en acciones masivas y contador de no leídos", async () => {
+    asRole("Seller");
+    const threads = await import("@/app/api/email/threads/route");
+    const unread = await import("@/app/api/email/threads/unread-count/route");
+    await expectForbidden(
+      await threads.PATCH(
+        jsonRequest("http://localhost/api/email/threads", "PATCH", {
+          ids: ["ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd"],
+          archived: true,
+        }),
+      ),
+    );
+    await expectForbidden(
+      await unread.GET(
+        new Request("http://localhost/api/email/threads/unread-count"),
       ),
     );
     expect(adminClient).not.toHaveBeenCalled();

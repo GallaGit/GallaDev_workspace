@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { PenSquare, Trash2 } from "lucide-react";
@@ -20,6 +20,21 @@ import {
   type CompanyMailbox,
 } from "@/lib/email/mailboxes";
 import { readJsonResponse } from "@/lib/http/read-json";
+import type { ThreadStatePatch } from "@/lib/email/email-payload";
+import {
+  THREAD_VIEWS,
+  TRASH_RETENTION_DAYS,
+  applyThreadPatch,
+  formatUnreadBadge,
+  stateToastKey,
+  threadViewOf,
+  type ThreadView as MailView,
+} from "@/lib/email/thread-state";
+import { BulkToolbar } from "@/components/correo/thread-actions";
+import {
+  notifyUnreadChanged,
+  useUnreadCounts,
+} from "@/components/correo/use-unread-counts";
 
 export interface EmailThread {
   id: string;
@@ -32,6 +47,10 @@ export interface EmailThread {
   message_count: number;
   lead_id: string | null;
   created_at: string;
+  archived_at?: string | null;
+  trashed_at?: string | null;
+  last_snippet?: string | null;
+  has_attachments?: boolean;
 }
 
 export interface EmailMessage {
@@ -81,6 +100,16 @@ export function InboxPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<EmailDraft | null>(null);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
+  const [view, setView] = useState<MailView>("inbox");
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
+  const threadsRef = useRef<EmailThread[]>([]);
+  useEffect(() => {
+    threadsRef.current = threads;
+  }, [threads]);
+  const { counts } = useUnreadCounts(
+    true,
+    mailboxFilter === "all" ? null : mailboxFilter,
+  );
 
   const filterOptions: { id: MailboxFilter; label: string }[] = [
     { id: "all", label: t("all") },
@@ -97,13 +126,11 @@ export function InboxPage() {
       setLoading(true);
       try {
         const params = new URLSearchParams();
+        params.set("view", view);
         if (mailboxFilter !== "all") {
           params.set("mailbox", mailboxFilter);
         }
-        const qs = params.toString();
-        const res = await fetch(
-          qs ? `/api/email/threads?${qs}` : "/api/email/threads",
-        );
+        const res = await fetch(`/api/email/threads?${params.toString()}`);
         const data = await readJsonResponse<{ threads?: EmailThread[] }>(
           res,
           t("loadThreadsError"),
@@ -111,6 +138,7 @@ export function InboxPage() {
         if (cancelled) return;
         setThreads(data.threads ?? []);
         setSelectedId(null);
+        setCheckedIds(new Set());
       } catch (e) {
         if (!cancelled) {
           toast.error(
@@ -125,7 +153,7 @@ export function InboxPage() {
     return () => {
       cancelled = true;
     };
-  }, [mailboxFilter, listMode, threadsReloadKey, t]);
+  }, [mailboxFilter, listMode, threadsReloadKey, view, t]);
 
   useEffect(() => {
     if (listMode !== "drafts") return;
@@ -167,6 +195,68 @@ export function InboxPage() {
         thread.id === threadId ? { ...thread, is_read: true } : thread,
       ),
     );
+    notifyUnreadChanged();
+  }, []);
+
+  /**
+   * Leído/no leído, archivar, papelera y restaurar sobre uno o varios hilos.
+   * Optimista: actualiza la lista y la deshace si la API falla.
+   */
+  const applyState = useCallback(
+    async (ids: string[], patch: ThreadStatePatch) => {
+      if (ids.length === 0) return;
+      const previous = threadsRef.current;
+      const idSet = new Set(ids);
+      const now = new Date();
+      const next = previous
+        .map((thread) =>
+          idSet.has(thread.id) ? applyThreadPatch(thread, patch, now) : thread,
+        )
+        .filter((thread) => threadViewOf(thread) === view);
+      const stillVisible = new Set(next.map((thread) => thread.id));
+      threadsRef.current = next;
+      setThreads(next);
+      setCheckedIds((prev) => {
+        const kept = new Set<string>();
+        prev.forEach((id) => {
+          if (stillVisible.has(id)) kept.add(id);
+        });
+        return kept;
+      });
+      setSelectedId((current) => {
+        if (!current || !idSet.has(current)) return current;
+        // Como Gmail: marcar no leído o sacar el hilo de la vista lo cierra.
+        if (!stillVisible.has(current) || patch.is_read === false) return null;
+        return current;
+      });
+
+      try {
+        const res = await fetch("/api/email/threads", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids, ...patch }),
+        });
+        await readJsonResponse(res, t("actionError"));
+        const toastKey = stateToastKey(patch);
+        if (toastKey) toast.success(t(toastKey, { count: ids.length }));
+      } catch (e) {
+        threadsRef.current = previous;
+        setThreads(previous);
+        toast.error(e instanceof Error ? e.message : t("actionError"));
+      } finally {
+        notifyUnreadChanged();
+      }
+    },
+    [view, t],
+  );
+
+  const toggleChecked = useCallback((id: string) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
 
   const handleLinkLead = useCallback(
@@ -223,6 +313,25 @@ export function InboxPage() {
   );
 
   const selectedThread = threads.find((thread) => thread.id === selectedId) ?? null;
+  const checkedList = useMemo(
+    () => threads.filter((th) => checkedIds.has(th.id)).map((th) => th.id),
+    [threads, checkedIds],
+  );
+  const allChecked = threads.length > 0 && checkedList.length === threads.length;
+  const someChecked = checkedList.length > 0 && !allChecked;
+  const viewLabels: Record<MailView, string> = {
+    inbox: t("views.inbox"),
+    archived: t("views.archived"),
+    trash: t("views.trash"),
+  };
+  const emptyText =
+    view === "archived"
+      ? t("emptyArchived")
+      : view === "trash"
+        ? t("emptyTrash")
+        : mailboxFilter === "all"
+          ? t("emptyAll")
+          : t("emptyMailbox", { mailbox: mailboxFilter });
 
   return (
     <>
@@ -239,6 +348,44 @@ export function InboxPage() {
               <PenSquare className="mr-1.5 h-3.5 w-3.5" />
               {t("new")}
             </Button>
+            <nav aria-label={t("views.label")}>
+              <ul className="space-y-0.5">
+                {THREAD_VIEWS.map((v) => {
+                  const active = listMode === "threads" && view === v;
+                  const badge = formatUnreadBadge(counts[v]);
+                  return (
+                    <li key={v}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setListMode("threads");
+                          setView(v);
+                        }}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded px-2 py-1 text-[12px] transition-colors",
+                          active
+                            ? "bg-rojo/10 font-semibold text-rojo"
+                            : badge
+                              ? "font-semibold text-grafito hover:bg-gris-100 dark:text-gris-100 dark:hover:bg-gris-800"
+                              : "text-gris-600 hover:bg-gris-100 dark:text-gris-300 dark:hover:bg-gris-800",
+                        )}
+                      >
+                        <span>{viewLabels[v]}</span>
+                        {badge ? (
+                          <span
+                            className="text-[11px] tabular-nums"
+                            aria-label={t("unreadBadge", { count: counts[v] })}
+                          >
+                            {badge}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
             <div
               className="flex flex-wrap gap-1"
               role="group"
@@ -286,7 +433,27 @@ export function InboxPage() {
                 ? t("draftCount", { count: drafts.length })
                 : t("threadCount", { count: threads.length })}
             </p>
+            {listMode === "threads" && view === "trash" ? (
+              <p className="text-[11px] text-gris-500 dark:text-gris-400">
+                {t("trashNotice", { days: TRASH_RETENTION_DAYS })}
+              </p>
+            ) : null}
           </div>
+
+          {listMode === "threads" && !loading && threads.length > 0 ? (
+            <BulkToolbar
+              view={view}
+              allChecked={allChecked}
+              someChecked={someChecked}
+              selectedCount={checkedList.length}
+              onToggleAll={() =>
+                setCheckedIds(
+                  allChecked ? new Set() : new Set(threads.map((th) => th.id)),
+                )
+              }
+              onAction={(patch) => void applyState(checkedList, patch)}
+            />
+          ) : null}
 
           {loading ? (
             <div className="space-y-3 p-3">
@@ -339,15 +506,15 @@ export function InboxPage() {
             )
           ) : threads.length === 0 ? (
             <p className="p-4 text-[13px] text-gris-500 dark:text-gris-400">
-              {mailboxFilter === "all"
-                ? t("emptyAll")
-                : t("emptyMailbox", { mailbox: mailboxFilter })}
+              {emptyText}
             </p>
           ) : (
             <ThreadList
               threads={threads}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              checkedIds={checkedIds}
+              onToggleChecked={toggleChecked}
             />
           )}
         </aside>
@@ -366,9 +533,11 @@ export function InboxPage() {
             </div>
           ) : (
             <ThreadView
+              key={selectedThread.id}
               thread={selectedThread}
               onMarkRead={handleMarkRead}
               onLinkLead={handleLinkLead}
+              onStateChange={(patch) => void applyState([selectedThread.id], patch)}
             />
           )}
         </div>

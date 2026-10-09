@@ -73,9 +73,27 @@ Names only. Values stay in Vercel (and in Resend). Never in git, never in this d
 | Name | Use |
 | --- | --- |
 | `RESEND_INBOUND_WEBHOOK_SECRET` | Signing secret for the inbound webhook. Resend’s own samples call the same kind of secret `RESEND_WEBHOOK_SECRET`. This spec uses `RESEND_INBOUND_WEBHOOK_SECRET` so it is not mixed up with a later sending-events webhook. |
-| `RESEND_API_KEY` | Already set. Reuse it for outbound replies and for the Receiving API (get message, list attachments) when that key is allowed to call them. A dedicated Resend key may be used instead of reusing this one. The dedicated key is also only a Vercel secret; it is not a second name this spec requires, and it is not committed. |
+| `RESEND_API_KEY` | Resend API key with **full access**. Required for sending and for the Receiving API (`GET /emails/receiving/{id}`: HTML/text body and headers). A `sending_access`-only key returns 401 on received reads and bodies stay empty. A dedicated full-access key may be stored in Vercel under the same name; it is not committed. |
 
 `EMAIL_FROM_CLIENTS` and `EMAIL_NOTIFY_TO` stay as they are. They are the existing transactional send, not the inbox.
+
+### Body backfill (Phase 0)
+
+If messages were stored without bodies (e.g. key lacked read permission), after setting a full-access `RESEND_API_KEY` and redeploying, an Admin can backfill bodies from Resend (~30-day retention):
+
+```bash
+# Admin session cookie. Optional body: {"limit":100} (1–500).
+curl -X POST "https://workspace.galladev.com/api/email/backfill-bodies" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <admin-session>" \
+  -d '{"limit":100}'
+```
+
+The route requires `requireAdmin`, is idempotent (only inbound rows with null `body_html` and `body_text`), and returns `{ ok, scanned, updated, skipped, failed }`. Repeat until `scanned: 0` or `updated: 0` with a stable `failed` count. It does not log bodies or addresses.
+
+### Attachments (download)
+
+`GET /api/email/attachments/[id]` (`email_attachments` UUID, Admin only) asks Resend for a temporary signed URL (`emails.receiving.attachments.get`, or `emails.attachments.get` for outbound) and returns it as JSON. It does not proxy the file or expose the API key. If Resend no longer has the email (~30 days), it responds 410. The thread view opens PDF/image in a new tab and downloads other types.
 
 ## 5. Phases
 
@@ -146,7 +164,9 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 ## 8. Future: folders (partial)
 
-**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). One unified list (filterable by `mailbox_address`), read/unread, compose/reply via Resend. No Inbox / Sent / Spam folders. **Reply drafts** on an open thread are not implemented yet (send only).
+**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). Gmail-like dense list (sender, subject, last-message snippet, short date, attachment clip, bold when unread), filterable by `mailbox_address`. **Inbox / Archived / Trash** views with unread counts per view and on the Correo sidebar entry. Read/unread, archive, trash and restore, single or bulk via checkboxes. Compose/reply via Resend. No Sent or Spam folders. **Reply drafts** on an open thread are not implemented yet (send only).
+
+**Folders (Oct 9, 2026).** Migration `20261009180000_email_thread_inbox_state.sql` (apply manually in the SQL editor **before** deploying): `email_threads.archived_at`, `trashed_at`, `last_snippet`, `has_attachments` (the last two kept up to date by triggers, with backfill). RLS unchanged. API: `GET /api/email/threads?view=`, bulk `PATCH /api/email/threads`, `PATCH /api/email/threads/[id]` (`archived`, `trashed`), `GET /api/email/threads/unread-count`, all `requireAdmin` + zod. **Pending:** purging Trash after 30 days (scheduled job TBD); nothing is deleted today.
 
 **Design path (when taken up).** Proposed vocabulary:
 

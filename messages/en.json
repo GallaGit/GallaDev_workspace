@@ -21,7 +21,8 @@
     "principalAria": "Main",
     "logout": "Log out",
     "exitDemo": "Exit demo",
-    "developedBy": "developed by GallaDev"
+    "developedBy": "developed by GallaDev",
+    "correoUnread": "{count} unread"
   },
   "topbar": {
     "openMenu": "Open menu",
@@ -532,6 +533,11 @@
     "sanitizedHtml": "Sanitized HTML",
     "noText": "No text content available.",
     "attachmentCount": "{count, plural, one {# attachment} other {# attachments}}",
+    "attachmentOpen": "Open {filename}",
+    "attachmentDownload": "Download {filename}",
+    "attachmentOpening": "Opening…",
+    "attachmentExpired": "Resend no longer keeps this attachment (older than ~30 days). It cannot be opened or downloaded.",
+    "attachmentUnavailable": "Could not get the attachment",
     "markReadError": "Could not mark as read",
     "replyAs": "Reply as hola@galladev.com",
     "replyPlaceholder": "Write your reply…",
@@ -570,7 +576,34 @@
       "error": "Error linking",
       "linked": "Lead linked to thread",
       "unlinked": "Link removed"
-    }
+    },
+    "views": {
+      "label": "Folders",
+      "inbox": "Inbox",
+      "archived": "Archived",
+      "trash": "Trash"
+    },
+    "unreadBadge": "{count} unread",
+    "hasAttachments": "Has attachments",
+    "selectThreadRow": "Select thread from {sender}",
+    "selectAll": "Select all",
+    "selectedCount": "{count} selected",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "archive": "Archive",
+    "moveToInbox": "Move to Inbox",
+    "moveToTrash": "Move to trash",
+    "restore": "Restore",
+    "actionsLabel": "Thread actions",
+    "bulkActionsLabel": "Actions on selection",
+    "actionError": "Could not update the thread",
+    "archivedToast": "{count, plural, one {Thread archived} other {# threads archived}}",
+    "trashedToast": "{count, plural, one {Thread moved to trash} other {# threads moved to trash}}",
+    "restoredToast": "{count, plural, one {Thread restored} other {# threads restored}}",
+    "inboxToast": "{count, plural, one {Thread moved to Inbox} other {# threads moved to Inbox}}",
+    "emptyArchived": "No archived threads.",
+    "emptyTrash": "Trash is empty.",
+    "trashNotice": "Threads in trash may be permanently deleted after {days} days."
   },
   "email": {
     "title": "Email",
