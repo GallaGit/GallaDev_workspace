@@ -603,7 +603,15 @@
     "inboxToast": "{count, plural, one {Hilo movido a Recibidos} other {# hilos movidos a Recibidos}}",
     "emptyArchived": "No hay hilos archivados.",
     "emptyTrash": "La papelera está vacía.",
-    "trashNotice": "Los hilos de la papelera se podrán borrar definitivamente a los {days} días."
+    "trashNotice": "Los hilos de la papelera se podrán borrar definitivamente a los {days} días.",
+    "search": {
+      "label": "Buscar en el correo",
+      "placeholder": "Buscar remitente, asunto o texto…",
+      "clear": "Borrar búsqueda",
+      "allViews": "Buscar en todas las bandejas",
+      "noResults": "No hay hilos que coincidan con «{query}».",
+      "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+    }
   },
   "email": {
     "title": "Email",

@@ -22,7 +22,19 @@ function fakeClient(result: Record<string, unknown>) {
   const calls: Call[] = [];
   const tables: string[] = [];
   const builder: Record<string, unknown> = {};
-  for (const method of ["select", "update", "eq", "in", "is", "not", "order", "range", "single"]) {
+  for (const method of [
+    "select",
+    "update",
+    "eq",
+    "in",
+    "is",
+    "not",
+    "order",
+    "range",
+    "single",
+    "textSearch",
+    "limit",
+  ]) {
     builder[method] = (...args: unknown[]) => {
       calls.push({ method, args });
       return builder;
@@ -214,5 +226,99 @@ describe("GET /api/email/threads/unread-count", () => {
       error: "No se pudieron contar los no leídos",
     });
     spy.mockRestore();
+  });
+});
+
+describe("GET /api/email/threads?q= (búsqueda)", () => {
+  async function run(query: string, result: Record<string, unknown>) {
+    const fake = fakeClient(result);
+    createSupabaseServerClient.mockResolvedValue(fake.client);
+    const { GET } = await import("@/app/api/email/threads/route");
+    const res = await GET(new Request(`http://localhost/api/email/threads${query}`));
+    return { res, fake };
+  }
+
+  it("busca en hilos y mensajes con tsquery seguro y filtra por ids", async () => {
+    const { res, fake } = await run(
+      "?q=" + encodeURIComponent("ana presupuesto | !x"),
+      { data: [{ id: A, thread_id: B }], error: null },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: true, view: "inbox", scope: "view", q: "ana presupuesto | !x" });
+    expect(fake.tables).toEqual(["email_threads", "email_messages", "email_threads"]);
+    const searches = fake.calls.filter((c) => c.method === "textSearch");
+    expect(searches).toHaveLength(2);
+    for (const call of searches) {
+      expect(call.args).toEqual([
+        "search_tsv",
+        "ana:* & presupuesto:* & x:*",
+        { config: "spanish" },
+      ]);
+    }
+    expect(fake.calls.find((c) => c.method === "in")?.args).toEqual(["id", [A, B]]);
+    // Sigue filtrando por la vista actual.
+    expect(fake.calls.some((c) => c.method === "is" && c.args[0] === "archived_at")).toBe(true);
+  });
+
+  it("scope=all quita el filtro de vista", async () => {
+    const { res, fake } = await run("?q=ana&scope=all&view=trash", {
+      data: [{ id: A, thread_id: A }],
+      error: null,
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).scope).toBe("all");
+    expect(
+      fake.calls.some(
+        (c) =>
+          (c.method === "is" || c.method === "not") &&
+          (c.args[0] === "archived_at" || c.args[0] === "trashed_at"),
+      ),
+    ).toBe(false);
+  });
+
+  it("sin coincidencias devuelve lista vacía sin consultar la lista", async () => {
+    const { res, fake } = await run("?q=nada", { data: [], error: null });
+    expect(await res.json()).toMatchObject({ ok: true, threads: [] });
+    expect(fake.tables).toEqual(["email_threads", "email_messages"]);
+  });
+
+  it("solo símbolos: vacío sin tocar la BD", async () => {
+    const { res, fake } = await run("?q=" + encodeURIComponent("!!! ()"), {
+      data: [],
+      error: null,
+    });
+    expect(await res.json()).toMatchObject({ ok: true, threads: [] });
+    expect(fake.tables).toEqual([]);
+  });
+
+  it("q demasiado larga → 400 sin consultar", async () => {
+    const { GET } = await import("@/app/api/email/threads/route");
+    const res = await GET(
+      new Request(`http://localhost/api/email/threads?q=${"a".repeat(201)}`),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ ok: false, error: "La búsqueda es demasiado larga" });
+  });
+
+  it("error de FTS → 500 genérico", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { res } = await run("?q=ana", {
+      data: null,
+      error: { code: "42703", message: 'column "search_tsv" does not exist' },
+    });
+    expect(res.status).toBe(500);
+    const text = await res.text();
+    expect(text).not.toContain("search_tsv");
+    expect(JSON.parse(text)).toEqual({ ok: false, error: "No se pudo buscar en el correo" });
+    spy.mockRestore();
+  });
+
+  it("sin Admin no busca", async () => {
+    requireAdmin.mockResolvedValue(new Response(null, { status: 403 }));
+    const { GET } = await import("@/app/api/email/threads/route");
+    const res = await GET(new Request("http://localhost/api/email/threads?q=ana"));
+    expect(res.status).toBe(403);
+    expect(createSupabaseServerClient).not.toHaveBeenCalled();
   });
 });
