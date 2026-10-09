@@ -91,6 +91,10 @@ curl -X POST "https://workspace.galladev.com/api/email/backfill-bodies" \
 
 The route requires `requireAdmin`, is idempotent (only inbound rows with null `body_html` and `body_text`), and returns `{ ok, scanned, updated, skipped, failed }`. Repeat until `scanned: 0` or `updated: 0` with a stable `failed` count. It does not log bodies or addresses.
 
+### Attachments (download)
+
+`GET /api/email/attachments/[id]` (`email_attachments` UUID, Admin only) asks Resend for a temporary signed URL (`emails.receiving.attachments.get`, or `emails.attachments.get` for outbound) and returns it as JSON. It does not proxy the file or expose the API key. If Resend no longer has the email (~30 days), it responds 410. The thread view opens PDF/image in a new tab and downloads other types.
+
 ## 5. Phases
 
 All three phases are implemented (PR #65, 30 Sep 2026). DNS, webhook, SQL migration, and environment variables are configured.
