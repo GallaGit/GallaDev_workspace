@@ -164,7 +164,16 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 ## 8. Futuro: bandejas (parcial)
 
-**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Un lista unificada (filtrable por `mailbox_address`), leído/no leído, compose/reply vía Resend. No hay carpetas Entrada / Enviados / Spam. Los borradores de **respuesta** en un hilo abierto aún no existen (solo enviar).
+**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Archivados / Papelera** con contador de no leídos por vista y en la entrada Correo de la barra lateral. Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Enviados ni Spam. Los borradores de **respuesta** en un hilo abierto aún no existen (solo enviar).
+
+**Bandejas (9 Oct 2026).** Migración `20261009180000_email_thread_inbox_state.sql` (aplicar a mano en el SQL editor **antes** de desplegar):
+
+- `email_threads.archived_at` / `trashed_at` (timestamptz). Recibidos = ambos nulos; Archivados = `archived_at` con fecha; Papelera = `trashed_at` con fecha. Restaurar desde Papelera devuelve el hilo a donde estaba.
+- `email_threads.last_snippet` (200 caracteres) y `has_attachments`, mantenidos por triggers sobre `email_messages` y `email_attachments` (con relleno de filas existentes). Un entrante nuevo saca el hilo de Archivados; uno en Papelera se queda allí.
+- Leído/no leído sigue en `email_threads.is_read`.
+- RLS sin cambios (SELECT/UPDATE de hilos solo Admin, FORCE RLS).
+- API: `GET /api/email/threads?view=inbox|archived|trash`, `PATCH /api/email/threads` (en bloque: `{ ids, is_read?, archived?, trashed? }`, máx. 100), `PATCH /api/email/threads/[id]` (acepta también `archived` y `trashed`), `GET /api/email/threads/unread-count`. Todo con `requireAdmin` y zod.
+- **Pendiente:** purga de la Papelera a los 30 días (`DELETE FROM email_threads WHERE trashed_at < now() - interval '30 days'`, tarea programada por decidir). Hoy no se borra nada.
 
 **Camino de diseño (cuando se aborde).** Vocabulario propuesto:
 

@@ -382,6 +382,26 @@ describe("correo: solo Admin", () => {
     expect(adminClient).not.toHaveBeenCalled();
   });
 
+  it("Seller recibe 403 en acciones masivas y contador de no leídos", async () => {
+    asRole("Seller");
+    const threads = await import("@/app/api/email/threads/route");
+    const unread = await import("@/app/api/email/threads/unread-count/route");
+    await expectForbidden(
+      await threads.PATCH(
+        jsonRequest("http://localhost/api/email/threads", "PATCH", {
+          ids: ["ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd"],
+          archived: true,
+        }),
+      ),
+    );
+    await expectForbidden(
+      await unread.GET(
+        new Request("http://localhost/api/email/threads/unread-count"),
+      ),
+    );
+    expect(adminClient).not.toHaveBeenCalled();
+  });
+
   it("Admin no enlaza un lead_id que no es UUID", async () => {
     asRole("Admin");
     const { PATCH } = await import("@/app/api/email/threads/[id]/route");

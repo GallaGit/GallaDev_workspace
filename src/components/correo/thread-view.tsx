@@ -15,6 +15,9 @@ import {
 } from "@/lib/email/attachment-meta";
 import { emailHtmlSrcDoc } from "@/lib/email/email-srcdoc";
 import { readJsonResponse } from "@/lib/http/read-json";
+import type { ThreadStatePatch } from "@/lib/email/email-payload";
+import { threadViewOf } from "@/lib/email/thread-state";
+import { StateActionButtons } from "./thread-actions";
 import type { EmailThread, EmailMessage, EmailAttachment } from "./inbox-page";
 
 /**
@@ -45,10 +48,13 @@ export function ThreadView({
   thread,
   onMarkRead,
   onLinkLead,
+  onStateChange,
 }: {
   thread: EmailThread;
   onMarkRead: (threadId: string) => void;
   onLinkLead: (threadId: string, leadId: string | null) => void;
+  /** Leído/no leído, archivar, papelera, restaurar desde el hilo abierto. */
+  onStateChange?: (patch: ThreadStatePatch) => void;
 }) {
   const t = useTranslations("correo");
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -124,6 +130,19 @@ export function ThreadView({
             )}
           </p>
         </div>
+        {onStateChange ? (
+          <div
+            role="toolbar"
+            aria-label={t("actionsLabel")}
+            className="flex items-center gap-0.5"
+          >
+            <StateActionButtons
+              view={threadViewOf(thread)}
+              isRead={thread.is_read}
+              onAction={onStateChange}
+            />
+          </div>
+        ) : null}
         <Button variant="secondary" size="sm" onClick={() => setLinkOpen(true)}>
           <Link2 className="mr-1 h-3.5 w-3.5" />
           {thread.lead_id ? t("changeLead") : t("linkLead")}
