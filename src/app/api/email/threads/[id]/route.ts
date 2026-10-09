@@ -4,6 +4,7 @@ import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { threadUpdateFromBody } from "@/lib/email/thread-patch";
+import { threadDbPatch } from "@/lib/email/thread-state";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 import { readCappedJson } from "@/lib/rate-limit";
 
@@ -86,9 +87,11 @@ async function getThread(request: Request, ctx: Ctx) {
 }
 
 /**
- * PATCH /api/email/threads/[id] — marcar leído, enlazar a lead.
+ * PATCH /api/email/threads/[id] — leído/no leído, archivar, papelera,
+ * enlazar a lead.
  * Auth: requireAdmin y RLS.
- * Body: { is_read?: boolean, lead_id?: string | null }
+ * Body: { is_read?: boolean, lead_id?: string | null,
+ *         archived?: boolean, trashed?: boolean }
  */
 async function patchThread(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
@@ -113,7 +116,7 @@ async function patchThread(request: Request, ctx: Ctx) {
     }
 
     const supabase = await createSupabaseServerClient();
-    const patch = parsed.patch;
+    const patch = threadDbPatch(parsed.patch);
 
     const { data: thread, error } = await supabase
       .from("email_threads")

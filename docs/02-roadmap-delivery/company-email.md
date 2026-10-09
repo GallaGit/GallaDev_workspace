@@ -164,7 +164,9 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 ## 8. Future: folders (partial)
 
-**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). One unified list (filterable by `mailbox_address`), read/unread, compose/reply via Resend. No Inbox / Sent / Spam folders. **Reply drafts** on an open thread are not implemented yet (send only).
+**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). Gmail-like dense list (sender, subject, last-message snippet, short date, attachment clip, bold when unread), filterable by `mailbox_address`. **Inbox / Archived / Trash** views with unread counts per view and on the Correo sidebar entry. Read/unread, archive, trash and restore, single or bulk via checkboxes. Compose/reply via Resend. No Sent or Spam folders. **Reply drafts** on an open thread are not implemented yet (send only).
+
+**Folders (Oct 9, 2026).** Migration `20261009180000_email_thread_inbox_state.sql` (apply manually in the SQL editor **before** deploying): `email_threads.archived_at`, `trashed_at`, `last_snippet`, `has_attachments` (the last two kept up to date by triggers, with backfill). RLS unchanged. API: `GET /api/email/threads?view=`, bulk `PATCH /api/email/threads`, `PATCH /api/email/threads/[id]` (`archived`, `trashed`), `GET /api/email/threads/unread-count`, all `requireAdmin` + zod. **Pending:** purging Trash after 30 days (scheduled job TBD); nothing is deleted today.
 
 **Design path (when taken up).** Proposed vocabulary:
 

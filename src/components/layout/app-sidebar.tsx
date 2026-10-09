@@ -23,6 +23,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { setAuthFlash } from "@/components/auth-flash-banner";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { useSessionAccess } from "@/components/session-access";
+import { useUnreadCounts } from "@/components/correo/use-unread-counts";
+import { formatUnreadBadge } from "@/lib/email/thread-state";
 
 const NAV = [
   { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
@@ -44,7 +46,9 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { open, close, navId } = useNavChrome();
-  const { isVisitor } = useSessionAccess();
+  const { isVisitor, isAdmin } = useSessionAccess();
+  const { counts: correoUnread } = useUnreadCounts(isAdmin && !isVisitor);
+  const correoBadge = formatUnreadBadge(correoUnread.inbox);
   const asideRef = useRef<HTMLElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -179,7 +183,16 @@ export function AppSidebar() {
               )}
             >
               <Icon className="h-4 w-4 opacity-70" />
-              {t(labelKey)}
+              <span className="flex-1">{t(labelKey)}</span>
+              {href === "/correo" && correoBadge ? (
+                <span
+                  className="rounded-full bg-accent px-1.5 text-[10px] font-semibold leading-4 text-accent-fg tabular-nums"
+                  aria-label={t("nav.correoUnread", { count: correoUnread.inbox })}
+                  data-testid="correo-unread-badge"
+                >
+                  {correoBadge}
+                </span>
+              ) : null}
             </Link>
           );
         })}
