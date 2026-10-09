@@ -63,7 +63,14 @@ beforeEach(() => {
         return json({ ok: true, counts: { inbox: 2, archived: 0, trash: 1 } });
       }
       if (url.startsWith("/api/email/threads?") && method === "GET") {
-        const view = new URL(url, "http://x").searchParams.get("view");
+        const sp = new URL(url, "http://x").searchParams;
+        const view = sp.get("view");
+        if (sp.get("q")) {
+          return json({
+            ok: true,
+            threads: sp.get("q") === "bruno" ? [thread(B, { is_read: true })] : [],
+          });
+        }
         return json({
           ok: true,
           threads: view === "inbox" ? [thread(A), thread(B, { is_read: true })] : [],
@@ -163,5 +170,35 @@ describe("InboxPage (bandeja tipo Gmail)", () => {
     await screen.findByText("La papelera está vacía.");
     expect(calls.some((c) => c.url === "/api/email/threads?view=trash")).toBe(true);
     expect(screen.getByText(/30 días/)).toBeTruthy();
+  });
+});
+
+describe("InboxPage: búsqueda", () => {
+  it("busca con debounce en la vista actual y muestra resultados", async () => {
+    renderWithIntl(<InboxPage />);
+    await screen.findByText("Ana");
+    const input = screen.getByRole("searchbox", { name: "Buscar en el correo" });
+    fireEvent.change(input, { target: { value: "bru" } });
+    fireEvent.change(input, { target: { value: "bruno" } });
+    await waitFor(() => expect(screen.queryByText("Ana")).toBeNull());
+    expect(screen.getByText("Bruno")).toBeTruthy();
+    expect(screen.getByText("1 resultado")).toBeTruthy();
+    const searches = calls.filter((c) => c.url.includes("q="));
+    expect(searches.map((c) => c.url)).toEqual(["/api/email/threads?view=inbox&q=bruno"]);
+  });
+
+  it("todas las bandejas, sin resultados y borrar vuelve a la lista", async () => {
+    renderWithIntl(<InboxPage />);
+    await screen.findByText("Ana");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Buscar en todas las bandejas" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar en el correo" }), {
+      target: { value: "zzz" },
+    });
+    await screen.findByText("No hay hilos que coincidan con «zzz».");
+    expect(calls.some((c) => c.url === "/api/email/threads?view=inbox&q=zzz&scope=all")).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Borrar búsqueda" }));
+    await screen.findByText("Ana");
   });
 });
