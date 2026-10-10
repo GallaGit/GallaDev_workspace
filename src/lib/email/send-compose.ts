@@ -9,6 +9,7 @@ import {
   type CompanyMailbox,
 } from "./mailboxes";
 import { createOutboundMessageId } from "./receiving-fetch";
+import { fetchSentMessageId } from "./thread-match";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
@@ -101,6 +102,10 @@ export async function sendCompose(
     return { sent: false, reason: "send-failed", detail: "No email id returned" };
   }
 
+  // Resend/SES reescribe Message-ID: guardamos el real (ver thread-match).
+  const realMessageId =
+    (await fetchSentMessageId(client, resendEmailId)) ?? outboundMessageId;
+
   const now = new Date().toISOString();
 
   const { data: thread, error: threadErr } = await admin
@@ -127,7 +132,7 @@ export async function sendCompose(
     .insert({
       thread_id: thread.id,
       resend_email_id: resendEmailId,
-      message_id: outboundMessageId,
+      message_id: realMessageId,
       in_reply_to: null,
       references: null,
       direction: "outbound",

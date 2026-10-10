@@ -91,6 +91,30 @@ curl -X POST "https://workspace.galladev.com/api/email/backfill-bodies" \
 
 La ruta exige `requireAdmin`, es idempotente (solo filas inbound con `body_html` y `body_text` null) y responde `{ ok, scanned, updated, skipped, failed }`. Repetir hasta `scanned: 0` o `updated: 0` con `failed` estable. No registra cuerpos ni direcciones.
 
+### Re-hilar hilos partidos
+
+**Causa.** Resend (SES) reescribe la cabecera `Message-ID` que mandamos. El destinatario ve `<…@eu-west-1.amazonses.com>` y su respuesta lleva ese id en `In-Reply-To`/`References`, pero guardábamos nuestro `<uuid@galladev.com>`, así que no había coincidencia y se creaba un hilo nuevo. Desde este cambio, tras cada envío (respuesta, compose, reenvío) se lee el `message_id` real con `emails.get` y es el que se guarda. El matcher de entrada (`thread-match.ts`) prueba `In-Reply-To`, luego cualquier id de `References` (con o sin `<>`, cabeceras plegadas) y, si el mensaje parece respuesta (cabeceras de hilo o prefijo `Re:`/`Fwd:`/`RV:`…), el asunto normalizado + misma contraparte en el mismo buzón en los últimos 30 días.
+
+Para arreglar los hilos que ya se partieron, desde una pestaña de GDW con sesión Admin, en la consola del navegador:
+
+```js
+// 1) Simulación: no escribe nada, lista qué fusionaría.
+await (await fetch("/api/email/rethread", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ dryRun: true }),
+})).json();
+
+// 2) Aplicar.
+await (await fetch("/api/email/rethread", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ dryRun: false }),
+})).json();
+```
+
+Responde `{ ok, dryRun, outboundIdsFixed, threadsScanned, merged: [{ from, into, via, messages }] }`. Corrige primero los `message_id` salientes guardados con nuestro id (consulta a Resend, retención ~30 días) y luego mueve los mensajes del hilo nuevo al hilo original y borra el hilo vacío (conserva `lead_id`; queda no leído si alguno lo estaba). `requireAdmin`, límite 3/min, idempotente: repetirlo devuelve `merged: []`. Opcional `limit` (1–1000, defecto 500).
+
 ### Adjuntos (descarga)
 
 `GET /api/email/attachments/[id]` (UUID de `email_attachments`, solo Admin) pide a Resend una URL firmada temporal (`emails.receiving.attachments.get` o `emails.attachments.get` si el mensaje es saliente) y la devuelve en JSON. No hace proxy del fichero ni expone la API key. Si Resend ya no tiene el correo (~30 días), responde 410. La vista de hilo abre PDF/imagen en pestaña nueva y descarga el resto.
@@ -143,7 +167,10 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 - [x] La respuesta sale como el mailbox del hilo por Resend (`GallaDev <hola@…>` u `Ociel <ociel@…>`), y SPF, DKIM y DMARC siguen pasando. (`send-reply.ts`, test: `send-reply.test.ts`)
 - [x] El payload enviado incluye `In-Reply-To` y `References` construidos con los `message_id` guardados del hilo. (test: `send-reply.test.ts`)
 - [x] La respuesta se ve en ese hilo en `/correo` después de enviarla, y un envío fallido queda marcado como fallido en vez de desaparecer. (`send_status` column: `delivered` / `failed`)
-- [x] Un seguimiento desde fuera hacia ese hilo se guarda en el mismo hilo, no como uno nuevo, cuando el `message_id` / `References` entrante coincide. (`findOrCreateThread` en `inbound-store.ts`)
+- [x] Un seguimiento desde fuera hacia ese hilo se guarda en el mismo hilo, no como uno nuevo, cuando el `message_id` / `References` entrante coincide. (`findOrCreateThread` en `inbound-store.ts`, `thread-match.ts`; se guarda el `message_id` real de Resend tras enviar, ver «Re-hilar hilos partidos»)
+- [x] Responder a todos: To = remitente + To del último mensaje, Cc = su Cc, sin nuestros buzones. (`replyAllRecipients`, test: `threading.test.ts`, `send-reply.test.ts`)
+- [x] Reenviar: `POST /api/email/threads/[id]/forward` con el último mensaje citado y sus adjuntos (URL firmada de Resend como `path`); si un adjunto ya no existe, nota con el nombre. Se guarda en el mismo hilo. (`send-forward.ts`)
+- [x] Borradores de respuesta por hilo: autoguardado, se restauran al abrir el hilo y se borran al enviar. `email_drafts.thread_id` (migración `20261010120000_email_reply_drafts.sql`).
 
 ## 6. Riesgos
 
