@@ -168,6 +168,8 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 **Folders (Oct 9, 2026).** Migration `20261009180000_email_thread_inbox_state.sql` (apply manually in the SQL editor **before** deploying): `email_threads.archived_at`, `trashed_at`, `last_snippet`, `has_attachments` (the last two kept up to date by triggers, with backfill). RLS unchanged. API: `GET /api/email/threads?view=`, bulk `PATCH /api/email/threads`, `PATCH /api/email/threads/[id]` (`archived`, `trashed`), `GET /api/email/threads/unread-count`, all `requireAdmin` + zod. **Pending:** purging Trash after 30 days (scheduled job TBD); nothing is deleted today.
 
+**Search (Oct 10, 2026).** Migration `20261010090000_email_search.sql` (apply manually **before** deploying): generated `search_tsv` tsvector columns + GIN indexes on `email_messages` (subject + sender + `body_text`) and `email_threads`. `GET /api/email/threads?q=…&scope=view|all` (max 200 chars) builds a safe prefix tsquery and uses PostgREST `textSearch` (`spanish`). UI: debounced search box, clear button, "search all folders". No `unaccent`; max 200 threads per search.
+
 **Design path (when taken up).** Proposed vocabulary:
 
 | Folder | Idea | Design notes |

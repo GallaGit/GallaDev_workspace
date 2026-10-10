@@ -175,6 +175,8 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 - API: `GET /api/email/threads?view=inbox|archived|trash`, `PATCH /api/email/threads` (en bloque: `{ ids, is_read?, archived?, trashed? }`, máx. 100), `PATCH /api/email/threads/[id]` (acepta también `archived` y `trashed`), `GET /api/email/threads/unread-count`. Todo con `requireAdmin` y zod.
 - **Pendiente:** purga de la Papelera a los 30 días (`DELETE FROM email_threads WHERE trashed_at < now() - interval '30 days'`, tarea programada por decidir). Hoy no se borra nada.
 
+**Búsqueda (10 Oct 2026).** Migración `20261010090000_email_search.sql` (aplicar a mano **antes** de desplegar): columnas generadas `search_tsv` (tsvector) con índice GIN en `email_messages` (asunto + remitente + `body_text`) y `email_threads` (asunto + remitente). Config `spanish` para asunto y cuerpo y `simple` para el remitente; el email se parte en palabras. `GET /api/email/threads?q=…&scope=view|all` (máx. 200 caracteres): la entrada se convierte en `palabra:* & palabra:*` (prefijo, sin operadores del usuario) y va por `textSearch` de PostgREST, parametrizado. La UI tiene caja de búsqueda con debounce de 300 ms, botón de borrar y casilla «Buscar en todas las bandejas». Límites: sin `unaccent` (buscar «informacion» no encuentra «información»), máx. 200 hilos por búsqueda.
+
 **Camino de diseño (cuando se aborde).** Vocabulario propuesto:
 
 | Bandeja | Idea | Notas de diseño |

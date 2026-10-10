@@ -7,6 +7,12 @@ import { readCappedJson } from "@/lib/rate-limit";
 import { parseThreadBulkPatch } from "@/lib/email/email-payload";
 import { parseThreadView, threadDbPatch } from "@/lib/email/thread-state";
 import { isCompanyMailbox } from "@/lib/email/mailboxes";
+import {
+  MAX_SEARCH_THREADS,
+  buildTsQuery,
+  parseSearchQuery,
+  parseSearchScope,
+} from "@/lib/email/thread-search";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +29,9 @@ const THREAD_LIST_COLUMNS =
  *   - unread (si "true", solo no leídos)
  *   - mailbox (hola@galladev.com | ociel@galladev.com; omitir = todos)
  *   - view (inbox | archived | trash; default inbox)
+ *   - q (opcional, máx. 200 caracteres): busca por remitente, asunto y cuerpo
+ *     con FTS (`search_tsv`, config spanish, prefijo por palabra)
+ *   - scope (view | all; default view): `all` busca en todas las vistas
  */
 async function listThreads(request: Request) {
   const denied = await requireAdmin();
@@ -37,6 +46,54 @@ async function listThreads(request: Request) {
     const unreadOnly = url.searchParams.get("unread") === "true";
     const mailboxParam = (url.searchParams.get("mailbox") ?? "").trim().toLowerCase();
     const view = parseThreadView(url.searchParams.get("view"));
+    const search = parseSearchQuery(url.searchParams.get("q"));
+    if (!search.ok) {
+      return NextResponse.json({ ok: false, error: search.error }, { status: 400 });
+    }
+    const scope = search.q ? parseSearchScope(url.searchParams.get("scope")) : "view";
+
+    let matchIds: string[] | null = null;
+    if (search.q) {
+      const tsQuery = buildTsQuery(search.q);
+      if (!tsQuery) {
+        return NextResponse.json({ ok: true, view, scope, q: search.q, threads: [] });
+      }
+      const [byThread, byMessage] = await Promise.all([
+        supabase
+          .from("email_threads")
+          .select("id")
+          .textSearch("search_tsv", tsQuery, { config: "spanish" })
+          .limit(MAX_SEARCH_THREADS),
+        supabase
+          .from("email_messages")
+          .select("thread_id")
+          .textSearch("search_tsv", tsQuery, { config: "spanish" })
+          .order("received_at", { ascending: false })
+          .limit(MAX_SEARCH_THREADS * 2),
+      ]);
+      const searchError = byThread.error ?? byMessage.error;
+      if (searchError) {
+        logRouteError({
+          route: "GET /api/email/threads",
+          status: 500,
+          errorClass: `Supabase:${searchError.code}`,
+          requestId,
+        });
+        return NextResponse.json(
+          { ok: false, error: "No se pudo buscar en el correo" },
+          { status: 500 },
+        );
+      }
+      const ids = new Set<string>();
+      for (const row of (byThread.data ?? []) as { id: string }[]) ids.add(row.id);
+      for (const row of (byMessage.data ?? []) as { thread_id: string }[]) {
+        ids.add(row.thread_id);
+      }
+      matchIds = Array.from(ids).slice(0, MAX_SEARCH_THREADS);
+      if (matchIds.length === 0) {
+        return NextResponse.json({ ok: true, view, scope, q: search.q, threads: [] });
+      }
+    }
 
     let query = supabase
       .from("email_threads")
@@ -44,7 +101,13 @@ async function listThreads(request: Request) {
       .order("last_message_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (view === "trash") {
+    if (matchIds) {
+      query = query.in("id", matchIds);
+    }
+
+    if (scope === "all") {
+      // Búsqueda en todas las vistas: sin filtro de archivado/papelera.
+    } else if (view === "trash") {
       query = query.not("trashed_at", "is", null);
     } else {
       query = query.is("trashed_at", null);
@@ -77,7 +140,13 @@ async function listThreads(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, view, threads: data ?? [] });
+    return NextResponse.json({
+      ok: true,
+      view,
+      scope,
+      q: search.q,
+      threads: data ?? [],
+    });
   } catch (e) {
     logRouteError({
       route: "GET /api/email/threads",

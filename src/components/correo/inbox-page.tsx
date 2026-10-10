@@ -32,6 +32,11 @@ import {
 } from "@/lib/email/thread-state";
 import { BulkToolbar } from "@/components/correo/thread-actions";
 import {
+  SEARCH_DEBOUNCE_MS,
+  SearchBox,
+  useDebouncedValue,
+} from "@/components/correo/search-box";
+import {
   notifyUnreadChanged,
   useUnreadCounts,
 } from "@/components/correo/use-unread-counts";
@@ -101,6 +106,10 @@ export function InboxPage() {
   const [editingDraft, setEditingDraft] = useState<EmailDraft | null>(null);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
   const [view, setView] = useState<MailView>("inbox");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchAll, setSearchAll] = useState(false);
+  const searchQuery = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS);
+  const searching = searchQuery.length > 0;
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const threadsRef = useRef<EmailThread[]>([]);
   useEffect(() => {
@@ -127,6 +136,10 @@ export function InboxPage() {
       try {
         const params = new URLSearchParams();
         params.set("view", view);
+        if (searchQuery) {
+          params.set("q", searchQuery);
+          if (searchAll) params.set("scope", "all");
+        }
         if (mailboxFilter !== "all") {
           params.set("mailbox", mailboxFilter);
         }
@@ -153,7 +166,7 @@ export function InboxPage() {
     return () => {
       cancelled = true;
     };
-  }, [mailboxFilter, listMode, threadsReloadKey, view, t]);
+  }, [mailboxFilter, listMode, threadsReloadKey, view, searchQuery, searchAll, t]);
 
   useEffect(() => {
     if (listMode !== "drafts") return;
@@ -212,7 +225,10 @@ export function InboxPage() {
         .map((thread) =>
           idSet.has(thread.id) ? applyThreadPatch(thread, patch, now) : thread,
         )
-        .filter((thread) => threadViewOf(thread) === view);
+        // En «buscar en todas las bandejas» las filas se quedan aunque cambien de vista.
+        .filter(
+          (thread) => (searching && searchAll) || threadViewOf(thread) === view,
+        );
       const stillVisible = new Set(next.map((thread) => thread.id));
       threadsRef.current = next;
       setThreads(next);
@@ -247,7 +263,7 @@ export function InboxPage() {
         notifyUnreadChanged();
       }
     },
-    [view, t],
+    [view, searching, searchAll, t],
   );
 
   const toggleChecked = useCallback((id: string) => {
@@ -324,7 +340,9 @@ export function InboxPage() {
     archived: t("views.archived"),
     trash: t("views.trash"),
   };
-  const emptyText =
+  const emptyText = searching
+    ? t("search.noResults", { query: searchQuery })
+    :
     view === "archived"
       ? t("emptyArchived")
       : view === "trash"
@@ -348,6 +366,12 @@ export function InboxPage() {
               <PenSquare className="mr-1.5 h-3.5 w-3.5" />
               {t("new")}
             </Button>
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              searchAll={searchAll}
+              onSearchAllChange={setSearchAll}
+            />
             <nav aria-label={t("views.label")}>
               <ul className="space-y-0.5">
                 {THREAD_VIEWS.map((v) => {
@@ -431,7 +455,9 @@ export function InboxPage() {
             <p className="text-[11px] text-gris-500 dark:text-gris-400">
               {listMode === "drafts"
                 ? t("draftCount", { count: drafts.length })
-                : t("threadCount", { count: threads.length })}
+                : searching
+                  ? t("search.resultCount", { count: threads.length })
+                  : t("threadCount", { count: threads.length })}
             </p>
             {listMode === "threads" && view === "trash" ? (
               <p className="text-[11px] text-gris-500 dark:text-gris-400">

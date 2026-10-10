@@ -603,7 +603,15 @@
     "inboxToast": "{count, plural, one {Thread moved to Inbox} other {# threads moved to Inbox}}",
     "emptyArchived": "No archived threads.",
     "emptyTrash": "Trash is empty.",
-    "trashNotice": "Threads in trash may be permanently deleted after {days} days."
+    "trashNotice": "Threads in trash may be permanently deleted after {days} days.",
+    "search": {
+      "label": "Search mail",
+      "placeholder": "Search sender, subject or text…",
+      "clear": "Clear search",
+      "allViews": "Search all folders",
+      "noResults": "No threads match “{query}”.",
+      "resultCount": "{count, plural, one {# result} other {# results}}"
+    }
   },
   "email": {
     "title": "Email",
