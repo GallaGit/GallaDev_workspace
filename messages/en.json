@@ -539,7 +539,7 @@
     "attachmentExpired": "Resend no longer keeps this attachment (older than ~30 days). It cannot be opened or downloaded.",
     "attachmentUnavailable": "Could not get the attachment",
     "markReadError": "Could not mark as read",
-    "replyAs": "Reply as hola@galladev.com",
+    "replyAs": "Reply as {mailbox}",
     "replyPlaceholder": "Write your reply…",
     "writeBeforeSend": "Write something before sending",
     "replySent": "Reply sent",
@@ -611,7 +611,20 @@
       "allViews": "Search all folders",
       "noResults": "No threads match “{query}”.",
       "resultCount": "{count, plural, one {# result} other {# results}}"
-    }
+    },
+    "reply": "Reply",
+    "replyAll": "Reply all",
+    "forward": "Forward",
+    "replyModes": "Reply type",
+    "forwardTo": "Forward to",
+    "forwardNote": "Message (optional)",
+    "forwardHint": "The last message is quoted and its attachments included if still available in Resend.",
+    "forwardToRequired": "Enter who to forward to",
+    "forwardSent": "Message forwarded",
+    "forwardMissingAttachments": "Could not attach: {files}",
+    "draftSaving": "Saving draft…",
+    "draftAutoSaved": "Draft saved",
+    "draftSaveError": "Could not save draft"
   },
   "email": {
     "title": "Email",

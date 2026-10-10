@@ -539,7 +539,7 @@
     "attachmentExpired": "Resend ya no conserva este adjunto (más de ~30 días). No se puede abrir ni descargar.",
     "attachmentUnavailable": "No se pudo obtener el adjunto",
     "markReadError": "No se pudo marcar como leído",
-    "replyAs": "Responder como hola@galladev.com",
+    "replyAs": "Responder como {mailbox}",
     "replyPlaceholder": "Escribe tu respuesta…",
     "writeBeforeSend": "Escribe algo antes de enviar",
     "replySent": "Respuesta enviada",
@@ -611,7 +611,20 @@
       "allViews": "Buscar en todas las bandejas",
       "noResults": "No hay hilos que coincidan con «{query}».",
       "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
-    }
+    },
+    "reply": "Responder",
+    "replyAll": "Responder a todos",
+    "forward": "Reenviar",
+    "replyModes": "Tipo de respuesta",
+    "forwardTo": "Reenviar a",
+    "forwardNote": "Mensaje (opcional)",
+    "forwardHint": "Se incluye el último mensaje citado y sus adjuntos si siguen disponibles en Resend.",
+    "forwardToRequired": "Indica a quién reenviar",
+    "forwardSent": "Mensaje reenviado",
+    "forwardMissingAttachments": "No se pudieron adjuntar: {files}",
+    "draftSaving": "Guardando borrador…",
+    "draftAutoSaved": "Borrador guardado",
+    "draftSaveError": "No se pudo guardar el borrador"
   },
   "email": {
     "title": "Email",

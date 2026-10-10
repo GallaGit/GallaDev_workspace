@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMock = vi.fn();
+const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./resend-client", () => ({
   getResendClient: vi.fn(() => ({
-    emails: { send: sendMock },
+    emails: { send: sendMock, get: getMock },
   })),
 }));
 
@@ -77,6 +78,11 @@ function mockAdmin(overrides: {
 describe("sendReply", () => {
   beforeEach(() => {
     sendMock.mockReset();
+    getMock.mockReset();
+    getMock.mockResolvedValue({
+      data: { message_id: "<0102-real@eu-west-1.amazonses.com>" },
+      error: null,
+    });
     sendMock.mockResolvedValue({ data: { id: "re_sent_123" }, error: null });
   });
 
@@ -128,10 +134,48 @@ describe("sendReply", () => {
     } as unknown as Parameters<typeof sendReply>[0];
 
     await sendReply(admin, { threadId: "t-1", bodyText: "Thanks" });
-    expect(inserted?.message_id).toMatch(/^<[0-9a-f-]{36}@galladev\.com>$/i);
-    expect(sendMock.mock.calls[0][0].headers["Message-ID"]).toBe(
-      inserted?.message_id,
-    );
+    // Root cause of split threads: Resend/SES rewrites Message-ID, so we
+    // store the real one from emails.get (what the recipient replies to).
+    expect(getMock).toHaveBeenCalledWith("re_sent_123");
+    expect(inserted?.message_id).toBe("<0102-real@eu-west-1.amazonses.com>");
+  });
+
+  it("falls back to our own Message-ID if Resend has no message_id yet", async () => {
+    getMock.mockResolvedValue({ data: null, error: { name: "not_found" } });
+    let inserted: Record<string, unknown> | undefined;
+    const base = mockAdmin();
+    const baseFrom = base.from as unknown as (t: string) => Record<string, unknown>;
+    const admin = {
+      from: (table: string) => {
+        const inner = baseFrom(table) as { insert?: (r: Record<string, unknown>) => unknown };
+        if (table === "email_messages" && inner.insert) {
+          const orig = inner.insert;
+          return { ...inner, insert: (r: Record<string, unknown>) => { inserted = r; return orig(r); } };
+        }
+        return inner;
+      },
+    } as unknown as Parameters<typeof sendReply>[0];
+    await sendReply(admin, { threadId: "t-1", bodyText: "Thanks" });
+    expect(inserted?.message_id).toBe(sendMock.mock.calls[0][0].headers["Message-ID"]);
+  });
+
+  it("reply-all sends to sender + To and Cc minus our mailboxes", async () => {
+    const admin = mockAdmin({
+      messages: [
+        {
+          message_id: "<m1@x>",
+          direction: "inbound",
+          from_address: "sender@example.com",
+          to_addresses: ["hola@galladev.com", "bob@example.com"],
+          cc_addresses: ["carol@example.com", "ociel@galladev.com", "bob@example.com"],
+        },
+      ],
+    });
+    const result = await sendReply(admin, { threadId: "t-1", bodyText: "Hi all", mode: "replyAll" });
+    expect(result.sent).toBe(true);
+    const call = sendMock.mock.calls[0][0];
+    expect(call.to).toEqual(["sender@example.com", "bob@example.com"]);
+    expect(call.cc).toEqual(["carol@example.com"]);
   });
 
   it("sends from ociel@ when thread mailbox is ociel@", async () => {
