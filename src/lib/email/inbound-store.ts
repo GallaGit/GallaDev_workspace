@@ -15,6 +15,8 @@ import {
   type ReceivingEmailContent,
 } from "./receiving-fetch";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
+import { findThreadForMessage } from "./thread-match";
+import { messageIdLookupVariants, normalizeMessageId } from "./threading";
 
 /**
  * Persiste un email inbound verificado en Supabase (email_threads + email_messages).
@@ -68,6 +70,7 @@ export async function storeInboundEmail(
     fromAddress,
     fromName,
     mailboxAddress,
+    at: data.created_at,
   });
 
   if (!threadId) {
@@ -154,31 +157,30 @@ async function findOrCreateThread(
     fromAddress: string;
     fromName?: string | null;
     mailboxAddress: CompanyMailbox;
+    at?: string;
   },
 ): Promise<string | null> {
-  const searchIds: string[] = [];
-  if (opts.inReplyTo) searchIds.push(opts.inReplyTo);
-  if (opts.references) {
-    for (const ref of opts.references.split(/\s+/)) {
-      if (ref && !searchIds.includes(ref)) searchIds.push(ref);
-    }
-  }
-  if (opts.messageId && !searchIds.includes(opts.messageId)) {
-    searchIds.push(opts.messageId);
-  }
-
-  for (const searchId of searchIds) {
-    const { data: existingByRef } = await admin
+  // Mismo Message-ID ya guardado (p. ej. llegó a hola@ y ociel@): mismo hilo.
+  const own = normalizeMessageId(opts.messageId);
+  if (own) {
+    const { data: same } = await admin
       .from("email_messages")
       .select("thread_id")
-      .eq("message_id", searchId)
+      .in("message_id", messageIdLookupVariants([opts.messageId as string]))
       .limit(1)
       .maybeSingle();
-
-    if (existingByRef?.thread_id) {
-      return existingByRef.thread_id;
-    }
+    if (same?.thread_id) return same.thread_id as string;
   }
+
+  const match = await findThreadForMessage(admin, {
+    inReplyTo: opts.inReplyTo,
+    references: opts.references,
+    subject: opts.subject,
+    counterpart: opts.fromAddress,
+    mailbox: opts.mailboxAddress,
+    at: opts.at,
+  });
+  if (match) return match.threadId;
 
   const { data: thread, error } = await admin
     .from("email_threads")

@@ -177,3 +177,42 @@ describe("parseThreadBulkPatch", () => {
     expect(parseThreadBulkPatch([A]).ok).toBe(false);
   });
 });
+
+describe("reply mode, forward and reply drafts", () => {
+  it("accepts reply mode replyAll and rejects unknown modes", async () => {
+    const { parseReplyBody: p } = await import("./email-payload");
+    expect(p({ text: "hola", mode: "replyAll" })).toEqual({
+      ok: true,
+      value: { text: "hola", html: undefined, mode: "replyAll" },
+    });
+    expect(p({ text: "hola", mode: "all" }).ok).toBe(false);
+  });
+
+  it("parses forward body", async () => {
+    const { parseForwardBody } = await import("./email-payload");
+    expect(parseForwardBody({ to: " bob@example.com ", text: "" })).toEqual({
+      ok: true,
+      value: { to: "bob@example.com", text: "" },
+    });
+    expect(parseForwardBody({ to: "nope" }).ok).toBe(false);
+    expect(parseForwardBody({ to: "bob@example.com", cc: "x" }).ok).toBe(false);
+  });
+
+  it("parses reply draft with threadId and replyMode", async () => {
+    const { parseDraftBody: p } = await import("./email-payload");
+    const r = p({
+      threadId: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+      replyMode: "replyAll",
+      mailbox: "hola@galladev.com",
+      to: "",
+      subject: "",
+      bodyText: "borrador",
+      leadId: null,
+    });
+    expect(r).toMatchObject({
+      ok: true,
+      value: { threadId: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd", replyMode: "replyAll" },
+    });
+    expect(p({ threadId: "x", mailbox: "hola@galladev.com", bodyText: "" }).ok).toBe(false);
+  });
+});

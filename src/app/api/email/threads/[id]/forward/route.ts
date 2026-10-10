@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
-import { parseReplyBody } from "@/lib/email/email-payload";
+import { parseForwardBody } from "@/lib/email/email-payload";
 import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
@@ -17,14 +17,12 @@ const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 10;
 
 /**
- * POST /api/email/threads/[id]/reply — enviar respuesta desde el mailbox_address del hilo.
+ * POST /api/email/threads/[id]/forward — reenviar el último mensaje del hilo.
  *
- * Auth: requireAdmin antes del cliente admin. La lectura del hilo usa la
- * sesión (RLS). El insert del mensaje saliente no tiene GRANT para
- * authenticated, así que la escritura sigue en service role después del gate.
- * Body: { text: string, html?: string, mode?: "reply" | "replyAll" }
+ * Auth: requireAdmin antes del cliente admin; el hilo se lee con la sesión (RLS).
+ * Body: { to: string, text?: string }. Adjuntos originales vía URL firmada de Resend.
  */
-async function postReply(request: Request, ctx: Ctx) {
+async function postForward(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
@@ -37,7 +35,7 @@ async function postReply(request: Request, ctx: Ctx) {
   }
 
   if (
-    await consumeRateLimit("email:reply", clientIp(request), {
+    await consumeRateLimit("email:forward", clientIp(request), {
       windowMs: RATE_WINDOW_MS,
       max: RATE_MAX,
     })
@@ -56,13 +54,13 @@ async function postReply(request: Request, ctx: Ctx) {
           ok: false,
           error:
             read.status === 413
-              ? "El texto de la respuesta es demasiado largo"
+              ? "El texto es demasiado largo"
               : "Datos del correo no válidos",
         },
         { status: read.status },
       );
     }
-    const parsed = parseReplyBody(read.value);
+    const parsed = parseForwardBody(read.value);
     if (!parsed.ok) {
       return NextResponse.json(
         { ok: false, error: parsed.error },
@@ -84,19 +82,19 @@ async function postReply(request: Request, ctx: Ctx) {
       );
     }
 
-    const { sendReply } = await import("@/lib/email/send-reply");
+    const { sendForward } = await import("@/lib/email/send-forward");
     const admin = createSupabaseAdminClient();
-    const result = await sendReply(admin, {
+    const result = await sendForward(admin, {
       threadId: id,
+      to: parsed.value.to,
       bodyText: parsed.value.text,
-      bodyHtml: parsed.value.html,
-      mode: parsed.value.mode,
     });
 
     if (!result.sent) {
       const statusMap: Record<string, number> = {
         "no-client": 503,
         "no-thread": 404,
+        "no-message": 404,
         "invalid-body": 400,
         "invalid-mailbox": 400,
         "invalid-recipient": 400,
@@ -104,37 +102,39 @@ async function postReply(request: Request, ctx: Ctx) {
         "db-error": 500,
       };
       const fixed: Record<string, string> = {
-        "no-client": "No se pudo enviar la respuesta",
+        "no-client": "No se pudo reenviar",
         "no-thread": "Hilo no encontrado o sin permiso",
-        "invalid-body": "El texto de la respuesta no es válido",
+        "invalid-body": "El texto no es válido",
         "invalid-mailbox": "Buzón de origen no válido",
-        "invalid-recipient": "El destinatario de la respuesta no es válido",
+        "invalid-recipient": "Destinatario no válido",
       };
       logRouteError({
-        route: `POST /api/email/threads/${id}/reply`,
+        route: `POST /api/email/threads/${id}/forward`,
         status: statusMap[result.reason] ?? 500,
-        errorClass: `Reply:${result.reason}`,
+        errorClass: `Forward:${result.reason}`,
         requestId,
       });
       return NextResponse.json(
         {
           ok: false,
-          error: fixed[result.reason] ?? result.detail ?? "No se pudo enviar la respuesta",
+          error: fixed[result.reason] ?? result.detail ?? "No se pudo reenviar",
         },
         { status: statusMap[result.reason] ?? 500 },
       );
     }
 
-    // Borrador de respuesta del hilo: se borra al enviar (RLS Admin).
-    await supabase.from("email_drafts").delete().eq("thread_id", id);
-
     return NextResponse.json(
-      { ok: true, messageId: result.messageId },
+      {
+        ok: true,
+        messageId: result.messageId,
+        attached: result.attached,
+        missing: result.missing,
+      },
       { status: 201 },
     );
   } catch (e) {
     logRouteError({
-      route: `POST /api/email/threads/${id}/reply`,
+      route: `POST /api/email/threads/${id}/forward`,
       status: 500,
       errorClass: errorClassOf(e),
       requestId,
@@ -147,6 +147,6 @@ async function postReply(request: Request, ctx: Ctx) {
 }
 
 export const POST = withJsonErrors(
-  "POST /api/email/threads/[id]/reply",
-  postReply,
+  "POST /api/email/threads/[id]/forward",
+  postForward,
 );

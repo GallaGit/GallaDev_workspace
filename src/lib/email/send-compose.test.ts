@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMock = vi.fn();
+const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./resend-client", () => ({
   getResendClient: vi.fn(() => ({
-    emails: { send: sendMock },
+    emails: { send: sendMock, get: getMock },
   })),
 }));
 
@@ -77,6 +78,11 @@ describe("isValidExternalEmail", () => {
 describe("sendCompose", () => {
   beforeEach(() => {
     sendMock.mockReset();
+    getMock.mockReset();
+    getMock.mockResolvedValue({
+      data: { message_id: "<0102-real@eu-west-1.amazonses.com>" },
+      error: null,
+    });
     sendMock.mockResolvedValue({ data: { id: "re_compose_1" }, error: null });
   });
 

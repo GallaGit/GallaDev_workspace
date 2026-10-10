@@ -10,6 +10,8 @@ import {
 import { MAX_EMAIL_BODY_CHARS } from "./limits";
 import { createOutboundMessageId } from "./receiving-fetch";
 import { getResendClient } from "./resend-client";
+import { fetchSentMessageId } from "./thread-match";
+import { replyAllRecipients, replySubject } from "./threading";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 
 /**
@@ -22,10 +24,14 @@ import { prepareStoredEmailBodies } from "./sanitize-email-html";
  *  - From: el mailbox_address del hilo (hola@ u ociel@).
  */
 
+export type ReplyMode = "reply" | "replyAll";
+
 export interface ReplyInput {
   threadId: string;
   bodyText: string;
   bodyHtml?: string;
+  /** "replyAll": To + Cc del último mensaje, sin nuestros buzones. */
+  mode?: ReplyMode;
 }
 
 export type ReplyResult =
@@ -79,7 +85,7 @@ export async function sendReply(
 
   const { data: messages } = await admin
     .from("email_messages")
-    .select("message_id, direction, from_address, to_addresses")
+    .select("message_id, direction, from_address, to_addresses, cc_addresses")
     .eq("thread_id", input.threadId)
     .order("received_at", { ascending: true });
 
@@ -95,6 +101,30 @@ export async function sendReply(
   }
   const replyTo = extractEmailAddress(rawReplyTo);
 
+  let toList: string[] = [replyTo];
+  let ccList: string[] = [];
+  const lastMessage = threadMessages[threadMessages.length - 1];
+  if (input.mode === "replyAll" && lastMessage) {
+    const all = replyAllRecipients(
+      {
+        from_address: String(lastMessage.from_address ?? ""),
+        to_addresses: (lastMessage.to_addresses as string[] | null) ?? [],
+        cc_addresses: (lastMessage.cc_addresses as string[] | null) ?? [],
+        direction: String(lastMessage.direction),
+      },
+      (a) => isCompanyMailbox(extractEmailAddress(a)),
+    );
+    const valid = (l: string[]) =>
+      l.filter(isValidExternalEmail).map(extractEmailAddress);
+    if (all.to.length > 0) {
+      toList = valid(all.to);
+      ccList = valid(all.cc).filter((a) => !toList.includes(a));
+    }
+    if (toList.length === 0) {
+      return { sent: false, reason: "invalid-recipient" };
+    }
+  }
+
   const allMessageIds = threadMessages
     .map((m) => m.message_id)
     .filter((id): id is string => Boolean(id));
@@ -102,9 +132,7 @@ export async function sendReply(
   const inReplyTo = allMessageIds.length > 0 ? allMessageIds[allMessageIds.length - 1] : undefined;
   const references = allMessageIds.length > 0 ? allMessageIds.join(" ") : undefined;
 
-  const subject = thread.subject.startsWith("Re:")
-    ? thread.subject
-    : `Re: ${thread.subject}`;
+  const subject = replySubject(thread.subject);
 
   const stored = prepareStoredEmailBodies(input.bodyHtml, bodyText);
 
@@ -116,7 +144,8 @@ export async function sendReply(
   try {
     const result = await client.emails.send({
       from: fromMeta.from,
-      to: replyTo,
+      to: toList.length === 1 ? toList[0] : toList,
+      ...(ccList.length > 0 ? { cc: ccList } : {}),
       subject,
       text: stored.text ?? bodyText,
       ...(stored.html ? { html: stored.html } : {}),
@@ -144,19 +173,24 @@ export async function sendReply(
     return { sent: false, reason: "send-failed", detail: "No email id returned" };
   }
 
+  // Resend/SES reescribe Message-ID: guardamos el que ve el destinatario
+  // para que su In-Reply-To encuentre este hilo.
+  const realMessageId =
+    (await fetchSentMessageId(client, resendEmailId)) ?? outboundMessageId;
+
   const { data: msg, error: dbErr } = await admin
     .from("email_messages")
     .insert({
       thread_id: input.threadId,
       resend_email_id: resendEmailId,
-      message_id: outboundMessageId,
+      message_id: realMessageId,
       in_reply_to: inReplyTo ?? null,
       references: references ?? null,
       direction: "outbound",
       from_address: fromMeta.address,
       from_name: fromMeta.name,
-      to_addresses: [replyTo],
-      cc_addresses: [],
+      to_addresses: toList,
+      cc_addresses: ccList,
       bcc_addresses: [],
       subject,
       body_html: stored.html,

@@ -3,18 +3,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseDraftBody } from "@/lib/email/email-payload";
+import { isUuid } from "@/lib/supabase/lead-lookup";
 import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+const DRAFT_COLUMNS =
+  "id, mailbox_address, to_address, subject, body_text, lead_id, thread_id, reply_mode, created_at, updated_at";
+
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 30;
 
 /**
- * GET /api/email/drafts — lista de borradores (Admin).
- * POST /api/email/drafts — crear o actualizar borrador.
+ * GET /api/email/drafts — lista de borradores de mensaje nuevo (Admin).
+ * GET /api/email/drafts?threadId=<uuid> — borrador de respuesta de ese hilo (o null).
+ * POST /api/email/drafts — crear o actualizar borrador. Con `threadId`, upsert
+ * del único borrador de respuesta de ese hilo.
  */
 async function listDrafts(request: Request) {
   const denied = await requireAdmin();
@@ -23,11 +29,38 @@ async function listDrafts(request: Request) {
 
   try {
     const supabase = await createSupabaseServerClient();
+    const threadId = new URL(request.url).searchParams.get("threadId");
+    if (threadId !== null) {
+      if (!isUuid(threadId)) {
+        return NextResponse.json(
+          { ok: false, error: "Identificador no válido" },
+          { status: 400 },
+        );
+      }
+      const { data: one, error: oneErr } = await supabase
+        .from("email_drafts")
+        .select(DRAFT_COLUMNS)
+        .eq("thread_id", threadId)
+        .maybeSingle();
+      if (oneErr) {
+        logRouteError({
+          route: "GET /api/email/drafts",
+          status: 500,
+          errorClass: `Supabase:${oneErr.code}`,
+          requestId,
+        });
+        return NextResponse.json(
+          { ok: false, error: "No se pudo cargar el borrador" },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({ ok: true, draft: one ?? null });
+    }
+
     const { data, error } = await supabase
       .from("email_drafts")
-      .select(
-        "id, mailbox_address, to_address, subject, body_text, lead_id, created_at, updated_at",
-      )
+      .select(DRAFT_COLUMNS)
+      .is("thread_id", null)
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -101,15 +134,28 @@ async function saveDraft(request: Request) {
       subject: parsed.value.subject,
       body_text: parsed.value.bodyText,
       lead_id: parsed.value.leadId,
+      ...(parsed.value.threadId
+        ? { thread_id: parsed.value.threadId, reply_mode: parsed.value.replyMode ?? "reply" }
+        : {}),
     };
 
-    if (parsed.value.id) {
+    let draftId = parsed.value.id;
+    if (!draftId && parsed.value.threadId) {
+      const { data: existing } = await supabase
+        .from("email_drafts")
+        .select("id")
+        .eq("thread_id", parsed.value.threadId)
+        .maybeSingle();
+      if (existing?.id) draftId = existing.id as string;
+    }
+
+    if (draftId) {
       const { data, error } = await supabase
         .from("email_drafts")
         .update(row)
-        .eq("id", parsed.value.id)
+        .eq("id", draftId)
         .select(
-          "id, mailbox_address, to_address, subject, body_text, lead_id, created_at, updated_at",
+          DRAFT_COLUMNS,
         )
         .single();
 
@@ -132,7 +178,7 @@ async function saveDraft(request: Request) {
       .from("email_drafts")
       .insert(row)
       .select(
-        "id, mailbox_address, to_address, subject, body_text, lead_id, created_at, updated_at",
+        DRAFT_COLUMNS,
       )
       .single();
 

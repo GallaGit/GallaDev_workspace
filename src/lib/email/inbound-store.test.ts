@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchReceivingEmail = vi.hoisted(() => vi.fn());
+const findThreadForMessage = vi.hoisted(() => vi.fn());
+
+vi.mock("./thread-match", () => ({ findThreadForMessage }));
 
 vi.mock("./receiving-fetch", () => ({
   fetchReceivingEmail,
@@ -30,6 +33,7 @@ import { storeInboundEmail } from "./inbound-store";
 function mockAdmin(opts: {
   existingMessage?: { id: string } | null;
   existingThreadByRef?: { thread_id: string } | null;
+  sameMessageId?: { thread_id: string } | null;
   insertMessage?: { id: string } | null;
   insertMessageError?: { code?: string; message?: string } | null;
   insertThread?: { id: string } | null;
@@ -41,6 +45,12 @@ function mockAdmin(opts: {
   const insertMessageError = opts.insertMessageError ?? null;
   const insertThread = opts.insertThread ?? { id: "thread-new" };
   const messageCount = opts.messageCount ?? 1;
+  const sameMessageId = opts.sameMessageId ?? null;
+  findThreadForMessage.mockResolvedValue(
+    existingThreadByRef
+      ? { threadId: existingThreadByRef.thread_id, via: "in-reply-to" }
+      : null,
+  );
 
   const messageInsert = vi.fn().mockReturnValue({
     select: vi.fn().mockReturnValue({
@@ -90,12 +100,12 @@ function mockAdmin(opts: {
                 }),
               };
             }
-            // Later: find thread by message_id
+            // Later: same Message-ID already stored
             return {
-              eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
                 limit: vi.fn().mockReturnValue({
                   maybeSingle: vi.fn().mockResolvedValue({
-                    data: existingThreadByRef,
+                    data: sameMessageId,
                     error: null,
                   }),
                 }),
@@ -141,6 +151,46 @@ const baseEvent = {
 describe("storeInboundEmail", () => {
   beforeEach(() => {
     fetchReceivingEmail.mockReset();
+    findThreadForMessage.mockReset();
+  });
+
+  it("passes In-Reply-To, References, subject and sender to the matcher", async () => {
+    fetchReceivingEmail.mockResolvedValue({
+      ok: true,
+      data: {
+        html: null,
+        text: "x",
+        headers: {
+          "In-Reply-To": "<ses-id@eu-west-1.amazonses.com>",
+          References: "<a@x>\r\n <ses-id@eu-west-1.amazonses.com>",
+        },
+        messageId: "<new@example.com>",
+        attachments: [],
+      },
+    });
+    const admin = mockAdmin({ existingThreadByRef: { thread_id: "t-1" } });
+    const result = await storeInboundEmail(admin, {
+      ...baseEvent,
+      data: { ...baseEvent.data, subject: "Re: Hello" },
+    });
+    expect(result).toMatchObject({ stored: true, threadId: "t-1" });
+    expect(findThreadForMessage).toHaveBeenCalledWith(
+      admin,
+      expect.objectContaining({
+        inReplyTo: "<ses-id@eu-west-1.amazonses.com>",
+        subject: "Re: Hello",
+        counterpart: "client@example.com",
+        mailbox: "hola@galladev.com",
+      }),
+    );
+  });
+
+  it("reuses the thread when the same Message-ID is already stored", async () => {
+    fetchReceivingEmail.mockResolvedValue({ ok: false, errorName: "x" });
+    const admin = mockAdmin({ sameMessageId: { thread_id: "t-same" } });
+    const result = await storeInboundEmail(admin, baseEvent);
+    expect(result).toMatchObject({ stored: true, threadId: "t-same" });
+    expect(findThreadForMessage).not.toHaveBeenCalled();
   });
 
   it("stores html/text from Receiving API and threads via headers", async () => {

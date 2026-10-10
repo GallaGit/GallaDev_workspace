@@ -37,6 +37,12 @@ export type ComposePayload = {
 export type ReplyPayload = {
   text: string;
   html?: string;
+  mode?: "reply" | "replyAll";
+};
+
+export type ForwardPayload = {
+  to: string;
+  text: string;
 };
 
 export type DraftPayload = {
@@ -46,6 +52,9 @@ export type DraftPayload = {
   subject: string;
   bodyText: string;
   leadId: string | null;
+  /** Borrador de respuesta de un hilo (uno por hilo). */
+  threadId?: string;
+  replyMode?: "reply" | "replyAll";
 };
 
 export type ThreadPatch = {
@@ -138,6 +147,20 @@ const replySchema = z.strictObject(
       .string({ error: "El HTML debe ser texto" })
       .max(MAX_EMAIL_BODY_CHARS, { error: "El HTML es demasiado largo" })
       .optional(),
+    mode: z.enum(["reply", "replyAll"], { error: "Modo de respuesta no válido" }).optional(),
+  },
+  { error: objectError },
+);
+
+const forwardSchema = z.strictObject(
+  {
+    to: z
+      .string({ error: "Destinatario no válido" })
+      .max(MAX_EMAIL_ADDRESS_CHARS, { error: "Destinatario no válido" })
+      .refine(isValidExternalEmail, { error: "Destinatario no válido" }),
+    text: z
+      .string({ error: "El cuerpo debe ser texto" })
+      .max(MAX_EMAIL_BODY_CHARS, { error: "El cuerpo es demasiado largo" }),
   },
   { error: objectError },
 );
@@ -158,6 +181,8 @@ const draftSchema = z.strictObject(
       .string({ error: "El cuerpo debe ser texto" })
       .max(MAX_EMAIL_BODY_CHARS, { error: "El cuerpo es demasiado largo" }),
     leadId: uuidField.nullable(),
+    threadId: uuidField.optional(),
+    replyMode: z.enum(["reply", "replyAll"], { error: "Modo de respuesta no válido" }).optional(),
   },
   { error: objectError },
 );
@@ -265,16 +290,36 @@ export function parseComposeBody(raw: unknown): EmailPayloadResult<ComposePayloa
 
 export function parseReplyBody(raw: unknown): EmailPayloadResult<ReplyPayload> {
   if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };
-  const unknown = unknownField(raw, ["text", "html"]);
+  const unknown = unknownField(raw, ["text", "html", "mode"]);
   if (unknown) return { ok: false, error: unknown };
   const normalized: Record<string, unknown> = {
     text: typeof raw.text === "string" ? raw.text.trim() : raw.text,
   };
+  if (raw.mode !== undefined) normalized.mode = raw.mode;
   if (typeof raw.html === "string" && raw.html.trim()) normalized.html = raw.html.trim();
   else if ("html" in raw && raw.html != null && raw.html !== "") normalized.html = raw.html;
   const parsed = replySchema.safeParse(normalized);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  return { ok: true, value: { text: parsed.data.text, html: parsed.data.html } };
+  return {
+    ok: true,
+    value: {
+      text: parsed.data.text,
+      html: parsed.data.html,
+      ...(parsed.data.mode ? { mode: parsed.data.mode } : {}),
+    },
+  };
+}
+
+export function parseForwardBody(raw: unknown): EmailPayloadResult<ForwardPayload> {
+  if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };
+  const unknown = unknownField(raw, ["to", "text"]);
+  if (unknown) return { ok: false, error: unknown };
+  const parsed = forwardSchema.safeParse({
+    to: typeof raw.to === "string" ? raw.to.trim() : raw.to,
+    text: typeof raw.text === "string" ? raw.text.trim() : raw.text ?? "",
+  });
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  return { ok: true, value: { to: parsed.data.to, text: parsed.data.text } };
 }
 
 export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
@@ -286,10 +331,14 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
     "subject",
     "bodyText",
     "leadId",
+    "threadId",
+    "replyMode",
   ]);
   if (unknown) return { ok: false, error: unknown };
   const id = optionalUuid(raw, "id");
   if (!id.ok) return id;
+  const threadId = optionalUuid(raw, "threadId");
+  if (!threadId.ok) return threadId;
   let leadId: string | null = null;
   if ("leadId" in raw && raw.leadId != null && raw.leadId !== "") {
     if (typeof raw.leadId !== "string" || !isUuid(raw.leadId.trim())) {
@@ -307,6 +356,8 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
     leadId,
   };
   if (id.value) normalized.id = id.value;
+  if (threadId.value) normalized.threadId = threadId.value;
+  if (raw.replyMode !== undefined) normalized.replyMode = raw.replyMode;
   const parsed = draftSchema.safeParse(normalized);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   if (!isCompanyMailbox(parsed.data.mailbox)) {
@@ -321,6 +372,8 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
       subject: parsed.data.subject,
       bodyText: parsed.data.bodyText,
       leadId: parsed.data.leadId,
+      ...(parsed.data.threadId ? { threadId: parsed.data.threadId } : {}),
+      ...(parsed.data.replyMode ? { replyMode: parsed.data.replyMode } : {}),
     },
   };
 }

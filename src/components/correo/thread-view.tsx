@@ -170,7 +170,12 @@ export function ThreadView({
         )}
       </div>
 
-      <ReplyForm threadId={thread.id} onSent={fetchThread} />
+      <ReplyForm
+        key={thread.id}
+        threadId={thread.id}
+        mailbox={thread.mailbox_address}
+        onSent={fetchThread}
+      />
 
       <LinkLeadDialog
         key={linkOpen ? "open" : "closed"}
