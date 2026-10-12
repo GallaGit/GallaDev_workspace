@@ -77,6 +77,10 @@ async function getAttachment(request: Request, ctx: Ctx) {
           status: 502,
           error: "No se pudo obtener el adjunto de Resend",
         },
+        "untrusted-url": {
+          status: 502,
+          error: "Resend devolvió una URL de descarga no válida",
+        },
       };
       const body = map[result.reason];
       return NextResponse.json(

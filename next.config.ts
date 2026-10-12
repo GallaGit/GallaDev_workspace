@@ -5,9 +5,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   // sanitize-html se deja fuera del bundle para que el runtime lo cargue
-  // con require(), igual que el test de regresión. Va fijado en 2.17.5:
-  // 2.17.6+ arrastra htmlparser2 ESM-only y ese require lanza
-  // ERR_REQUIRE_ESM en Vercel (la ruta responde 500 con cuerpo vacío).
+  // con require(), igual que el test de regresión. sanitize-html ^2.18.0
+  // (GDW-SEC-022) trae htmlparser2@12 ESM-only, cuyo require lanza
+  // ERR_REQUIRE_ESM en Vercel; por eso package.json fuerza con "overrides"
+  // htmlparser2@^10 (CJS) solo para sanitize-html.
   serverExternalPackages: ["sanitize-html"],
 
   // Standalone solo para Docker/self-host (lo exige el Dockerfile).
