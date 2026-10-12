@@ -134,7 +134,7 @@ export interface LeadCreateInput {
   /**
    * Origen del lead. Por defecto los mappers usan "Manual".
    * La ingesta pública (form galladev.com) pasa "web-galladev".
-   * POST /api/ingest/n8n usa "n8n" si no viene source.
+   * Leads antiguos de n8n (ruta retirada el 2026-10-10) llevan "n8n".
    */
   source?: string | null;
   /** Campos ricos opcionales (p.ej. prospectos n8n). No los usa el diálogo manual. */

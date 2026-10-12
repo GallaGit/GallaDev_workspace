@@ -10,13 +10,11 @@ import {
 
 /**
  * Contratos de la ingesta pública (bearer), no de la sesión Supabase.
- * Los topes viven en las rutas: lead 32 KiB / 30 por minuto, n8n 64 KiB / 60.
+ * Los topes viven en la ruta: lead 32 KiB / 30 por minuto. n8n responde 410.
  */
 const SECRET = "test-ingest-secret";
 const LEAD_MAX_BYTES = 32 * 1024;
 const LEAD_RATE_MAX = 30;
-const N8N_MAX_BYTES = 64 * 1024;
-const N8N_RATE_MAX = 60;
 
 const repo = vi.hoisted(() => ({
   list: vi.fn(async (): Promise<unknown[]> => []),
@@ -44,7 +42,6 @@ vi.mock("@/lib/automations/dispatch", () => ({
 }));
 
 const LEAD_URL = "http://localhost/api/ingest/lead";
-const N8N_URL = "http://localhost/api/ingest/n8n";
 
 function ingestRequest(
   url: string,
@@ -240,129 +237,13 @@ describe("POST /api/ingest/lead", () => {
     expect(res.status).toBe(201);
     expect(sendIngestEmails).not.toHaveBeenCalled();
   });
-
-  it("no acepta el secreto de n8n", async () => {
-    vi.stubEnv("N8N_INGEST_SECRET", "n8n-only-secret-value");
-    const { POST } = await import("@/app/api/ingest/lead/route");
-    const res = await POST(
-      ingestRequest(LEAD_URL, {
-        bearer: "n8n-only-secret-value",
-        body: landingBody,
-        ip: "198.51.100.41",
-      }),
-    );
-    await expectError(res, 401, "No autorizado");
-    expect(repo.create).not.toHaveBeenCalled();
-  });
 });
 
-describe("POST /api/ingest/n8n", () => {
-  it("401 si falta el bearer o no coincide", async () => {
+describe("POST /api/ingest/n8n (retirada)", () => {
+  it("410 sin autenticar ni tocar el repositorio", async () => {
     const { POST } = await import("@/app/api/ingest/n8n/route");
-    const missing = await POST(ingestRequest(N8N_URL, { bearer: null, body: "{}" }));
-    await expectError(missing, 401, "No autorizado");
-
-    const wrong = await POST(
-      ingestRequest(N8N_URL, { bearer: "nope", body: "{}" }),
-    );
-    await expectError(wrong, 401, "No autorizado");
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(repo.create).not.toHaveBeenCalled();
-  });
-
-  it("429 al superar el límite en memoria por IP", async () => {
-    const { POST } = await import("@/app/api/ingest/n8n/route");
-    const ip = "198.51.100.20";
-    for (let i = 0; i < N8N_RATE_MAX; i++) {
-      const allowed = await POST(ingestRequest(N8N_URL, { body: "{}", ip }));
-      expect(allowed.status).not.toBe(429);
-    }
-    const blocked = await POST(ingestRequest(N8N_URL, { body: "{}", ip }));
-    await expectError(
-      blocked,
-      429,
-      "Demasiadas solicitudes. Inténtalo más tarde.",
-    );
-  });
-
-  it("413 si el cuerpo supera el tope de n8n, no el de la landing", async () => {
-    const { POST } = await import("@/app/api/ingest/n8n/route");
-    const underN8n = await POST(
-      ingestRequest(N8N_URL, {
-        body: "x".repeat(LEAD_MAX_BYTES + 1),
-        ip: "198.51.100.21",
-      }),
-    );
-    await expectError(underN8n, 400, "JSON inválido");
-
-    const over = await POST(
-      ingestRequest(N8N_URL, {
-        body: "x".repeat(N8N_MAX_BYTES + 1),
-        ip: "198.51.100.22",
-      }),
-    );
-    await expectError(over, 413, "Payload demasiado grande");
-    expect(repo.create).not.toHaveBeenCalled();
-  });
-
-  it("el catch de guardado registra la ruta sin secreto ni cuerpo", async () => {
-    const leaked = `${SECRET} leak@example.com`;
-    repo.create.mockRejectedValueOnce(new Error(`db down ${leaked}`));
-    const { POST } = await import("@/app/api/ingest/n8n/route");
-    const res = await POST(
-      ingestRequest(N8N_URL, {
-        body: JSON.stringify({
-          companyName: "Acme",
-          email: "ana@example.com",
-        }),
-        ip: "198.51.100.23",
-        requestId: "req-n8n-500",
-      }),
-    );
-    await expectError(res, 500, "No se pudo guardar el lead");
-    const dumped = loggedText(errorSpy);
-    expect(dumped).not.toContain(SECRET);
-    expect(dumped).not.toContain("leak@example.com");
-    expect(dumped).not.toContain("ana@example.com");
-    expect(JSON.parse(loggedLine(errorSpy, "/api/ingest/n8n"))).toEqual({
-      level: "error",
-      route: "POST /api/ingest/n8n",
-      status: 500,
-      errorClass: "Error",
-      requestId: "req-n8n-500",
-    });
-  });
-
-  it("rechaza el secreto del formulario cuando hay secreto dedicado", async () => {
-    vi.stubEnv("N8N_INGEST_SECRET", "n8n-only-secret-value");
-    const { POST } = await import("@/app/api/ingest/n8n/route");
-    const formSecret = await POST(
-      ingestRequest(N8N_URL, {
-        bearer: SECRET,
-        body: "{}",
-        ip: "198.51.100.42",
-      }),
-    );
-    await expectError(formSecret, 401, "No autorizado");
-
-    const dedicated = await POST(
-      ingestRequest(N8N_URL, {
-        bearer: "n8n-only-secret-value",
-        body: "{}",
-        ip: "198.51.100.43",
-      }),
-    );
-    expect(dedicated.status).not.toBe(401);
-    expect(dedicated.status).not.toBe(503);
-  });
-
-  it("503 si el secreto dedicado es igual al del formulario", async () => {
-    vi.stubEnv("N8N_INGEST_SECRET", SECRET);
-    const { POST } = await import("@/app/api/ingest/n8n/route");
-    const res = await POST(
-      ingestRequest(N8N_URL, { body: "{}", ip: "198.51.100.44" }),
-    );
-    await expectError(res, 503, "Ingesta no configurada");
+    const res = await POST();
+    await expectError(res, 410, "La ingesta desde n8n está desactivada");
     expect(repo.create).not.toHaveBeenCalled();
   });
 });

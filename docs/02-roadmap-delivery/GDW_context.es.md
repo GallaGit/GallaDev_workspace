@@ -35,7 +35,7 @@ Producción: `https://workspace.galladev.com`. `GET /api/health` responde `{"ok"
 
 ### M2 Slice 2 (PR #54, hecho)
 
-- Tests de ingesta de `POST /api/ingest/lead` y `POST /api/ingest/n8n`: 401 sin bearer válido, 429 del limitador en memoria, 413 si el cuerpo supera el tope.
+- Tests de ingesta de `POST /api/ingest/lead` (`/api/ingest/n8n` responde 410 desde 2026-10-10): 401 sin bearer válido, 429 del limitador en memoria, 413 si el cuerpo supera el tope.
 - `src/app/error.tsx` y `src/app/global-error.tsx` (reintentar / inicio). No hay SDK de Sentry en el repo.
 - Logs estructurados vía `src/lib/route-log.ts` en los catch de ingesta y análisis: campos JSON `route`, `status` cuando se informa, `errorClass`, `requestId` si ya venía un id de cabecera válido.
 

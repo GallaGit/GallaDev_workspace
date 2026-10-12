@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
  * POST /api/ingest/lead — ingesta pública del formulario galladev.com.
  *
  * Auth: `Authorization: Bearer <INGEST_SECRET>` (no la cookie de sesión;
- * la ruta está exenta en src/proxy.ts). No acepta `N8N_INGEST_SECRET`.
+ * la ruta está exenta en src/proxy.ts).
  * NO dispara automatizaciones n8n por decisión de producto: solo guarda.
  * Tras create/dedupe envía emails canal clientes (fail-open).
  *
