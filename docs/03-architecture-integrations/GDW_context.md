@@ -60,7 +60,7 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 - `GET /api/automations`
 - `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
-- `POST /api/ingest/n8n`
+- `POST /api/ingest/n8n` (410 Gone desde 2026-10-10)
 - `POST /api/email/inbound` (Resend webhook; no session, Svix signature)
 - `GET /api/email/threads` (Admin, session + RLS)
 - `GET/PATCH /api/email/threads/:id` (Admin, session + RLS)

@@ -60,7 +60,7 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 - `GET /api/automations`
 - `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
-- `POST /api/ingest/n8n`
+- `POST /api/ingest/n8n` (410 Gone desde 2026-10-10)
 - `POST /api/email/inbound` (webhook Resend; sin sesión, firma Svix)
 - `GET /api/email/threads` (Admin, sesión + RLS)
 - `GET/PATCH /api/email/threads/:id` (Admin, sesión + RLS)

@@ -116,7 +116,6 @@ describe("rutas bloqueadas para el visitante", () => {
     const analyze = await import("@/app/api/leads/[id]/analyze/route");
     const pain = await import("@/app/api/leads/pain-analysis/route");
     const ingest = await import("@/app/api/ingest/lead/route");
-    const n8n = await import("@/app/api/ingest/n8n/route");
     await expectDemoForbidden(
       await analyze.POST(
         jsonRequest("http://localhost/api/leads/demo-01/analyze", "POST", {}),
@@ -137,13 +136,6 @@ describe("rutas bloqueadas para el visitante", () => {
           email: "ana@example.com",
           company: "Acme",
           message: "hola",
-        }),
-      ),
-    );
-    await expectDemoForbidden(
-      await n8n.POST(
-        jsonRequest("http://localhost/api/ingest/n8n", "POST", {
-          companyName: "Acme",
         }),
       ),
     );

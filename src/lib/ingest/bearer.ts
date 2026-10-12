@@ -15,27 +15,11 @@ export function bearerMatches(provided: string, expected: string): boolean {
 }
 
 export interface IngestSecretDecision {
+  /** `INGEST_SECRET` del formulario web. Vacío → la ruta responde 503. */
   form: string;
-  /** Secreto que acepta `/api/ingest/n8n`. Vacío si hay que responder 503. */
-  n8n: string;
-  /** `N8N_INGEST_SECRET` está definido y es igual a `INGEST_SECRET`. */
-  n8nMisconfigured: boolean;
 }
 
-/**
- * Formulario: solo `INGEST_SECRET` (503 si falta).
- * n8n: `N8N_INGEST_SECRET` si está y es distinto. Si no está, el mismo
- * `INGEST_SECRET` para no cortar la ingesta ya desplegada. Si está y coincide
- * con el del formulario, 503: no hay separación.
- */
+/** Solo `INGEST_SECRET` (la ingesta de n8n se retiró el 2026-10-10). */
 export function ingestSecrets(): IngestSecretDecision {
-  const form = process.env.INGEST_SECRET?.trim() ?? "";
-  const dedicated = process.env.N8N_INGEST_SECRET?.trim() ?? "";
-  if (!dedicated) {
-    return { form, n8n: form, n8nMisconfigured: false };
-  }
-  if (dedicated === form) {
-    return { form, n8n: "", n8nMisconfigured: true };
-  }
-  return { form, n8n: dedicated, n8nMisconfigured: false };
+  return { form: process.env.INGEST_SECRET?.trim() ?? "" };
 }
