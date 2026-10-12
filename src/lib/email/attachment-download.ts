@@ -29,7 +29,8 @@ export type AttachmentDownloadResult =
         | "no-resend-id"
         | "no-client"
         | "expired"
-        | "resend-error";
+        | "resend-error"
+        | "untrusted-url";
       detail?: string;
     };
 
@@ -124,6 +125,18 @@ export async function resolveAttachmentDownload(
       return { ok: false, reason: "not-found" };
     }
 
+    // GDW-SEC-023: solo https y hosts de Resend.
+    if (!isTrustedResendDownloadUrl(data.download_url)) {
+      logRouteError(
+        {
+          route: "email/attachment.download",
+          errorClass: "ResendAttachment:untrusted-url",
+        },
+        "warn",
+      );
+      return { ok: false, reason: "untrusted-url" };
+    }
+
     return {
       ok: true,
       downloadUrl: data.download_url,
@@ -150,4 +163,24 @@ export async function resolveAttachmentDownload(
     );
     return { ok: false, reason: "resend-error" };
   }
+}
+
+const TRUSTED_RESEND_DOMAINS = ["resend.com", "resend.dev"];
+
+/** GDW-SEC-023: true si la URL es https, sin credenciales y de un host Resend. */
+export function isTrustedResendDownloadUrl(raw: unknown): boolean {
+  if (typeof raw !== "string") return false;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  if (url.username || url.password) return false;
+  if (url.port && url.port !== "443") return false;
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  return TRUSTED_RESEND_DOMAINS.some(
+    (d) => host === d || host.endsWith(`.${d}`),
+  );
 }
