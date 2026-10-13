@@ -1,0 +1,22 @@
+title = "GallaDev workspace gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-personal-access-token"
+description = "Supabase personal access token (sbp_)"
+regex = '''\bsbp_(?:oauth_|v0_)?[a-f0-9]{40}\b'''
+keywords = ["sbp_"]
+
+[[rules]]
+id = "supabase-auth-json-token"
+description = "Supabase/opencode auth JSON with access/refresh token"
+regex = '''"(?:access|refresh)"\s*:\s*"([A-Za-z0-9_\-\.]{12,})"'''
+secretGroup = 1
+keywords = ["access", "refresh"]
+
+[[rules]]
+id = "opencode-or-auth-json-file"
+description = "Committed .opencode/** or *auth*.json file"
+path = '''(?i)(^|/)(\.opencode/.*|[^/]*auth[^/]*\.json)$'''
