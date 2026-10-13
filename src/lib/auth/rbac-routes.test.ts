@@ -462,6 +462,22 @@ describe("GET /api/team", () => {
     });
   });
 
+  it("Admin recibe 429 al superar el cupo de cambios de rol", async () => {
+    asRole("Admin");
+    const { PATCH } = await import("@/app/api/team/route");
+    const send = () =>
+      PATCH(
+        jsonRequest("http://localhost/api/team", "PATCH", {
+          id: "11111111-1111-4111-8111-111111111111",
+          role: "Viewer",
+        }),
+      );
+    for (let i = 0; i < 20; i++) {
+      expect((await send()).status).toBe(200);
+    }
+    expect((await send()).status).toBe(429);
+  });
+
   it("Seller no asigna roles", async () => {
     asRole("Seller");
     const { PATCH } = await import("@/app/api/team/route");
