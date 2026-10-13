@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getApiSession, requireAdmin } from "@/lib/api-auth";
 import { isAppRole, type AppRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
+
+const ROLE_RATE_WINDOW_MS = 60_000;
+const ROLE_RATE_MAX = 20;
+const ROLE_BODY_MAX_BYTES = 2_048;
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +28,7 @@ const UUID_RE =
  *
  * PATCH /api/team — un Admin asigna Admin, Seller o Viewer.
  * Body: { id, role }. No puede quitarse el Admin a sí mismo.
+ * Cupo de 20 cambios/min por Admin e IP; body máximo 2 KB.
  */
 export async function GET() {
   const denied = await requireAdmin();
@@ -81,12 +87,26 @@ export async function PATCH(request: Request) {
     );
   }
 
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ error: "JSON no válido" }, { status: 400 });
+  if (
+    await consumeRateLimit("team:role-patch", `${actor.id}:${clientIp(request)}`, {
+      windowMs: ROLE_RATE_WINDOW_MS,
+      max: ROLE_RATE_MAX,
+    })
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "Demasiadas solicitudes" },
+      { status: 429 },
+    );
   }
+
+  const parsed = await readCappedJson(request, ROLE_BODY_MAX_BYTES);
+  if (!parsed.ok) {
+    return NextResponse.json(
+      { error: parsed.status === 413 ? "Body demasiado grande" : "JSON no válido" },
+      { status: parsed.status },
+    );
+  }
+  const raw = parsed.value;
   if (!raw || typeof raw !== "object") {
     return NextResponse.json({ error: "JSON no válido" }, { status: 400 });
   }
