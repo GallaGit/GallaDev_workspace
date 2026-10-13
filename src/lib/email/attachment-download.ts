@@ -165,7 +165,7 @@ export async function resolveAttachmentDownload(
   }
 }
 
-const TRUSTED_RESEND_DOMAINS = ["resend.com", "resend.dev"];
+const TRUSTED_RESEND_DOMAINS = ["resend.com", "resend.dev", "resend.app"];
 
 /** GDW-SEC-023: true si la URL es https, sin credenciales y de un host Resend. */
 export function isTrustedResendDownloadUrl(raw: unknown): boolean {
