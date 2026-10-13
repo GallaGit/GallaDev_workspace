@@ -25,7 +25,7 @@ Hechos del código y del esquema. Lo que no está en esta tabla es **PROPOSED**.
 | Correos del lead | Columnas `email`, `email_commercial`, `email_manager`. No hay columna para "el email acordado en la reunión". |
 | Correo saliente | Resend, solo para la ingesta web: `src/lib/email/resend-client.ts` y `src/lib/email/send-ingest-emails.ts`. Remitente `emailFromClients()` (`EMAIL_FROM_CLIENTS` o `GallaDev <hola@galladev.com>`). Reply-To opcional `EMAIL_REPLY_TO`. Aviso interno `EMAIL_NOTIFY_TO`. Si falta `RESEND_API_KEY`, el envío se omite (fail-open) y el lead se guarda igual. No hay `inviteUserByEmail` ni `generateLink`. |
 | Storage | El repo no usa Supabase Storage. No hay buckets. |
-| Shell | `src/app/layout.tsx` envuelve todas las páginas en `AppShell`. El menú interno está en `src/components/layout/app-sidebar.tsx` (Dashboard, Daily Work, Leads, Kanban, Statistics, Email, Automations, Duplicados, Settings). |
+| Shell | `src/app/layout.tsx` envuelve todas las páginas en `AppShell`. El menú interno está en `src/components/layout/app-sidebar.tsx` (Dashboard, Daily Work, Leads, Kanban, Statistics, Email, Duplicados, Settings). |
 | Login | `src/app/login/login-form.tsx` llama a `signInWithPassword` y redirige a `from` o a `/`. Puede ofrecer «Entrar como visitante». No hay pantalla de restablecer contraseña. |
 | Demo de visitante | Cookie httpOnly `gdw_visitor` (HMAC, 4 horas). No es Admin, Seller ni Viewer. `GET /api/session` devuelve `visitor: true` y `role: null`. Las APIs bloqueadas responden 403 `demo_readonly`. |
 | Auditoría | Especificada en [`audit-trail.es.md`](./audit-trail.es.md). La tabla `audit_log` no existe. |
@@ -79,11 +79,11 @@ La invitación no hereda el fail-open de `sendIngestEmails`. Si el correo no sal
 
 | Actor | Hoy | Con esta spec |
 | --- | --- | --- |
-| Admin | Settings, automatizaciones, equipo, escrituras de leads y análisis IA. Lee todo lo que las policies de Admin permiten. | Igual en el CRM. Confirma conversiones, publica, envía restablecimiento, cierra el proyecto, revoca el acceso, ejecuta la supresión y abre la vista previa del portal. Puede descargar ficheros y lanzar el informe semanal. |
+| Admin | Settings, equipo, escrituras de leads y análisis IA. Lee todo lo que las policies de Admin permiten. | Igual en el CRM. Confirma conversiones, publica, envía restablecimiento, cierra el proyecto, revoca el acceso, ejecuta la supresión y abre la vista previa del portal. Puede descargar ficheros y lanzar el informe semanal. |
 | Seller | Escribe leads propios o sin asignar (`responsable`). No toca settings ni `GET /api/team`. | Igual en el CRM. En los leads que puede escribir: confirma la conversión, publica, envía restablecimiento, descarga ficheros y lanza el informe semanal. No revoca, no cierra el proyecto y no ejecuta la supresión. |
 | Viewer | Lectura del CRM. Las escrituras responden 403. | Sigue en el CRM, en lectura. Puede leer la traza interna del proyecto. No invita, no sube, no descarga, no abre `/portal`. |
 | `client` | No existe. | **PROPOSED.** Solo `/portal` y las APIs de esa área, en solo lectura. Sin CRM. Hasta tres cuentas ven el mismo proyecto. |
-| Visitante demo | Cookie `gdw_visitor`, datos ficticios, sin Supabase. | Sigue igual. `/portal` le redirige a `/leads`, como `/settings`, `/automations` y `/email`. No hay demo del portal en v1. |
+| Visitante demo | Cookie `gdw_visitor`, datos ficticios, sin Supabase. | Sigue igual. `/portal` le redirige a `/leads`, como `/settings` y `/email`. No hay demo del portal en v1. |
 
 El rol sale de `profiles.role`. El email de login vive en `auth.users`, no en `profiles` (`profiles` hoy solo tiene `id`, `role`, `created_at`).
 
@@ -412,7 +412,7 @@ Storage: el bucket no es público. No hay policy de Storage que entregue objetos
 
 Vista previa de Admin: la sesión sigue siendo Admin. La consulta filtra `visibility = 'client'` en la aplicación y no cambia `auth.uid()`. No es una policy que dé al Admin "ser" el cliente.
 
-APIs del CRM (`/api/leads`, `/api/settings`, `/api/automations`, `/api/team`, ingesta, análisis): `requireApiRole` sin `client`. Respuesta 403 `forbidden`. El visitante sigue en 403 `demo_readonly`.
+APIs del CRM (`/api/leads`, `/api/settings`, `/api/team`, ingesta, análisis): `requireApiRole` sin `client`. Respuesta 403 `forbidden`. El visitante sigue en 403 `demo_readonly`.
 
 ## 7. UI
 
@@ -430,7 +430,7 @@ Layout mínimo, fuera de `AppShell`. Hay que bifurcar `src/app/layout.tsx`, que 
 - Datos de contacto: empresa, teléfono del lead si existe, y un correo de GallaDev de respuesta (`EMAIL_REPLY_TO` si está definido; si no, el remitente público). Sin notas de CRM, sin score, sin análisis IA, sin otros leads.
 - Vacío: texto claro de que el proyecto existe y aún no hay avances publicados.
 
-El cliente no ve Daily Work, Leads, Kanban, Statistics, Email, Automations, Duplicados ni Settings.
+El cliente no ve Daily Work, Leads, Kanban, Statistics, Email, Duplicados ni Settings.
 
 ### UI interna — PROPOSED
 

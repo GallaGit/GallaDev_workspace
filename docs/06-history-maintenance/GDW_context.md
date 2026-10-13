@@ -26,7 +26,7 @@ Email + password replaced the shared-password login. `AUTH_SECRET`, `AUTH_PASSWO
 
 ### RBAC (PR #44)
 
-Settings and automation mutations are Admin-only. Lead writes and AI analysis are Admin or Seller. Viewer writes return 403. `GET /api/team` is Admin-only.
+Settings mutations are Admin-only. Lead writes and AI analysis are Admin or Seller. Viewer writes return 403. `GET /api/team` is Admin-only.
 
 ### M2 slices (PR #53, PR #54)
 
@@ -34,7 +34,7 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests, and E2E Tests are requir
 
 ### Visitor demo (PR #55)
 
-Passwordless read-only session (HMAC httpOnly cookie, off by default). `getSessionLeadRepository()` returns `DemoLeadRepository`. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`; blocked APIs return 403 `demo_readonly`.
+Passwordless read-only session (HMAC httpOnly cookie, off by default). `getSessionLeadRepository()` returns `DemoLeadRepository`. Pages `/settings` and `/email` redirect to `/leads`; blocked APIs return 403 `demo_readonly`.
 
 ### Product decision 26-27 Sep 2026 (Ociel)
 

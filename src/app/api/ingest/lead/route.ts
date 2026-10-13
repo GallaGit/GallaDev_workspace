@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
  *
  * Auth: `Authorization: Bearer <INGEST_SECRET>` (no la cookie de sesión;
  * la ruta está exenta en src/proxy.ts).
- * NO dispara automatizaciones n8n por decisión de producto: solo guarda.
+ * No dispara automatizaciones: solo guarda.
  * Tras create/dedupe envía emails canal clientes (fail-open).
  *
  * Rate-limit por IP (Redis si Upstash está configurado; si no, por instancia)
@@ -176,7 +176,6 @@ export async function POST(request: Request) {
     }
 
     const lead = await repo.create(mapIngestToLeadCreate(result.value));
-    // Sin dispatch*: no disparamos n8n desde la landing (decisión producto).
     await safeSendEmails({
       name: result.value.name,
       email: result.value.email,

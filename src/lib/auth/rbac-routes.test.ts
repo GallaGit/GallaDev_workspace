@@ -113,14 +113,14 @@ beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test");
 });
 
-describe("settings y automatizaciones: solo Admin muta", () => {
+describe("settings: solo Admin muta", () => {
   it("Seller y Viewer reciben 403 en PATCH /api/settings", async () => {
     const { PATCH } = await import("@/app/api/settings/route");
     for (const role of ["Seller", "Viewer"] as const) {
       asRole(role);
       const res = await PATCH(
         jsonRequest("http://localhost/api/settings", "PATCH", {
-          n8n: { baseUrl: "not-a-url" },
+          ai: { provider: "openai" },
         }),
       );
       await expectForbidden(res);
@@ -132,7 +132,7 @@ describe("settings y automatizaciones: solo Admin muta", () => {
     asRole("Admin");
     const res = await PATCH(
       jsonRequest("http://localhost/api/settings", "PATCH", {
-        n8n: { baseUrl: "not-a-url" },
+        ai: { provider: "openai" },
       }),
     );
     expect(res.status).toBe(400);
@@ -141,17 +141,14 @@ describe("settings y automatizaciones: solo Admin muta", () => {
     });
   });
 
-  it("Seller y Viewer no leen settings, estado ni automatizaciones", async () => {
+  it("Seller y Viewer no leen settings ni estado", async () => {
     const settings = await import("@/app/api/settings/route");
     const status = await import("@/app/api/settings/status/route");
-    const automations = await import("@/app/api/automations/route");
     for (const role of ["Seller", "Viewer"] as const) {
       asRole(role);
       await expectForbidden(await settings.GET());
       asRole(role);
       await expectForbidden(await status.GET());
-      asRole(role);
-      await expectForbidden(await automations.GET());
     }
   });
 
@@ -161,37 +158,13 @@ describe("settings y automatizaciones: solo Admin muta", () => {
       asRole(role);
       const res = await POST(
         jsonRequest("http://localhost/api/settings/test", "POST", {
-          integration: "n8n",
+          integration: "ai",
         }),
       );
       await expectForbidden(res);
     }
   });
 
-  it("Seller y Viewer reciben 403 al guardar o probar una automatización", async () => {
-    const { PATCH, POST } = await import("@/app/api/automations/[action]/route");
-    const ctx = { params: Promise.resolve({ action: "lead_created" }) };
-    for (const role of ["Seller", "Viewer"] as const) {
-      asRole(role);
-      await expectForbidden(
-        await PATCH(
-          jsonRequest("http://localhost/api/automations/lead_created", "PATCH", {
-            enabled: true,
-          }),
-          ctx,
-        ),
-      );
-      asRole(role);
-      await expectForbidden(
-        await POST(
-          jsonRequest("http://localhost/api/automations/lead_created", "POST", {
-            test: true,
-          }),
-          ctx,
-        ),
-      );
-    }
-  });
 });
 
 describe("escrituras de leads: Viewer denegado", () => {

@@ -93,10 +93,9 @@ afterEach(() => {
 });
 
 describe("rutas bloqueadas para el visitante", () => {
-  it("GET /api/team, settings y automations responden 403 sin service role", async () => {
+  it("GET /api/team y settings responden 403 sin service role", async () => {
     const team = await import("@/app/api/team/route");
     const settings = await import("@/app/api/settings/route");
-    const automations = await import("@/app/api/automations/route");
     const dbStatus = await import("@/app/api/db-status/route");
     await expectDemoForbidden(await team.GET());
     await expectDemoForbidden(await dbStatus.GET());
@@ -106,7 +105,6 @@ describe("rutas bloqueadas para el visitante", () => {
         jsonRequest("http://localhost/api/settings", "PATCH", {}),
       ),
     );
-    await expectDemoForbidden(await automations.GET());
     expect(createSupabaseAdminClient).not.toHaveBeenCalled();
     expect(createSupabaseServerClient).not.toHaveBeenCalled();
     expect(SupabaseLeadRepository).not.toHaveBeenCalled();

@@ -16,7 +16,7 @@ Nadie trabaja directo en `main`/`master`: ni humano, ni agente, ni "un cambio ch
 
 ## Regla 1 — Test-tripwire primero
 
-Antes de modificar un área sin cobertura (rutas `src/app/api/**`, repositorios, `src/lib/auth*`, `src/lib/automations/**`):
+Antes de modificar un área sin cobertura (rutas `src/app/api/**`, repositorios, `src/lib/auth*`):
 
 1. Escribe el test que describe el **comportamiento actual** (input → output/error).
 2. Verifícalo en verde **antes** del cambio.
@@ -26,7 +26,7 @@ Sin tripwire, no hay refactor. Excepción: solo-docs.
 
 ## Regla 2 — Un PR = un área
 
-Prohibidos los refactors cruzados. Si un cambio toca 3 carpetas (p. ej. `ingest` + `automations` + `settings`), son 3 PRs apilados o secuenciales, no uno.
+Prohibidos los refactors cruzados. Si un cambio toca 3 carpetas (p. ej. `ingest` + `email` + `settings`), son 3 PRs apilados o secuenciales, no uno.
 
 - Ramas según `CONTRIBUTING.md`: `feat|fix|chore|docs/<slug>`.
 - Título en Conventional Commits (es el commit squash en `master`).
@@ -54,7 +54,7 @@ Todo PR que **mueve** comportamiento (p. ej. n8n → interno, Notion → Supabas
 Nunca internalizar/migrar comportamiento sobre áreas sin tests. Orden obligatorio:
 
 1. Tests del comportamiento existente (tripwires en verde).
-2. Implementación interna en paralelo (toggle interno/externo cuando exista, como `getAutomationClient()`).
+2. Implementación interna en paralelo (toggle interno/externo cuando exista).
 3. Paridad verificada (Regla 4) → conmutar → eliminar lo viejo en PR separado.
 
 ## Principio permanente — Preferir lo propio

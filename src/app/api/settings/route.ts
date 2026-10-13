@@ -6,7 +6,7 @@ import {
   toPublicSettings,
   validateSettingsPatch,
 } from "@/lib/settings";
-import { webhookAuditChanges } from "@/lib/settings/audit";
+import { settingsAuditChanges } from "@/lib/settings/audit";
 import type { SettingsPatch } from "@/lib/settings/types";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export async function PATCH(request: Request) {
     const before = service.getRaw();
     const raw = service.patch(patch);
     const actor = await getApiSession();
-    logConfigChange(actor?.id ?? "unknown", webhookAuditChanges(before, raw));
+    logConfigChange(actor?.id ?? "unknown", settingsAuditChanges(before, raw));
     return NextResponse.json(toPublicSettings(raw));
   } catch (e) {
     const message =

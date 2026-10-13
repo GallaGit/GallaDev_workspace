@@ -34,7 +34,6 @@ import {
 } from "@/lib/utils/email-plain";
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
 import { statusColor, useUiStore } from "@/store/ui-store";
-import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
 import { useSessionAccess } from "@/components/session-access";
 import type { TeamMember } from "@/app/api/team/route";
 import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
@@ -51,7 +50,6 @@ type AnalyzeResponse = {
   activity?: { at: string; type: string; message: string }[];
   empty?: boolean;
   notionUpdated?: boolean;
-  automation?: Parameters<typeof toastAutomationDispatch>[0];
 };
 
 function analyzeErrorMessage(
@@ -113,7 +111,6 @@ function LeadDrawerBody({
   const tConfidence = useTranslations("confidence");
   const tProvince = useTranslations("province");
   const tService = useTranslations("service");
-  const tAuto = useTranslations("automations");
   const locale = useLocale();
   const base = leads.find((l) => l.id === selectedLeadId) ?? null;
   const [lead, setLead] = useState<Lead | null>(base);
@@ -198,9 +195,6 @@ function LeadDrawerBody({
       setLead(data.lead);
       upsertLead(data.lead);
       toast.success(t("saved"));
-      toastAutomationDispatch(data.automation, {
-        dispatched: tAuto("dispatched"),
-      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("saveError"));
     } finally {
@@ -255,9 +249,6 @@ function LeadDrawerBody({
       if (data.notionUpdated) {
         toast.success(t("analysisSaved"));
       }
-      toastAutomationDispatch(data.automation, {
-        dispatched: tAuto("dispatched"),
-      });
     } catch (e) {
       const message =
         e instanceof Error ? e.message : tAi("genericError");

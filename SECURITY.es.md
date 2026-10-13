@@ -43,6 +43,6 @@ Objetivo: confirmar recepción en 72 horas, compartir un plan de remediación y 
 - `handle_new_user()` no es una RPC. La migración `20261002200000_revoke_handle_new_user_execute.sql` revoca `EXECUTE` a `PUBLIC`, `anon` y `authenticated`. Hay que aplicarla en el editor SQL de Supabase; no cambia filas. El trigger de alta sigue ejecutándose como dueño de la función.
 - Compose, respuesta, borrador y PATCH de hilo de correo comparten un esquema: longitudes máximas, UUID y buzón de la lista. La respuesta vuelve a comprobar el destinatario guardado antes de enviar y rechaza un buzón fuera de la lista.
 - Ingesta pública: `POST /api/ingest/lead` usa `INGEST_SECRET`. `POST /api/ingest/n8n` se retiró el 2026-10-10 y responde 410 Gone. Un bypass de auth es severidad alta.
-- Las URLs salientes de n8n tienen que ser https, sin usuario ni contraseña, y no pueden apuntar a loopback, enlace local, rangos privados ni metadatos de nube. `N8N_ALLOWED_HOSTS` fija los hosts. La prueba de una automatización devuelve solo el código HTTP.
+- El CRM no hace llamadas salientes de automatización: los webhooks de n8n y `/automations` se eliminaron el 2026-10-13.
 - El límite de tasa usa `x-vercel-forwarded-for` (si no, el último salto de `x-forwarded-for`). `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` comparten el contador; sin ellas cada instancia tiene su ventana. La ingesta web también tiene un cupo diario de acuses, independiente de la IP.
 - El email transaccional (Resend) es fail-open por diseño — el lead se guarda aunque falle el email. No lo reportes como bug.

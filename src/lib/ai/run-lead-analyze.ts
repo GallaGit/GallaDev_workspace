@@ -8,15 +8,12 @@ import {
   formatPainAnalysis,
   hasPainAnalysisSignal,
   isPainAnalysisEmpty,
-  painAnalysisToWebhookPayload,
 } from "@/lib/ai/pain-analysis";
 import {
   type AnalyzeSuccessBody,
   emptyApiPainAnalysis,
   toApiPainAnalysis,
 } from "@/lib/ai/pain-analysis-api";
-import { dispatchLeadAnalyzed } from "@/lib/automations/dispatch";
-import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
 import { getApiSession } from "@/lib/api-auth";
 import { canWriteLead } from "@/lib/leads/lead-access";
@@ -169,18 +166,6 @@ export async function runLeadAnalyze(
     logFailure(error, undefined, "warn");
   }
 
-  let notified = false;
-  let automation: AutomationDispatchResult | undefined;
-  try {
-    automation = dispatchLeadAnalyzed(
-      saved,
-      painAnalysisToWebhookPayload(analysis, text),
-    );
-    notified = automation.status === "dispatched";
-  } catch (error) {
-    logFailure(error, undefined, "warn");
-  }
-
   return {
     ok: true,
     status: 200,
@@ -188,10 +173,9 @@ export async function runLeadAnalyze(
       leadId: saved.id,
       analysis: apiAnalysis,
       notionUpdated: true,
-      notified,
+      notified: false,
       lead: saved,
       ...(activity ? { activity } : {}),
-      ...(automation ? { automation } : {}),
     },
   };
 }

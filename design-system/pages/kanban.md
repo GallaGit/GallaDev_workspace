@@ -22,7 +22,7 @@
 - 
 
 ### Content
-- No inline “Add Card” form on the board. New leads come from manual create, web ingest, or n8n. Dragging an existing card still patches status.
+- No inline “Add Card” form on the board. New leads come from manual create or web ingest. Dragging an existing card still patches status.
 - Statistics (`/stats`), not this page, has the chart-type selector: Barras, Circular (donut), Área. 
 
 ---

@@ -43,6 +43,6 @@ We aim to acknowledge within 72 hours, share a remediation plan, and credit repo
 - `handle_new_user()` is not an RPC. Migration `20261002200000_revoke_handle_new_user_execute.sql` revokes `EXECUTE` from `PUBLIC`, `anon`, and `authenticated`. Apply it in the Supabase SQL editor; it does not change existing rows. The signup trigger still runs as the function owner.
 - Company mail compose, reply, draft, and thread patch share one schema: max lengths, UUID for ids, and a mailbox on the allowlist. A reply checks the stored recipient again before send and refuses a mailbox outside that list.
 - Public ingest: `POST /api/ingest/lead` uses `INGEST_SECRET`. `POST /api/ingest/n8n` was retired on 2026-10-10 and returns 410 Gone. Report auth bypasses as high severity.
-- Outbound n8n URLs must be https, without userinfo, and must not target loopback, link-local, private, or cloud-metadata hosts. `N8N_ALLOWED_HOSTS` pins the allowed hosts. The automation test response returns the HTTP status only.
+- The CRM makes no outbound automation calls: the n8n webhooks and `/automations` were removed on 2026-10-13.
 - Rate limits use `x-vercel-forwarded-for` (else the last `x-forwarded-for` hop). `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` make the counter shared; without them each instance has its own window. Web ingest also caps receipt emails per day, independent of IP.
 - Transactional email (Resend) is fail-open by design — the lead is saved even if email fails. Do not report that as a bug.

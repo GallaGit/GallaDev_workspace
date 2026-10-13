@@ -7,7 +7,6 @@ The application uses Next.js App Router. The browser calls server route handlers
 ```text
 Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
                                            -> Settings service
-                                           -> Optional automation provider
 ```
 
 ## Persistence and security
@@ -19,19 +18,18 @@ Browser -> Next.js UI -> Route handlers -> Lead repository -> Supabase
 - Route handlers add an RBAC layer: `requireApiSession`, `requireApiRole`, `requireAdmin`, and `requireLeadWriter`. Roles are `profiles.role` (`Admin`, `Seller`, `Viewer`). A new account has a null role until an Admin assigns one.
 - Row-level security is the boundary for user data isolation. A Seller only reads and updates leads where `responsable` is their user id. Unassigned leads belong to Admin (Viewer can still read them: Viewer is the trusted read-only role for the whole book). The API uses the same predicate.
 - Settings expose masked previews and never return complete secrets.
-- n8n dispatch failures do not fail lead persistence.
 
 ## Integrations
 
 - **Supabase:** active database and source of truth.
-- **n8n:** optional prospecting and automation provider.
+- **n8n:** no longer integrated. Lead ingest returns 410 since 2026-10-10 and outbound webhooks were removed on 2026-10-13.
 - **SerpAPI:** external search used by the prospecting workflow.
 - **Groq:** web extraction, email generation, and lead pain analysis.
 - **Resend:** transactional notifications for web ingestion and company inbox (`hola@` and `ociel@galladev.com`). Receiving via Resend Inbound (webhook `POST /api/email/inbound`, Svix signature); threads with `mailbox_address`; compose and reply from `/correo` (`POST /api/email/compose`, drafts in `email_drafts`).
 
 ## Ingestion contract
 
-Any source may create a lead with state `Nuevo` and an `Origen` such as `n8n`, `web-galladev`, or `Manual`. The CRM qualifies all sources identically. CRM-to-automation notifications are disabled by default, best-effort, and never block persistence.
+Any source may create a lead with state `Nuevo` and an `Origen` such as `n8n`, `web-galladev`, or `Manual`. The CRM qualifies all sources identically. The CRM sends no outbound automation notifications.
 
 ## Historical Notion integration
 
@@ -57,8 +55,6 @@ Notion was the former source of truth. The runtime has been removed; the migrati
 - `GET/PATCH /api/settings`
 - `GET /api/settings/status`
 - `POST /api/settings/test`
-- `GET /api/automations`
-- `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
 - `POST /api/ingest/n8n` (410 Gone desde 2026-10-10)
 - `POST /api/email/inbound` (Resend webhook; no session, Svix signature)

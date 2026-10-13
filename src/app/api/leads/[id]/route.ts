@@ -5,10 +5,6 @@ import {
   constrainLeadPatch,
   filterReadableLeads,
 } from "@/lib/leads/enforce-lead-write";
-import {
-  changedKeys,
-  dispatchLeadUpdated,
-} from "@/lib/automations/dispatch";
 import { validateLeadPatch } from "@/lib/leads/validate-lead-patch";
 
 export const dynamic = "force-dynamic";
@@ -62,8 +58,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
       return NextResponse.json({ error: gate.error }, { status: gate.status });
     }
     const lead = await repo.update(id, gate.patch);
-    const automation = dispatchLeadUpdated(lead, changedKeys(gate.patch));
-    return NextResponse.json({ lead, automation });
+    return NextResponse.json({ lead });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al actualizar lead";
     return NextResponse.json({ error: message }, { status: 500 });

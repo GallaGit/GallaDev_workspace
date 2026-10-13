@@ -3,7 +3,6 @@ import { cleanup, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsIntegrations } from "./settings-integrations";
-import { AutomationsPanel } from "@/components/automations/automations-panel";
 import { renderWithIntl } from "@/test/i18n-wrapper";
 
 const access = vi.hoisted(() => ({
@@ -43,22 +42,16 @@ afterEach(() => {
 });
 
 describe("lecturas de ajustes", () => {
-  it("un Seller no pide /api/settings ni /api/automations", async () => {
+  it("un Seller no pide /api/settings", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     renderWithQuery(
-      <>
-        <SettingsIntegrations />
-        <AutomationsPanel />
-      </>,
+      <SettingsIntegrations />,
     );
     expect(
       await screen.findByText(
         "Solo un administrador puede ver la configuración de integraciones.",
       ),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("Solo un administrador puede ver las automatizaciones."),
     ).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();

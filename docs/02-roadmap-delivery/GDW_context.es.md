@@ -11,7 +11,7 @@ Enriquecimiento opcional (checklist) desde temas del bootcamp — no sustituye e
 
 ## Estado actual
 
-Supabase es la capa de persistencia activa y la única fuente de verdad. La aplicación actual incluye leads, Kanban, email, Daily Work, estadísticas, duplicados, settings, Supabase Auth con RBAC (Admin, Seller, Viewer), endpoints de ingesta y análisis IA. Las integraciones con n8n son opcionales y best-effort. No hay alta pública.
+Supabase es la capa de persistencia activa y la única fuente de verdad. La aplicación actual incluye leads, Kanban, email, Daily Work, estadísticas, duplicados, settings, Supabase Auth con RBAC (Admin, Seller, Viewer), endpoints de ingesta y análisis IA. No hay integraciones con n8n (eliminadas el 2026-10-13). No hay alta pública.
 
 ### Base de seguridad M1 (2026-09-22)
 
@@ -29,7 +29,7 @@ Supabase es la capa de persistencia activa y la única fuente de verdad. La apli
 
 Producción: `https://workspace.galladev.com`. `GET /api/health` responde `{"ok":true}` (el proceso atiende HTTP; sin sesión ni base de datos).
 
-- **RBAC High** (PR #44): mutaciones de settings y automatizaciones solo Admin; escrituras de leads y análisis IA para Admin o Seller; Viewer recibe 403 en escrituras. `GET /api/team` solo Admin. El análisis IA usa la sesión autenticada (RLS), no `service_role` en las peticiones normales, con tope de 10 peticiones / 60s. La UI se guía por el rol de la sesión.
+- **RBAC High** (PR #44): mutaciones de settings solo Admin; escrituras de leads y análisis IA para Admin o Seller; Viewer recibe 403 en escrituras. `GET /api/team` solo Admin. El análisis IA usa la sesión autenticada (RLS), no `service_role` en las peticiones normales, con tope de 10 peticiones / 60s. La UI se guía por el rol de la sesión.
 - **Kanban, Statistics e higiene de release** (PR #43): eliminado el “+ añadir tarjeta” del Kanban (no persistía); selector de tipo de gráfico en Statistics (barras / donut / área); `GET /api/health`; `LICENSE` MIT; Dependabot.
 - **M2 Slice 1 — gates de CI en `master` (PR #53):** obligatorios y estrictos, con `enforce_admins` activo: Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL no es check obligatorio. Las revisiones requeridas no están por encima de 0.
 
@@ -41,7 +41,7 @@ Producción: `https://workspace.galladev.com`. `GET /api/health` responde `{"ok"
 
 ### Demo de visitante (PR #55, hecha, 2026-09-25)
 
-Demo sin contraseña para reclutadores y revisores. Se mantiene. `DEMO_MODE_ENABLED` queda **apagado** si no está definido. Con `true` o `1` y `DEMO_SESSION_SECRET` (al menos 16 caracteres), el login ofrece «Entrar como visitante». Una cookie httpOnly firmada con HMAC (4 horas) se resuelve en servidor, por `getSessionLeadRepository()`, a `DemoLeadRepository` (leads ficticios en memoria). Las peticiones del visitante no construyen el cliente de sesión de Supabase ni el repositorio con service role. Las páginas `/settings`, `/automations`, `/email` y `/correo` redirigen a `/leads`. Las APIs bloqueadas responden 403 `demo_readonly`. `POST /api/demo/enter` responde 404 `demo_disabled`, 503 `demo_misconfigured` o 429. `GET /api/session` devuelve `visitor: true`. Unos pocos leads traen un análisis de dolores ya escrito. Para apagarla: `DEMO_MODE_ENABLED=false` o borrar la variable (sin cambio de código). La activación en Vercel Production sigue pendiente. Ver la guía de operación.
+Demo sin contraseña para reclutadores y revisores. Se mantiene. `DEMO_MODE_ENABLED` queda **apagado** si no está definido. Con `true` o `1` y `DEMO_SESSION_SECRET` (al menos 16 caracteres), el login ofrece «Entrar como visitante». Una cookie httpOnly firmada con HMAC (4 horas) se resuelve en servidor, por `getSessionLeadRepository()`, a `DemoLeadRepository` (leads ficticios en memoria). Las peticiones del visitante no construyen el cliente de sesión de Supabase ni el repositorio con service role. Las páginas `/settings`, `/email` y `/correo` redirigen a `/leads`. Las APIs bloqueadas responden 403 `demo_readonly`. `POST /api/demo/enter` responde 404 `demo_disabled`, 503 `demo_misconfigured` o 429. `GET /api/session` devuelve `visitor: true`. Unos pocos leads traen un análisis de dolores ya escrito. Para apagarla: `DEMO_MODE_ENABLED=false` o borrar la variable (sin cambio de código). La activación en Vercel Production sigue pendiente. Ver la guía de operación.
 
 ### Prioridad urgente — email de empresa (decisión 29 Sep 2026)
 

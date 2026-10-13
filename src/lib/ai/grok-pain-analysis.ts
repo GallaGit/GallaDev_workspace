@@ -18,7 +18,6 @@ export type GrokPainAnalysisResponse = {
   promptVersion: string;
   persisted: boolean;
   lead?: Lead;
-  automation?: AnalyzeSuccessBody["automation"];
 };
 
 export function toGrokPainAnalysisResponse(
@@ -38,7 +37,6 @@ export function toGrokPainAnalysisResponse(
     promptVersion: PAIN_ANALYSIS_PROMPT_VERSION,
     persisted: body.notionUpdated,
     lead: body.lead,
-    ...(body.automation ? { automation: body.automation } : {}),
   };
 }
 

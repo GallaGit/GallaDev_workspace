@@ -41,7 +41,6 @@ Variables clave (ver `.env.example` para la lista completa):
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Smoke de login opcional en Playwright. `critical-paths` omite ese login si están vacías. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Usuarios Admin y Seller para `tests/e2e/auth-sync-roles.spec.ts`. CI no tiene credenciales E2E de Viewer. |
 | `INGEST_SECRET` | Secreto de `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. Solo en servidor (Cloudflare), nunca en el bundle del navegador. |
-| `N8N_ALLOWED_HOSTS` | Hosts https de n8n, separados por comas. Si no está, vale cualquier host público https (siguen prohibidos loopback, enlace local, privados y metadatos). |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Almacén opcional del límite de tasa. Si faltan, el cupo queda en memoria en cada instancia. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Email transaccional tras ingesta web (fail-open: el lead se guarda aunque falle el email). |
 
@@ -124,7 +123,7 @@ Convenciones de testing (detalle en [`TESTING.md`](./TESTING.md)):
 
 - **La fuente de verdad es Supabase (PostgreSQL).** `getLeadRepository(client)` devuelve `SupabaseLeadRepository` con ese cliente (RLS si es el de sesión). No hay cliente service role por defecto. `getPrivilegedLeadRepository()` es la factory de service role, solo para la ingesta pública y `AUTH_DISABLED` en local. `getSessionLeadRepository()` devuelve `DemoLeadRepository` con una cookie de visitante válida (leads ficticios en memoria, sin cliente de Supabase) y, si no, el repositorio de sesión. El código nuevo de persistencia debe implementar la interfaz `LeadRepository`, sin importar tipos del proveedor en la UI ni en los route handlers.
 - **Pipeline de leads:** exactamente 9 estados (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Los nombres legacy de Notion se normalizan al leer, nunca se escriben.
-- **La prospección con n8n** escribe leads nuevos (`Origen=n8n`, estado `Nuevo`); el CRM nunca edita el workflow de captación. Los dispatches de webhooks son best-effort y nunca deben impedir la persistencia.
+- Los leads entran por el formulario público (`Origen=web-galladev`) o alta manual; filas antiguas pueden llevar `Origen=n8n`. El CRM no llama a n8n ni a ninguna automatización saliente.
 - **La UI está en español.** Código, commits, issues y PRs van en inglés; las cadenas visibles al usuario, en español.
 - **Jerarquía de docs** (ver [`docs/00-overview/GDW_context.es.md`](./docs/00-overview/GDW_context.es.md)): el código actual y el comportamiento de Supabase tienen prioridad, después `docs/01-business-product/GDW_context.es.md`, y luego `docs/02-roadmap-delivery/GDW_context.es.md`.
 
@@ -135,7 +134,7 @@ Modo individual (actual): sin revisores obligatorios — mergea tus propios PRs 
 - Protección de la rama `master`: checks obligatorios (`Lint & TypeCheck`, `Unit Tests`, `Component Tests`, `E2E Tests`), exigir ramas actualizadas, bloquear force pushes y borrados, solo squash-merge. **No** exigir revisiones de PR ni de Code Owners mientras sea individual.
 - Cuando se una un segundo contribuidor: activar "Require a pull request before merging" con 1 aprobación + revisión de Code Owners + descartar aprobaciones obsoletas.
 - Seguridad: secret scanning + push protection activados; Security Advisories abiertos para reportes privados.
-- Sección About: descripción actual, homepage `https://workspace.galladev.com`, topics (`nextjs`, `typescript`, `supabase`, `crm`, `n8n`, `tailwindcss`).
+- Sección About: descripción actual, homepage `https://workspace.galladev.com`, topics (`nextjs`, `typescript`, `supabase`, `crm`, `tailwindcss`).
 
 ## 10. Pedir ayuda
 

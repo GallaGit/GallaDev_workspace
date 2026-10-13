@@ -56,7 +56,7 @@ export function logConfigChange(actorId: string, fields: string[]): void {
   console.info(
     JSON.stringify({
       level: "info",
-      event: "settings_url_change",
+      event: "settings_change",
       actorId: safeId(actorId) ?? "unknown",
       fields: names.join(","),
     }),

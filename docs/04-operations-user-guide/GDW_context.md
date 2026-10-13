@@ -24,7 +24,6 @@ Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` 
 - `/duplicates`: duplicate groups.
 - `/correo`: company inbox (`hola@` and `ociel@`). Unified inbox with filter, chip, Nuevo (Resend compose), Drafts, read/reply, link to lead. Admin only. No Inbox/Sent/Spam folders (see company-email spec).
 - `/email`: draft review and Gmail Compose support. Visitors are redirected to `/leads`.
-- `/automations`: automation webhooks. Visitors are redirected to `/leads`.
 - `/settings`: integration status, security, and masked configuration. Visitors are redirected to `/leads`.
 
 ## Daily operation
@@ -35,8 +34,8 @@ New leads enter the `Nuevo` queue. Users can search by company, domain, email, c
 
 The role comes from `profiles.role` (PostgreSQL enum `app_role`): Admin, Seller, or Viewer.
 
-- **Admin:** settings and automation mutations, `GET /api/team`, lead writes, and AI analysis.
-- **Seller:** lead writes and AI analysis (subject to the rate limit) only on leads they already own. They do not see the unassigned queue, cannot change settings or automations, and cannot list the team.
+- **Admin:** settings mutations, `GET /api/team`, lead writes, and AI analysis.
+- **Seller:** lead writes and AI analysis (subject to the rate limit) only on leads they already own. They do not see the unassigned queue, cannot change settings, and cannot list the team.
 - **Viewer:** read-only on the whole book, including unassigned leads. Write APIs return 403.
 - **No role:** the account lands on `/pending` and cannot read leads until an Admin assigns one.
 
@@ -48,7 +47,7 @@ Uptime check: `GET /api/health` (no session). It returns `{"ok":true}` when the 
 
 The demo stays. Activation in Vercel Production is still pending. On the same login page, the “What is it?” slice (ES: «¿Qué es?»; specified, not implemented) adds text and screenshots that need no session and sit alongside the button. See [`what-it-is.md`](../02-roadmap-delivery/what-it-is.md).
 
-The login page can offer **Entrar como visitante** / “Ver demo sin cuenta”. The session is an HMAC-SHA256 httpOnly cookie (`gdw_visitor`, 4 hours) signed with `DEMO_SESSION_SECRET`. It is not an Admin, Seller, or Viewer, and it never opens the Supabase lead repository or the service-role client. `getSessionLeadRepository()` returns `DemoLeadRepository`. The UI shows fictional Spanish asesorías (`example.com` emails). A few leads include a pre-written pain analysis so the drawer can show it without calling a model. Kanban moves show a Spanish toast and are not saved. Pages `/settings`, `/automations`, and `/email` redirect to `/leads`. Blocked APIs (team, settings, automations, db-status, ingest, lead writes, merge, score, and live AI) return HTTP 403 with `code: "demo_readonly"`. `GET /api/session` returns `visitor: true` and `role: null`. `POST /api/demo/enter` returns 404 `demo_disabled` when the flag is off, 503 `demo_misconfigured` when the secret is missing or shorter than 16 characters, and 429 `rate_limited` after 8 requests in 15 minutes per IP. Demo responses send `X-Robots-Tag: noindex, nofollow` (the app layout is already `noindex`).
+The login page can offer **Entrar como visitante** / “Ver demo sin cuenta”. The session is an HMAC-SHA256 httpOnly cookie (`gdw_visitor`, 4 hours) signed with `DEMO_SESSION_SECRET`. It is not an Admin, Seller, or Viewer, and it never opens the Supabase lead repository or the service-role client. `getSessionLeadRepository()` returns `DemoLeadRepository`. The UI shows fictional Spanish asesorías (`example.com` emails). A few leads include a pre-written pain analysis so the drawer can show it without calling a model. Kanban moves show a Spanish toast and are not saved. Pages `/settings` and `/email` redirect to `/leads`. Blocked APIs (team, settings, db-status, ingest, lead writes, merge, score, and live AI) return HTTP 403 with `code: "demo_readonly"`. `GET /api/session` returns `visitor: true` and `role: null`. `POST /api/demo/enter` returns 404 `demo_disabled` when the flag is off, 503 `demo_misconfigured` when the secret is missing or shorter than 16 characters, and 429 `rate_limited` after 8 requests in 15 minutes per IP. Demo responses send `X-Robots-Tag: noindex, nofollow` (the app layout is already `noindex`).
 
 | Variable | Role |
 | --- | --- |
@@ -68,7 +67,7 @@ To disable in production without a code change, set `DEMO_MODE_ENABLED=false` or
 - Apply `supabase/migrations/20261002200000_revoke_handle_new_user_execute.sql` in the Supabase SQL editor after the earlier migrations. It only revokes `EXECUTE` on `handle_new_user()`. It does not change profile rows. The signup trigger keeps working.
 - If an authenticated user gets HTTP 401 with `code: "no_profile"`, or sees the pending-access screen, that account has no `Admin`, `Seller`, or `Viewer` role. The trigger no longer assigns Seller. An Admin sets the role in Settings → Equipo. Apply migration `20261002180000_least_privilege_signup_and_lead_rls.sql` in the SQL editor; it does not change roles that already exist.
 - **Cerrar todas las sesiones** calls `supabase.auth.signOut({ scope: "global" })`. The app has no `POST /api/auth/logout-all` and does not consult `app_session_epoch`. A 503 on `POST /api/demo/enter` means the demo flag is on and `DEMO_SESSION_SECRET` is missing or too short (`demo_misconfigured`), not a session-epoch failure.
-- Visitor pages `/settings`, `/automations`, `/email`, and `/correo` redirect to `/leads`. The matching APIs return 403 `demo_readonly`. `GET /api/session` includes `visitor: true` for that cookie.
+- Visitor pages `/settings`, `/email`, and `/correo` redirect to `/leads`. The matching APIs return 403 `demo_readonly`. `GET /api/session` includes `visitor: true` for that cookie.
 - If an integration fails, inspect Settings status and server logs without exposing credentials.
 - If TypeScript or build checks fail, resolve the code/schema mismatch before treating the roadmap item as complete.
 

@@ -22,11 +22,11 @@ The canonical pipeline has nine states:
 8. `Cliente`
 9. `Descartado`
 
-These names are shared by lists, Kanban, filters, KPIs, and Daily Work. New leads enter `Nuevo`, regardless of whether they come from n8n, the public form, or manual entry. `Origen` identifies the source.
+These names are shared by lists, Kanban, filters, KPIs, and Daily Work. New leads enter `Nuevo`, whether they come from the public form or manual entry (older rows may carry `Origen=n8n`). `Origen` identifies the source.
 
 ## Product rules
 
-- n8n is an optional, replaceable acquisition provider.
+- n8n is no longer an acquisition provider (ingest retired 2026-10-10, webhooks removed 2026-10-13).
 - There is no tags field in the product UI.
 - A lead has a responsible user (`Lead.responsibleId`, column `responsable`). The drawer assignee dropdown lists the team from `GET /api/team` for an Admin; other writers can assign themselves (**Yo**). The leads list has a **Mis leads** filter on the signed-in user id.
 - Favorites persist with the lead.
@@ -34,7 +34,7 @@ These names are shared by lists, Kanban, filters, KPIs, and Daily Work. New lead
 - Merging fills only empty fields in the surviving lead and archives the other record.
 - The user interface remains Spanish.
 - AI analysis is stored in `Análisis IA` and distinguishes evidence, inference, and speculation.
-- The strategic ICP is 5–30 employees; the current n8n operational filter is 3–10.
+- The strategic ICP is 5–30 employees; the former n8n operational filter was 3–10.
 
 ## SaaS validation gate
 

@@ -19,10 +19,6 @@ vi.mock("@/lib/ai/analyze-lead-pains", () => ({
   },
 }));
 
-vi.mock("@/lib/automations/dispatch", () => ({
-  dispatchLeadAnalyzed: vi.fn(),
-}));
-
 vi.mock("@/lib/settings/service", () => ({
   getSettingsService: () => ({
     getRaw: () => ({ ai: { model: { value: "test-model" } } }),

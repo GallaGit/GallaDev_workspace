@@ -24,7 +24,6 @@ Configura en `.env.local` `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE
 - `/duplicates`: grupos de duplicados.
 - `/correo`: buzón de empresa (`hola@` y `ociel@`). Inbox unificado con filtro, chip, Nuevo (compose Resend), Borradores, leer/responder, vincular a lead. Solo Admin. Sin carpetas Entrada/Enviados/Spam (ver spec company-email).
 - `/email`: revisión de borradores y soporte de Gmail Compose. El visitante es redirigido a `/leads`.
-- `/automations`: webhooks de automatización. El visitante es redirigido a `/leads`.
 - `/settings`: estado de integraciones, seguridad y configuración enmascarada. El visitante es redirigido a `/leads`.
 
 ## Operación diaria
@@ -35,8 +34,8 @@ Los leads nuevos entran en la cola `Nuevo`. Se puede buscar por empresa, dominio
 
 El rol sale de `profiles.role` (enum de PostgreSQL `app_role`): Admin, Seller o Viewer.
 
-- **Admin:** mutaciones de settings y automatizaciones, `GET /api/team`, escrituras de leads y análisis IA.
-- **Seller:** escrituras de leads y análisis IA (con el límite de tasa) solo en leads cuyo responsable es él. No ve la cola sin asignar, no cambia settings ni automatizaciones y no lista el equipo.
+- **Admin:** mutaciones de settings, `GET /api/team`, escrituras de leads y análisis IA.
+- **Seller:** escrituras de leads y análisis IA (con el límite de tasa) solo en leads cuyo responsable es él. No ve la cola sin asignar, no cambia settings y no lista el equipo.
 - **Viewer:** solo lectura de toda la cartera, también de los leads sin responsable. Las APIs de escritura responden 403.
 - **Sin rol:** la cuenta entra en `/pending` y no lee leads hasta que un Admin le asigne uno.
 
@@ -48,7 +47,7 @@ Comprobación de vida para uptime: `GET /api/health` (sin sesión). Responde `{"
 
 La demo se mantiene. La activación en Vercel Production sigue pendiente. En la misma página de login, el slice «¿Qué es?» (especificado, no implementado) añade texto y capturas que no piden sesión y conviven con el botón. Ver [`what-it-is.es.md`](../02-roadmap-delivery/what-it-is.es.md).
 
-El login puede ofrecer **Entrar como visitante** («Ver demo sin cuenta»). La sesión es una cookie httpOnly firmada con HMAC-SHA256 (`gdw_visitor`, 4 horas) usando `DEMO_SESSION_SECRET`. No es Admin, Seller ni Viewer, y no abre el repositorio de leads de Supabase ni el cliente service role. `getSessionLeadRepository()` devuelve `DemoLeadRepository`. La UI muestra asesorías españolas ficticias (correos `example.com`). Algunos leads traen un análisis de dolores ya escrito, así el panel lo enseña sin llamar a un modelo. Mover una tarjeta del Kanban muestra un aviso en español y no se guarda. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`. Las APIs bloqueadas (equipo, settings, automatizaciones, db-status, ingesta, escrituras de leads, merge, score y el análisis IA real) responden HTTP 403 con `code: "demo_readonly"`. `GET /api/session` devuelve `visitor: true` y `role: null`. `POST /api/demo/enter` responde 404 `demo_disabled` con el flag apagado, 503 `demo_misconfigured` si el secreto falta o tiene menos de 16 caracteres, y 429 `rate_limited` tras 8 peticiones en 15 minutos por IP. Las respuestas de la demo envían `X-Robots-Tag: noindex, nofollow` (el layout de la app ya es `noindex`).
+El login puede ofrecer **Entrar como visitante** («Ver demo sin cuenta»). La sesión es una cookie httpOnly firmada con HMAC-SHA256 (`gdw_visitor`, 4 horas) usando `DEMO_SESSION_SECRET`. No es Admin, Seller ni Viewer, y no abre el repositorio de leads de Supabase ni el cliente service role. `getSessionLeadRepository()` devuelve `DemoLeadRepository`. La UI muestra asesorías españolas ficticias (correos `example.com`). Algunos leads traen un análisis de dolores ya escrito, así el panel lo enseña sin llamar a un modelo. Mover una tarjeta del Kanban muestra un aviso en español y no se guarda. Las páginas `/settings` y `/email` redirigen a `/leads`. Las APIs bloqueadas (equipo, settings, db-status, ingesta, escrituras de leads, merge, score y el análisis IA real) responden HTTP 403 con `code: "demo_readonly"`. `GET /api/session` devuelve `visitor: true` y `role: null`. `POST /api/demo/enter` responde 404 `demo_disabled` con el flag apagado, 503 `demo_misconfigured` si el secreto falta o tiene menos de 16 caracteres, y 429 `rate_limited` tras 8 peticiones en 15 minutos por IP. Las respuestas de la demo envían `X-Robots-Tag: noindex, nofollow` (el layout de la app ya es `noindex`).
 
 | Variable | Papel |
 | --- | --- |
@@ -68,7 +67,7 @@ Para desactivarla en producción sin cambiar código: `DEMO_MODE_ENABLED=false` 
 - Aplica `supabase/migrations/20261002200000_revoke_handle_new_user_execute.sql` en el editor SQL de Supabase, después de las migraciones anteriores. Solo revoca `EXECUTE` en `handle_new_user()`. No cambia filas de perfiles. El trigger de alta sigue funcionando.
 - Si un usuario autenticado recibe HTTP 401 con `code: "no_profile"`, o ve la pantalla «Acceso pendiente», esa cuenta no tiene un rol `Admin`, `Seller` o `Viewer`. El trigger ya no asigna Seller. Un Admin lo asigna en Settings → Equipo. La migración `20261002180000_least_privilege_signup_and_lead_rls.sql` hay que aplicarla en el SQL editor; no toca los roles que ya existen.
 - **Cerrar todas las sesiones** llama a `supabase.auth.signOut({ scope: "global" })`. La app no tiene `POST /api/auth/logout-all` y no consulta `app_session_epoch`. Un 503 en `POST /api/demo/enter` significa que el flag de la demo está encendido y `DEMO_SESSION_SECRET` falta o es corto (`demo_misconfigured`), no un fallo del epoch de sesiones.
-- Las páginas de visitante `/settings`, `/automations`, `/email` y `/correo` redirigen a `/leads`. Las APIs correspondientes responden 403 `demo_readonly`. `GET /api/session` incluye `visitor: true` con esa cookie.
+- Las páginas de visitante `/settings`, `/email` y `/correo` redirigen a `/leads`. Las APIs correspondientes responden 403 `demo_readonly`. `GET /api/session` incluye `visitor: true` con esa cookie.
 - Si falla una integración, revisa el estado de Settings y los logs del servidor sin exponer credenciales.
 - Si fallan TypeScript o el build, resuelve la discrepancia entre código y esquema antes de considerar completado un hito.
 

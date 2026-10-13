@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Lead } from "@/lib/domain/lead";
-import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
 import { useSessionAccess } from "@/components/session-access";
 import type {
   DuplicateGroup,
@@ -56,7 +55,6 @@ type ConfirmAction =
 export function DuplicatesPage() {
   const t = useTranslations("duplicates");
   const tStatus = useTranslations("leadStatus");
-  const tAuto = useTranslations("automations");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,9 +219,6 @@ export function DuplicatesPage() {
       toast.success(
         n > 0 ? t("mergeSuccess", { count: n }) : t("mergeEmptySuccess"),
       );
-      toastAutomationDispatch(body.automation, {
-        dispatched: tAuto("dispatched"),
-      });
       setConfirm(null);
       clearPair();
       await refreshGroups();
