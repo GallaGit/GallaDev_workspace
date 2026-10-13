@@ -76,6 +76,7 @@
   "overrides": {
     "sanitize-html": {
       "htmlparser2": "^10.0.0"
-    }
+    },
+    "source-map-js": "^1.2.2"
   }
 }
