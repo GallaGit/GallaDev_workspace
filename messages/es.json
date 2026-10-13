@@ -13,7 +13,6 @@
     "statistics": "Statistics",
     "email": "Email",
     "correo": "Correo",
-    "automations": "Automations",
     "duplicates": "Duplicados",
     "settings": "Settings",
     "brand": "Leads_CRM",
@@ -431,11 +430,7 @@
     "secretsInfo": "Secretos solo en el servidor. Los valores se mezclan desde .env.local (arranque) y data/settings.local.json (cambios de esta pantalla). El navegador solo ve si está configurado y las últimas 4 caracteres.",
     "authDisabled": "Auth desactivado (local)",
     "active": "Activa",
-    "urlBase": "URL base",
-    "urlHintConfigured": "Configurado {preview}. Vacío = no cambiar. Solo https, sin usuario ni contraseña.",
-    "urlHintEmpty": "Opcional. Solo https, sin usuario ni contraseña. Se usa para Probar conexión (/healthz).",
     "apiKey": "API key",
-    "webhook": "Webhook · {name}",
     "provider": "Proveedor",
     "model": "Modelo",
     "credentialsPresent": "Credenciales presentes",
@@ -629,57 +624,13 @@
   "email": {
     "title": "Email",
     "draftCount": "Borradores · {count}",
-    "empty": "No hay emails generados. Genera borradores en n8n o aplica la plantilla desde un lead.",
+    "empty": "No hay emails generados. Aplica la plantilla desde un lead.",
     "select": "Selecciona un lead con borrador a la izquierda.",
     "noEmail": "Sin correo",
     "saved": "Guardado",
     "saveError": "Error al guardar",
     "replaceTemplate": "El cuerpo no está vacío. ¿Sustituir por la plantilla outreach-v1?",
     "copied": "Email copiado"
-  },
-  "automations": {
-    "title": "Automations",
-    "loading": "Cargando…",
-    "adminOnlyView": "Solo un administrador puede ver las automatizaciones.",
-    "adminOnlyChange": "Solo un administrador puede cambiar o probar automatizaciones.",
-    "description": "La captación se lanza en n8n (Manual o semanal), no desde esta pantalla. Leads_CRM no edita el workflow. En v1 no actives los toggles ni pegues URLs: la capa de webhooks está lista, pero el workflow no tiene esos triggers.",
-    "active": "Activa",
-    "inactive": "Inactiva",
-    "configured": "Webhook configurado",
-    "notConfigured": "Sin webhook",
-    "inactiveHint": "No se disparará hasta activarla",
-    "ready": "Lista",
-    "webhookUrl": "URL del webhook",
-    "webhookPlaceholder": "https://…/webhook/…",
-    "webhookHint": "Vacío = no cambiar. Guarda para persistir un override local.",
-    "saveUrl": "Guardar URL",
-    "sending": "Enviando…",
-    "test": "Probar",
-    "loadError": "No se pudieron cargar las automatizaciones",
-    "saveFailed": "No se pudo guardar",
-    "updated": "Automatización actualizada",
-    "saveError": "Error al guardar",
-    "testFailed": "La prueba falló",
-    "testError": "Error al probar",
-    "httpError": "Webhook HTTP {status}",
-    "httpSuccess": "Webhook respondió HTTP {status}",
-    "dispatched": "Webhook n8n enviado",
-    "dispatchedMany": "{count} webhooks n8n enviados",
-    "permissionDenied": "No tienes permiso para realizar esta acción",
-    "catalog": {
-      "leadCreated": {
-        "name": "Nuevo Lead",
-        "description": "Reserva post-alta en el CRM (alias buscar leads). En v1 el workflow de captación no tiene este trigger: no pegues URL ni actives el toggle."
-      },
-      "leadUpdated": {
-        "name": "Lead actualizado",
-        "description": "Sin flujo n8n en v1. La capa queda lista; no configures webhook hasta una fase posterior."
-      },
-      "leadAnalyzed": {
-        "name": "Lead analizado",
-        "description": "Webhook tras Detectar dolores. Se dispara en segundo plano si está activo y hay URL. En v1 no hay trigger n8n ni URL configurada."
-      }
-    }
   },
   "duplicates": {
     "title": "Duplicados",

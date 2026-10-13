@@ -16,11 +16,6 @@ export async function GET() {
       notionConfigured: false,
       serpapiConfigured: settings.serpapi.configured,
       groqConfigured: settings.ai.configured,
-      n8nActions: settings.automations.map((a) => ({
-        action: a.action,
-        configured: a.webhook.configured,
-        enabled: a.enabled,
-      })),
     });
   } catch (e) {
     const message =

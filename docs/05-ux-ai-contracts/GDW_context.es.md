@@ -2,7 +2,7 @@
 
 ## Objetivo del análisis de dolores
 
-La acción `Detectar dolores` analiza un lead con Groq y guarda el resultado en `Análisis IA`. La función es best-effort desde el punto de vista de automatizaciones: un fallo del webhook no debe cambiar el resultado de persistencia.
+La acción `Detectar dolores` analiza un lead con Groq y guarda el resultado en `Análisis IA`.
 
 ## Estados de la UI
 
@@ -23,4 +23,3 @@ El modelo no debe inventar webs, cifras, software, información de clientes ni o
 - `POST /api/leads/:id/analyze` es el endpoint canónico.
 - El alias histórico de pain-analysis solo debe mantenerse donde la aplicación ya lo soporte.
 - El resultado se persiste en `Análisis IA`.
-- La automatización opcional `lead_analyzed` se notifica de forma asíncrona.

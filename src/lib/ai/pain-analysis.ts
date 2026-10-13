@@ -120,18 +120,6 @@ export function resolvePainAnalysis(
   return null;
 }
 
-export function painAnalysisToWebhookPayload(
-  analysis: PainAnalysis,
-  text: string,
-): Record<string, unknown> {
-  return {
-    evidence: analysis.evidence,
-    inference: analysis.inference,
-    speculation: analysis.speculation,
-    text,
-  };
-}
-
 /** Enough raw signal to ask Groq; otherwise the UI shows the empty state. */
 export function hasPainAnalysisSignal(lead: Lead): boolean {
   return Boolean(

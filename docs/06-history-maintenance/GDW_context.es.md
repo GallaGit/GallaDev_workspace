@@ -26,7 +26,7 @@ Email + contraseña sustituyó el login de contraseña compartida. `AUTH_SECRET`
 
 ### RBAC (PR #44)
 
-Las mutaciones de settings y automatizaciones son solo Admin. Las escrituras de leads y el análisis IA son Admin o Seller. Las escrituras de Viewer responden 403. `GET /api/team` es solo Admin.
+Las mutaciones de settings son solo Admin. Las escrituras de leads y el análisis IA son Admin o Seller. Las escrituras de Viewer responden 403. `GET /api/team` es solo Admin.
 
 ### Slices de M2 (PR #53, PR #54)
 
@@ -34,7 +34,7 @@ Slice 1: Lint & TypeCheck, Unit Tests, Component Tests y E2E Tests son obligator
 
 ### Demo de visitante (PR #55)
 
-Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defecto). `getSessionLeadRepository()` devuelve `DemoLeadRepository`. Las páginas `/settings`, `/automations` y `/email` redirigen a `/leads`; las APIs bloqueadas responden 403 `demo_readonly`.
+Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defecto). `getSessionLeadRepository()` devuelve `DemoLeadRepository`. Las páginas `/settings` y `/email` redirigen a `/leads`; las APIs bloqueadas responden 403 `demo_readonly`.
 
 ### Decisión de producto 26-27 Sep 2026 (Ociel)
 

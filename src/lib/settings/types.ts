@@ -1,12 +1,4 @@
-export const AUTOMATION_ACTION_IDS = [
-  "lead_created",
-  "lead_updated",
-  "lead_analyzed",
-] as const;
-
-export type AutomationAction = (typeof AUTOMATION_ACTION_IDS)[number];
-
-export const INTEGRATION_IDS = ["n8n", "ai", "serpapi"] as const;
+export const INTEGRATION_IDS = ["ai", "serpapi"] as const;
 
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
@@ -35,11 +27,6 @@ export interface SourcedBoolean {
 }
 
 export interface ResolvedSettings {
-  n8n: {
-    baseUrl: SourcedString;
-    apiKey: SourcedString;
-    webhooks: Record<AutomationAction, SourcedString>;
-  };
   ai: {
     provider: SourcedString;
     apiKey: SourcedString;
@@ -48,16 +35,10 @@ export interface ResolvedSettings {
   serpapi: {
     apiKey: SourcedString;
   };
-  automations: Record<AutomationAction, { enabled: SourcedBoolean }>;
   connections: Record<IntegrationId, IntegrationConnectionState>;
 }
 
 export interface SettingsFile {
-  n8n?: {
-    baseUrl?: string;
-    apiKey?: string;
-    webhooks?: Partial<Record<AutomationAction, string>>;
-  };
   ai?: {
     provider?: string;
     apiKey?: string;
@@ -66,18 +47,10 @@ export interface SettingsFile {
   serpapi?: {
     apiKey?: string;
   };
-  automations?: Partial<
-    Record<AutomationAction, { enabled?: boolean; webhookUrl?: string }>
-  >;
   connections?: Partial<Record<IntegrationId, IntegrationConnectionState>>;
 }
 
 export interface SettingsPatch {
-  n8n?: {
-    baseUrl?: string;
-    apiKey?: string;
-    webhooks?: Partial<Record<AutomationAction, string>>;
-  };
   ai?: {
     provider?: string;
     apiKey?: string;
@@ -86,9 +59,6 @@ export interface SettingsPatch {
   serpapi?: {
     apiKey?: string;
   };
-  automations?: Partial<
-    Record<AutomationAction, { enabled?: boolean; webhookUrl?: string }>
-  >;
 }
 
 export interface MaskedField {
@@ -97,23 +67,8 @@ export interface MaskedField {
   source: ValueSource;
 }
 
-export interface PublicAutomation {
-  action: AutomationAction;
-  name: string;
-  description: string;
-  enabled: boolean;
-  webhook: MaskedField;
-}
-
 export interface PublicSettings {
   authDisabled: boolean;
-  n8n: {
-    configured: boolean;
-    baseUrl: MaskedField;
-    apiKey: MaskedField;
-    webhooks: Record<AutomationAction, MaskedField>;
-    connection: IntegrationConnectionState;
-  };
   ai: {
     configured: boolean;
     provider: string;
@@ -126,7 +81,6 @@ export interface PublicSettings {
     apiKey: MaskedField;
     connection: IntegrationConnectionState;
   };
-  automations: PublicAutomation[];
 }
 
 export interface FieldErrors {

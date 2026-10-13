@@ -1,8 +1,5 @@
 import "server-only";
 
-import { createN8nClient } from "@/lib/n8n/client";
-import { N8nClientError } from "@/lib/n8n/errors";
-import { shouldSendN8nApiKey } from "./outbound-url";
 import { getSettingsService } from "./service";
 import type {
   IntegrationId,
@@ -22,12 +19,6 @@ function timeoutSignal(ms = 12_000): AbortSignal {
 function overlay(raw: ResolvedSettings, patch?: SettingsPatch): ResolvedSettings {
   if (!patch) return raw;
   const next = structuredClone(raw);
-  if (patch.n8n?.baseUrl?.trim()) {
-    next.n8n.baseUrl.value = patch.n8n.baseUrl.trim();
-  }
-  if (patch.n8n?.apiKey?.trim()) {
-    next.n8n.apiKey.value = patch.n8n.apiKey.trim();
-  }
   if (patch.ai?.apiKey?.trim()) next.ai.apiKey.value = patch.ai.apiKey.trim();
   if (patch.ai?.provider?.trim()) {
     next.ai.provider.value = patch.ai.provider.trim();
@@ -90,17 +81,6 @@ async function testSerpApi(patch?: SettingsPatch): Promise<ConnectionTestResult>
   return { ok: true, message: "SerpAPI: API key válida" };
 }
 
-async function testN8n(patch?: SettingsPatch): Promise<ConnectionTestResult> {
-  const saved = await getSettingsService().getRaw();
-  const settings = overlay(saved, patch);
-  const sendApiKey = shouldSendN8nApiKey(
-    saved.n8n.baseUrl.value,
-    settings.n8n.baseUrl.value,
-  );
-  const client = createN8nClient({ getSettings: async () => settings });
-  return client.testConnection({ sendApiKey });
-}
-
 export async function testIntegration(
   id: IntegrationId,
   patch?: SettingsPatch,
@@ -111,13 +91,8 @@ export async function testIntegration(
         return await testAi(patch);
       case "serpapi":
         return await testSerpApi(patch);
-      case "n8n":
-        return await testN8n(patch);
     }
   } catch (error) {
-    if (error instanceof N8nClientError) {
-      return { ok: false, message: error.message };
-    }
     const message =
       error instanceof Error ? error.message : "Error al probar la conexión";
     return { ok: false, message };
@@ -126,8 +101,6 @@ export async function testIntegration(
 
 export function isIntegrationId(value: string): value is IntegrationId {
   return (
-    value === "n8n" ||
-    value === "ai" ||
-    value === "serpapi"
+value === "ai" || value === "serpapi"
   );
 }

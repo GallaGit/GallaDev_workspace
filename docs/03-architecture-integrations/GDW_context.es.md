@@ -7,7 +7,6 @@ La aplicación usa Next.js App Router. El navegador llama a route handlers del s
 ```text
 Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
                                              -> Servicio de settings
-                                             -> Proveedor opcional de automatización
 ```
 
 ## Persistencia y seguridad
@@ -19,19 +18,18 @@ Navegador -> UI Next.js -> Route handlers -> Repositorio de leads -> Supabase
 - Los route handlers añaden una capa RBAC: `requireApiSession`, `requireApiRole`, `requireAdmin` y `requireLeadWriter`. Los roles son `profiles.role` (`Admin`, `Seller`, `Viewer`). Un alta nueva queda con rol nulo hasta que un Admin lo asigne.
 - RLS es la frontera de aislamiento de datos entre usuarios. Seller solo ve y edita leads con `responsable = auth.uid()`. La cola sin responsable es de Admin (Viewer la lee, porque es el rol de solo lectura de toda la cartera). La API repite ese predicado.
 - Settings muestra previews enmascarados y nunca devuelve secretos completos.
-- Los fallos de dispatch a n8n no hacen fallar la persistencia del lead.
 
 ## Integraciones
 
 - **Supabase:** base de datos activa y fuente de verdad.
-- **n8n:** proveedor opcional de prospección y automatización.
+- **n8n:** ya no está integrado. La ingesta responde 410 desde 2026-10-10 y los webhooks salientes se eliminaron el 2026-10-13.
 - **SerpAPI:** búsqueda externa usada por el workflow de prospección.
 - **Groq:** extracción web, generación de emails y análisis de dolores.
 - **Resend:** notificaciones transaccionales de la ingesta web e inbox de empresa (`hola@` y `ociel@galladev.com`). Recepción vía Resend Inbound (webhook `POST /api/email/inbound`, firma Svix); hilos con `mailbox_address`; compose y reply desde `/correo` (`POST /api/email/compose`, borradores en `email_drafts`).
 
 ## Contrato de ingesta
 
-Cualquier fuente puede crear un lead con estado `Nuevo` y un `Origen` como `n8n`, `web-galladev` o `Manual`. El CRM cualifica todas las fuentes de la misma forma. Las notificaciones del CRM hacia automatizaciones están desactivadas por defecto, son best-effort y nunca bloquean la persistencia.
+Cualquier fuente puede crear un lead con estado `Nuevo` y un `Origen` como `n8n`, `web-galladev` o `Manual`. El CRM cualifica todas las fuentes de la misma forma. El CRM no envía notificaciones a automatizaciones externas.
 
 ## Integración histórica con Notion
 
@@ -57,8 +55,6 @@ Notion fue la fuente de verdad anterior. El runtime se eliminó; el script de mi
 - `GET/PATCH /api/settings`
 - `GET /api/settings/status`
 - `POST /api/settings/test`
-- `GET /api/automations`
-- `GET/PATCH/POST /api/automations/:action`
 - `POST /api/ingest/lead`
 - `POST /api/ingest/n8n` (410 Gone desde 2026-10-10)
 - `POST /api/email/inbound` (webhook Resend; sin sesión, firma Svix)

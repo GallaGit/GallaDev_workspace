@@ -1,19 +1,15 @@
-import { AUTOMATION_ACTION_IDS } from "./types";
 import type { ResolvedSettings } from "./types";
 
-/** Nombres de campo cuyo valor de URL cambió. Nunca incluye la URL. */
-export function webhookAuditChanges(
+/** Nombres de campo de configuración que cambiaron. Nunca incluye el valor. */
+export function settingsAuditChanges(
   before: ResolvedSettings,
   after: ResolvedSettings,
 ): string[] {
-  const changed: string[] = [];
-  if (before.n8n.baseUrl.value !== after.n8n.baseUrl.value) {
-    changed.push("n8n.baseUrl");
-  }
-  for (const action of AUTOMATION_ACTION_IDS) {
-    if (before.n8n.webhooks[action].value !== after.n8n.webhooks[action].value) {
-      changed.push(`n8n.webhooks.${action}`);
-    }
-  }
-  return changed;
+  const fields: Array<[string, string, string]> = [
+    ["ai.provider", before.ai.provider.value, after.ai.provider.value],
+    ["ai.model", before.ai.model.value, after.ai.model.value],
+    ["ai.apiKey", before.ai.apiKey.value, after.ai.apiKey.value],
+    ["serpapi.apiKey", before.serpapi.apiKey.value, after.serpapi.apiKey.value],
+  ];
+  return fields.filter(([, a, b]) => a !== b).map(([name]) => name);
 }

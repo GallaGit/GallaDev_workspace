@@ -11,7 +11,7 @@ Optional enrichment checklist from bootcamp themes — does not replace this seq
 
 ## Current state
 
-Supabase is the active persistence layer and sole source of truth. The current application includes leads, Kanban, email, Daily Work, statistics, duplicates, settings, Supabase Auth with RBAC (Admin, Seller, Viewer), ingestion endpoints, and AI analysis. n8n integrations are optional and best-effort. There is no self-signup.
+Supabase is the active persistence layer and sole source of truth. The current application includes leads, Kanban, email, Daily Work, statistics, duplicates, settings, Supabase Auth with RBAC (Admin, Seller, Viewer), ingestion endpoints, and AI analysis. There are no n8n integrations (removed 2026-10-13). There is no self-signup.
 
 ### M1 security baseline (2026-09-22)
 
@@ -29,7 +29,7 @@ Supabase is the active persistence layer and sole source of truth. The current a
 
 Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":true}` (the process answers HTTP; no session and no database).
 
-- **RBAC High** (PR #44): settings and automation mutations are Admin-only; lead writes and AI analysis are Admin or Seller; Viewer gets 403 on writes. `GET /api/team` is Admin-only. AI analysis uses the authenticated session (RLS), not `service_role` for normal user requests, with a cap of 10 requests / 60s. The UI gates actions from the session role.
+- **RBAC High** (PR #44): settings mutations are Admin-only; lead writes and AI analysis are Admin or Seller; Viewer gets 403 on writes. `GET /api/team` is Admin-only. AI analysis uses the authenticated session (RLS), not `service_role` for normal user requests, with a cap of 10 requests / 60s. The UI gates actions from the session role.
 - **Kanban, Statistics, and release hygiene** (PR #43): removed the dead Kanban “+ add card” control (it did not persist); Statistics chart-type selector (bars / donut / area); `GET /api/health`; MIT `LICENSE`; Dependabot.
 - **M2 Slice 1 — CI gates on `master` (PR #53):** required and strict, with `enforce_admins` on: Lint & TypeCheck, Unit Tests, Component Tests, E2E Tests. CodeQL is not a required check. Required reviews are not above 0.
 
@@ -41,7 +41,7 @@ Production: `https://workspace.galladev.com`. `GET /api/health` returns `{"ok":t
 
 ### Visitor demo (PR #55, done, 2026-09-25)
 
-Passwordless demo for recruiters and reviewers. It stays. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/automations`, `/email`, and `/correo` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). Activation in Vercel Production is still pending. See the operations guide.
+Passwordless demo for recruiters and reviewers. It stays. `DEMO_MODE_ENABLED` defaults **off** when unset. When it is `true` or `1` and `DEMO_SESSION_SECRET` is set (at least 16 characters), the login page offers “Entrar como visitante”. An HMAC-signed httpOnly cookie (4 hours) resolves server-side through `getSessionLeadRepository()` to `DemoLeadRepository` (in-memory fictional leads). Visitor requests do not construct the Supabase session client or the service-role repository. Pages `/settings`, `/email`, and `/correo` redirect to `/leads`. Blocked APIs return 403 `demo_readonly`. `POST /api/demo/enter` returns 404 `demo_disabled`, 503 `demo_misconfigured`, or 429. `GET /api/session` returns `visitor: true`. Canned pain analyses ship on a few fictional leads. Turn the demo off by setting `DEMO_MODE_ENABLED=false` or removing the variable (no code change). Activation in Vercel Production is still pending. See the operations guide.
 
 ### Urgent priority — company email (decision 29 Sep 2026)
 

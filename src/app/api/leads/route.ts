@@ -14,12 +14,6 @@ import {
   filterReadableLeads,
 } from "@/lib/leads/enforce-lead-write";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
-import {
-  changedKeys,
-  dispatchLeadCreated,
-  dispatchLeadUpdated,
-  summarizeDispatch,
-} from "@/lib/automations/dispatch";
 
 export const dynamic = "force-dynamic";
 
@@ -101,8 +95,7 @@ export async function POST(request: Request) {
         : { ...result.value, responsibleId: null };
     const repo = await getSessionLeadRepository();
     const lead = await repo.create(input);
-    const automation = dispatchLeadCreated(lead);
-    return NextResponse.json({ lead, automation }, { status: 201 });
+    return NextResponse.json({ lead }, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al crear el lead";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -132,8 +125,6 @@ export async function PATCH(request: Request) {
     const { ids, patch } = validated.value;
     const repo = await getSessionLeadRepository();
     const updated = [];
-    const automations = [];
-    const changed = changedKeys(patch);
     for (const id of ids) {
       const gate = await constrainLeadPatch(repo, id, patch);
       if (!gate.ok) {
@@ -141,12 +132,8 @@ export async function PATCH(request: Request) {
       }
       const lead = await repo.update(id, gate.patch);
       updated.push(lead);
-      automations.push(dispatchLeadUpdated(lead, changed));
     }
-    return NextResponse.json({
-      leads: updated,
-      automation: summarizeDispatch(automations),
-    });
+    return NextResponse.json({ leads: updated });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error en actualización masiva";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -22,11 +22,11 @@ El pipeline canónico tiene nueve estados:
 8. `Cliente`
 9. `Descartado`
 
-Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los leads nuevos entran en `Nuevo`, vengan de n8n, del formulario público o de un alta manual. `Origen` identifica la fuente.
+Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los leads nuevos entran en `Nuevo`, vengan del formulario público o de un alta manual (filas antiguas pueden llevar `Origen=n8n`). `Origen` identifica la fuente.
 
 ## Reglas de producto
 
-- n8n es un proveedor de captación opcional e intercambiable.
+- n8n ya no es proveedor de captación (ingesta retirada el 2026-10-10, webhooks eliminados el 2026-10-13).
 - En la UI del producto no hay campo de tags.
 - Un lead tiene responsable (`Lead.responsibleId`, columna `responsable`). El desplegable del panel lista el equipo desde `GET /api/team` si el usuario es Admin; el resto de quien puede escribir se asigna a sí mismo (**Yo**). La lista de leads tiene el filtro **Mis leads** sobre el id del usuario con sesión.
 - Los favoritos se persisten con el lead.
@@ -34,7 +34,7 @@ Estos nombres se comparten en listas, Kanban, filtros, KPIs y Daily Work. Los le
 - El merge solo rellena campos vacíos del lead conservado y archiva el otro.
 - La interfaz de usuario permanece en español.
 - El análisis IA se guarda en `Análisis IA` y distingue evidencia, inferencia y especulación.
-- El ICP estratégico es de 5–30 empleados; el filtro operativo actual de n8n es de 3–10.
+- El ICP estratégico es de 5–30 empleados; el antiguo filtro operativo de n8n era de 3–10.
 
 ## Puerta de validación SaaS
 

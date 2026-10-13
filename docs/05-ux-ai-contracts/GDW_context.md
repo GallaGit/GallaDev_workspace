@@ -2,7 +2,7 @@
 
 ## Pain analysis goal
 
-The `Detectar dolores` action analyzes a lead using Groq and stores the result in `Análisis IA`. The feature is best-effort from an automation perspective: a webhook failure must not change the persistence result.
+The `Detectar dolores` action analyzes a lead using Groq and stores the result in `Análisis IA`.
 
 ## UI states
 
@@ -23,4 +23,3 @@ The model must not invent websites, figures, software, customer information, or 
 - `POST /api/leads/:id/analyze` is the canonical endpoint.
 - The legacy pain-analysis alias may remain only where already supported by the application.
 - The result is persisted in `Análisis IA`.
-- Optional `lead_analyzed` automation is notified asynchronously.

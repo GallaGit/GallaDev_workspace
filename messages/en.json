@@ -13,7 +13,6 @@
     "statistics": "Statistics",
     "email": "Email",
     "correo": "Inbox",
-    "automations": "Automations",
     "duplicates": "Duplicates",
     "settings": "Settings",
     "brand": "Leads_CRM",
@@ -431,11 +430,7 @@
     "secretsInfo": "Secrets remain on the server. Values are merged from .env.local (startup) and data/settings.local.json (changes from this screen). The browser only sees whether a value is configured and its last 4 characters.",
     "authDisabled": "Auth disabled (local)",
     "active": "Active",
-    "urlBase": "Base URL",
-    "urlHintConfigured": "Configured {preview}. Leave empty to keep it unchanged. HTTPS only, with no username or password.",
-    "urlHintEmpty": "Optional. HTTPS only, with no username or password. Used by Test connection (/healthz).",
     "apiKey": "API key",
-    "webhook": "Webhook · {name}",
     "provider": "Provider",
     "model": "Model",
     "credentialsPresent": "Credentials present",
@@ -629,57 +624,13 @@
   "email": {
     "title": "Email",
     "draftCount": "Drafts · {count}",
-    "empty": "No generated emails. Generate drafts in n8n or apply the template from a lead.",
+    "empty": "No generated emails. Apply the template from a lead.",
     "select": "Select a lead with a draft on the left.",
     "noEmail": "No email",
     "saved": "Saved",
     "saveError": "Error saving",
     "replaceTemplate": "The body is not empty. Replace it with the outreach-v1 template?",
     "copied": "Email copied"
-  },
-  "automations": {
-    "title": "Automations",
-    "loading": "Loading…",
-    "adminOnlyView": "Only an administrator can view automations.",
-    "adminOnlyChange": "Only an administrator can change or test automations.",
-    "description": "Lead capture runs in n8n (manually or weekly), not from this screen. Leads_CRM does not edit the workflow. In v1, do not enable the toggles or paste URLs: the webhook layer is ready, but the workflow does not have these triggers.",
-    "active": "Active",
-    "inactive": "Inactive",
-    "configured": "Webhook configured",
-    "notConfigured": "No webhook",
-    "inactiveHint": "It will not run until enabled",
-    "ready": "Ready",
-    "webhookUrl": "Webhook URL",
-    "webhookPlaceholder": "https://…/webhook/…",
-    "webhookHint": "Leave empty to keep it unchanged. Save to persist a local override.",
-    "saveUrl": "Save URL",
-    "sending": "Sending…",
-    "test": "Test",
-    "loadError": "Could not load automations",
-    "saveFailed": "Could not save",
-    "updated": "Automation updated",
-    "saveError": "Error saving",
-    "testFailed": "The test failed",
-    "testError": "Error testing",
-    "httpError": "Webhook HTTP {status}",
-    "httpSuccess": "Webhook responded with HTTP {status}",
-    "dispatched": "n8n webhook sent",
-    "dispatchedMany": "{count} n8n webhooks sent",
-    "permissionDenied": "You do not have permission to perform this action",
-    "catalog": {
-      "leadCreated": {
-        "name": "New Lead",
-        "description": "Reserved for post-creation in the CRM (alias search leads). In v1, the capture workflow does not have this trigger: do not paste a URL or enable the toggle."
-      },
-      "leadUpdated": {
-        "name": "Lead updated",
-        "description": "There is no n8n flow in v1. The integration layer is ready; do not configure a webhook until a later phase."
-      },
-      "leadAnalyzed": {
-        "name": "Lead analyzed",
-        "description": "Webhook after Detect pain points. It runs in the background when active and a URL is present. In v1, there is no n8n trigger or configured URL."
-      }
-    }
   },
   "duplicates": {
     "title": "Duplicates",

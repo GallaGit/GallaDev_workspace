@@ -6,10 +6,6 @@ import {
   MERGEABLE_FIELD_LABELS,
 } from "@/lib/leads/merge-leads";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
-import {
-  changedKeys,
-  dispatchLeadUpdated,
-} from "@/lib/automations/dispatch";
 
 export const dynamic = "force-dynamic";
 
@@ -68,10 +64,8 @@ export async function POST(request: Request) {
     const { patch, filledKeys } = buildEmptyFieldMerge(keep, archive);
 
     let updated = keep;
-    let automation: ReturnType<typeof dispatchLeadUpdated> | undefined;
     if (Object.keys(patch).length > 0) {
       updated = await repo.update(keepId, patch);
-      automation = dispatchLeadUpdated(updated, changedKeys(patch));
     }
 
     const filledLabels = filledKeys.map((k) => MERGEABLE_FIELD_LABELS[k]);
@@ -94,7 +88,6 @@ export async function POST(request: Request) {
       filledKeys,
       filledLabels,
       archivedId: archiveId,
-      automation,
     });
   } catch (e) {
     const message =

@@ -1,6 +1,5 @@
 import type { PainAnalysis } from "@/lib/ai/pain-analysis";
 import type { Lead } from "@/lib/domain/lead";
-import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 
 export type ApiPainAnalysis = {
   evidencia: string[];
@@ -18,7 +17,6 @@ export type AnalyzeSuccessBody = {
   notified: boolean;
   lead: Lead;
   activity?: { at: string; type: string; message: string }[];
-  automation?: AutomationDispatchResult;
   empty?: boolean;
 };
 
@@ -64,7 +62,6 @@ export function analyzeSuccessPayload(input: {
   notionUpdated: boolean;
   notified: boolean;
   activity?: { at: string; type: string; message: string }[];
-  automation?: AutomationDispatchResult;
   empty?: boolean;
 }): AnalyzeSuccessBody {
   return {
@@ -74,7 +71,6 @@ export function analyzeSuccessPayload(input: {
     notified: input.notified,
     lead: input.lead,
     ...(input.activity ? { activity: input.activity } : {}),
-    ...(input.automation ? { automation: input.automation } : {}),
     ...(input.empty ? { empty: true } : {}),
   };
 }

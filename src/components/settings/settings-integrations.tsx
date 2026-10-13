@@ -8,39 +8,21 @@ import { Button } from "@/components/ui/button";
 import { ConnectionBadge } from "@/components/settings/connection-badge";
 import { SecretField, TextField } from "@/components/settings/fields";
 import type {
-  AutomationAction,
   IntegrationId,
   PublicSettings,
   SettingsPatch,
 } from "@/lib/settings/types";
-import { AUTOMATION_ACTION_IDS } from "@/lib/settings/types";
 import { useSessionAccess } from "@/components/session-access";
 
 type Draft = {
-  n8nBaseUrl: string;
-  n8nApiKey: string;
-  n8nWebhooks: Record<AutomationAction, string>;
   aiProvider: string;
   aiApiKey: string;
   aiModel: string;
   serpapiKey: string;
 };
 
-const CATALOG_KEYS: Record<AutomationAction, "leadCreated" | "leadUpdated" | "leadAnalyzed"> = {
-  lead_created: "leadCreated",
-  lead_updated: "leadUpdated",
-  lead_analyzed: "leadAnalyzed",
-};
-
 function seedDraft(settings: PublicSettings): Draft {
   return {
-    n8nBaseUrl: "",
-    n8nApiKey: "",
-    n8nWebhooks: {
-      lead_created: "",
-      lead_updated: "",
-      lead_analyzed: "",
-    },
     aiProvider: settings.ai.provider || "groq",
     aiApiKey: "",
     aiModel: settings.ai.model,
@@ -86,7 +68,6 @@ export function SettingsIntegrations() {
 
 function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
   const t = useTranslations("settings");
-  const tAuto = useTranslations("automations");
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState(initial);
   const [draft, setDraft] = useState(() => seedDraft(initial));
@@ -189,105 +170,6 @@ function SettingsForm({ settings: initial }: { settings: PublicSettings }) {
           </span>
         </div>
       </div>
-
-      <section className="space-y-3 rounded-lg border border-(--border) bg-(--panel) p-4">
-        <Header
-          title="n8n"
-          configured={settings.n8n.configured}
-          connection={settings.n8n.connection}
-          pending={testing === "n8n"}
-        />
-        <TextField
-          id="n8n-url"
-          label={t("urlBase")}
-          value={draft.n8nBaseUrl}
-          onChange={(v) => setDraft((d) => ({ ...d, n8nBaseUrl: v }))}
-          placeholder="https://n8n.ejemplo.com"
-          hint={
-            settings.n8n.baseUrl.configured
-              ? t("urlHintConfigured", {
-                  preview: settings.n8n.baseUrl.preview ?? "",
-                })
-              : t("urlHintEmpty")
-          }
-          disabled={!isAdmin}
-        />
-        {isAdmin && settings.n8n.baseUrl.configured ? (
-          <ClearLink
-            onClick={() => markClear("n8n.baseUrl")}
-            active={Boolean(clearing["n8n.baseUrl"])}
-          />
-        ) : null}
-        <SecretField
-          id="n8n-key"
-          label={t("apiKey")}
-          field={settings.n8n.apiKey}
-          value={draft.n8nApiKey}
-          onChange={(v) => setDraft((d) => ({ ...d, n8nApiKey: v }))}
-          disabled={!isAdmin}
-        />
-        {isAdmin && settings.n8n.apiKey.source === "file" ? (
-          <ClearLink
-            onClick={() => markClear("n8n.apiKey")}
-            active={Boolean(clearing["n8n.apiKey"])}
-          />
-        ) : null}
-        {AUTOMATION_ACTION_IDS.map((action) => (
-          <SecretField
-            key={action}
-            id={`n8n-wh-${action}`}
-            label={t("webhook", {
-              name: tAuto(`catalog.${CATALOG_KEYS[action]}.name`),
-            })}
-            field={settings.n8n.webhooks[action]}
-            value={draft.n8nWebhooks[action]}
-            onChange={(v) =>
-              setDraft((d) => ({
-                ...d,
-                n8nWebhooks: { ...d.n8nWebhooks, [action]: v },
-              }))
-            }
-            placeholder="https://…/webhook/…"
-            disabled={!isAdmin}
-          />
-        ))}
-        <Actions
-          saving={saving === "n8n"}
-          testing={testing === "n8n"}
-          onSave={() => {
-            const webhooks: Partial<Record<AutomationAction, string>> = {};
-            for (const action of AUTOMATION_ACTION_IDS) {
-              const value = optionalSecret(draft.n8nWebhooks[action]);
-              if (value) webhooks[action] = value;
-            }
-            void save(
-              {
-                n8n: {
-                  baseUrl: clearing["n8n.baseUrl"]
-                    ? ""
-                    : draft.n8nBaseUrl.trim()
-                      ? draft.n8nBaseUrl.trim()
-                      : undefined,
-                  apiKey: clearing["n8n.apiKey"]
-                    ? ""
-                    : optionalSecret(draft.n8nApiKey),
-                  webhooks,
-                },
-              },
-              "n8n",
-            );
-          }}
-          locked={!isAdmin}
-          onTest={() =>
-            void test("n8n", {
-              n8n: {
-                baseUrl: draft.n8nBaseUrl.trim() || undefined,
-                apiKey: optionalSecret(draft.n8nApiKey),
-              },
-            })
-          }
-        />
-      </section>
 
       <section className="space-y-3 rounded-lg border border-(--border) bg-(--panel) p-4">
         <Header
@@ -428,7 +310,7 @@ function Header({
 }: {
   title: string;
   configured: boolean;
-  connection: PublicSettings["n8n"]["connection"];
+  connection: PublicSettings["ai"]["connection"];
   pending?: boolean;
 }) {
   const t = useTranslations("settings");

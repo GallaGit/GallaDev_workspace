@@ -12,7 +12,6 @@ import {
   BarChart3,
   Mail,
   MailCheck,
-  Workflow,
   Settings,
   Copy,
   LogOut,
@@ -34,12 +33,11 @@ const NAV = [
   { href: "/stats", labelKey: "nav.statistics", icon: BarChart3 },
   { href: "/email", labelKey: "nav.email", icon: Mail },
   { href: "/correo", labelKey: "nav.correo", icon: MailCheck },
-  { href: "/automations", labelKey: "nav.automations", icon: Workflow },
   { href: "/duplicates", labelKey: "nav.duplicates", icon: Copy },
   { href: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
-const HIDDEN_FOR_VISITOR = new Set(["/email", "/correo", "/automations", "/settings"]);
+const HIDDEN_FOR_VISITOR = new Set(["/email", "/correo", "/settings"]);
 
 export function AppSidebar() {
   const t = useTranslations();

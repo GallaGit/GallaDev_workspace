@@ -1,6 +1,6 @@
 # GallaDev Workspace
 
-CRM for reviewing, qualifying, and managing leads for asesorías y gestorías. **Supabase (PostgreSQL) is the sole source of truth**; n8n handles prospecting. The Notion runtime has been removed.
+CRM for reviewing, qualifying, and managing leads for asesorías y gestorías. **Supabase (PostgreSQL) is the sole source of truth**. The Notion runtime has been removed.
 
 > Formerly `Leads_CRM`. Production: [https://workspace.galladev.com](https://workspace.galladev.com).
 

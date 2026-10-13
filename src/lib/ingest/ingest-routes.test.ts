@@ -37,10 +37,6 @@ vi.mock("@/lib/email/send-ingest-emails", () => ({
   sendIngestEmails,
 }));
 
-vi.mock("@/lib/automations/dispatch", () => ({
-  dispatchLeadCreated: vi.fn(() => ({ status: "skipped", reason: "inactive" })),
-}));
-
 const LEAD_URL = "http://localhost/api/ingest/lead";
 
 function ingestRequest(

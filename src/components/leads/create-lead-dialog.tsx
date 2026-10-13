@@ -27,7 +27,6 @@ import {
 } from "@/lib/leads/validate-lead";
 import { useUiStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
-import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
 
 const emptyForm: LeadCreateInput = {
   companyName: "",
@@ -172,9 +171,6 @@ export function CreateLeadDialog() {
       upsertLead(lead);
       setSelectedLeadId(lead.id);
       toast.success(t("leads.create.created", { company: lead.companyName }));
-      toastAutomationDispatch(data.automation, {
-        dispatched: t("automations.dispatched"),
-      });
       setOpen(false);
       reset();
     } catch (err) {

@@ -42,7 +42,6 @@ Key env facts (see `.env.example` for the full list):
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Optional Playwright login smoke. `critical-paths` skips that login when they are empty. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Admin and Seller users for `tests/e2e/auth-sync-roles.spec.ts`. CI has no Viewer E2E credentials. |
 | `INGEST_SECRET` | Shared secret for `POST /api/ingest/lead` only. Generate with `openssl rand -hex 32`. Keep it on the server (Cloudflare), never in the browser bundle. |
-| `N8N_ALLOWED_HOSTS` | Optional comma-separated https hosts for n8n webhooks and the base URL. If unset, any public https host is allowed (loopback, link-local, private, and metadata hosts are still rejected). |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Optional shared rate-limit store. If unset, limits stay in memory on each instance. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Transactional email after web ingest (fail-open: the lead is still saved if email fails). |
 
@@ -125,7 +124,7 @@ Testing conventions (details in [`TESTING.md`](./TESTING.md)):
 
 - **Source of truth is Supabase (PostgreSQL).** `getLeadRepository(client)` returns `SupabaseLeadRepository` for that client (RLS when it is the session client). There is no default service-role client. `getPrivilegedLeadRepository()` is the service-role factory for public ingest and local `AUTH_DISABLED` only. `getSessionLeadRepository()` returns `DemoLeadRepository` for a valid visitor cookie (in-memory fictional leads, no Supabase client) and otherwise the session repository. New persistence code must implement the `LeadRepository` interface, not import provider types in UI or route handlers.
 - **Lead pipeline:** exactly 9 statuses (`Nuevo`, `Pendiente revisar`, `Validado`, `Email preparado`, `Email enviado`, `Respondió`, `Reunión`, `Cliente`, `Descartado`). Legacy Notion names are normalized on read, never written.
-- **n8n prospecting** writes new leads (`Origen=n8n`, state `Nuevo`); the CRM never edits the capture workflow. Webhook dispatches are best-effort and must never fail persistence.
+- Leads arrive from the public form (`Origen=web-galladev`) or manual entry; older rows may still carry `Origen=n8n`. The CRM does not call n8n or any other outbound automation.
 - **UI language is Spanish.** Code, commits, issues, and PRs are in English; user-facing strings in Spanish.
 - **Docs hierarchy** (see [`docs/00-overview/GDW_context.md`](./docs/00-overview/GDW_context.md)): current code and Supabase behavior take precedence, then `docs/01-business-product/GDW_context.md`, then `docs/02-roadmap-delivery/GDW_context.md`.
 
@@ -136,7 +135,7 @@ Solo-dev mode (current): no required reviewers — you merge your own PRs after 
 - Branch protection on `master`: required status checks (`Lint & TypeCheck`, `Unit Tests`, `Component Tests`, `E2E Tests`), require branches up to date, block force pushes and deletions, squash-merge only. **Do not** require pull request reviews or Code Owners review while solo.
 - When a second contributor joins: enable "Require a pull request before merging" with 1 approval + Code Owners review + dismiss stale approvals.
 - Security: secret scanning + push protection enabled; Security Advisories open for private reports.
-- About section: current description, `https://workspace.galladev.com` homepage, topics (`nextjs`, `typescript`, `supabase`, `crm`, `n8n`, `tailwindcss`).
+- About section: current description, `https://workspace.galladev.com` homepage, topics (`nextjs`, `typescript`, `supabase`, `crm`, `tailwindcss`).
 
 ## 10. Getting help
 

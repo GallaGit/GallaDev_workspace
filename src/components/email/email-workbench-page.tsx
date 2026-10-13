@@ -3,12 +3,10 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { toastAutomationDispatch } from "@/components/automations/toast-dispatch";
 import { useSessionAccess } from "@/components/session-access";
 import { Topbar } from "@/components/layout/topbar";
 import { EmailEditor } from "@/components/leads/email-editor";
 import { useEnsureLeadsSynced } from "@/hooks/use-ensure-leads-synced";
-import type { AutomationDispatchResult } from "@/lib/automations/dispatch-result";
 import type { Lead } from "@/lib/domain/lead";
 import { readJsonResponse } from "@/lib/http/read-json";
 import { leadStatusLabel } from "@/lib/i18n/lead-status-label";
@@ -102,7 +100,6 @@ function EmailDraftPanel({
 }) {
   const t = useTranslations("email");
   const tStatus = useTranslations("leadStatus");
-  const tAuto = useTranslations("automations");
   const [subject, setSubject] = useState(selected.emailSubject ?? "");
   const [body, setBody] = useState(selected.emailBody ?? "");
   const [saving, setSaving] = useState(false);
@@ -119,13 +116,9 @@ function EmailDraftPanel({
       });
       const data = await readJsonResponse<{
         lead: Lead;
-        automation?: AutomationDispatchResult;
       }>(res, t("saveError"));
       upsertLead(data.lead);
       toast.success(t("saved"));
-      toastAutomationDispatch(data.automation, {
-        dispatched: tAuto("dispatched"),
-      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("saveError"));
     } finally {

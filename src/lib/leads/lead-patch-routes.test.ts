@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getApiSession, requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
-import { dispatchLeadUpdated } from "@/lib/automations/dispatch";
 
 vi.mock("@/lib/api-auth", () => ({
   requireApiSession: vi.fn(async () => null),
@@ -15,15 +14,6 @@ vi.mock("@/lib/api-auth", () => ({
 
 vi.mock("@/lib/repository/get-repository", () => ({
   getSessionLeadRepository: vi.fn(),
-}));
-
-vi.mock("@/lib/automations/dispatch", () => ({
-  changedKeys: (patch: object) => Object.keys(patch),
-  dispatchLeadUpdated: vi.fn(() => ({ status: "skipped", reason: "inactive" })),
-  summarizeDispatch: (results: { status: string }[]) => ({
-    dispatched: results.filter((result) => result.status === "dispatched").length,
-    skipped: results.filter((result) => result.status !== "dispatched").length,
-  }),
 }));
 
 const update = vi.fn(async (id: string, patch: Record<string, unknown>) => ({
@@ -71,7 +61,7 @@ describe("PATCH /api/leads/:id", () => {
       status: "Email preparado",
       notes: "Listo",
     });
-    expect(dispatchLeadUpdated).toHaveBeenCalled();
+    expect(body).not.toHaveProperty("automation");
   });
 
   it("returns 400 with field errors for invalid fields and types", async () => {
