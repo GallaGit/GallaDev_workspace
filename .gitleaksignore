@@ -1,0 +1,43 @@
+# Huellas revisadas para gitleaks.
+# SEC-001: .opencode/supabase-auth.json (commits 9e1660f / 83fa4fc), token revocado el 13 oct 2026.
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:generic-api-key:4
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:generic-api-key:5
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:supabase-access-token:4
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:supabase-access-token:5
+83fa4fc303f35576c8695d7e7da78c0c09541149:.opencode/supabase-auth.json:generic-api-key:4
+83fa4fc303f35576c8695d7e7da78c0c09541149:.opencode/supabase-auth.json:generic-api-key:5
+83fa4fc303f35576c8695d7e7da78c0c09541149:.opencode/supabase-auth.json:supabase-access-token:4
+83fa4fc303f35576c8695d7e7da78c0c09541149:.opencode/supabase-auth.json:supabase-access-token:5
+# Falsos positivos históricos: claves publicables de Supabase, ejemplos de docs y tests.
+3fcf7e70019fd2f1c2ca93ad2a28d0795532e00d:src/lib/demo/token.test.ts:generic-api-key:21
+bdc9eb25fcce28da0d69964032175e4e4153caed:.github/workflows/ci.yml:generic-api-key:60
+bdc9eb25fcce28da0d69964032175e4e4153caed:.github/workflows/ci.yml:generic-api-key:62
+af85de4759543f1b97a882e1e3c97065dabb8dbc:.github/workflows/ci.yml:generic-api-key:71
+b4135fa32747404f0c3003723894c5c598ead1fc:.env.example:generic-api-key:11
+b4135fa32747404f0c3003723894c5c598ead1fc:.env.example:generic-api-key:16
+c282f83f0903f541fa0e42d1f7e01db0b47140f1:.env.example:generic-api-key:11
+c282f83f0903f541fa0e42d1f7e01db0b47140f1:.env.example:generic-api-key:16
+0b3fc91b8dc57d99e6c6477a3d0bb912f9a9eb9a:.agents/skills/code-security/rules/kubernetes.md:generic-api-key:254
+0b3fc91b8dc57d99e6c6477a3d0bb912f9a9eb9a:.agents/skills/code-security/rules/kubernetes.md:generic-api-key:266
+0b3fc91b8dc57d99e6c6477a3d0bb912f9a9eb9a:.agents/skills/code-security/rules/secrets.md:stripe-access-token:143
+0b3fc91b8dc57d99e6c6477a3d0bb912f9a9eb9a:.agents/skills/code-security/AGENTS.md:generic-api-key:3728
+0b3fc91b8dc57d99e6c6477a3d0bb912f9a9eb9a:.agents/skills/code-security/AGENTS.md:generic-api-key:3740
+0b3fc91b8dc57d99e6c6477a3d0bb912f9a9eb9a:.agents/skills/code-security/AGENTS.md:stripe-access-token:1383
+# Falsos positivos en el árbol actual (modo dir).
+.github/workflows/ci.yml:generic-api-key:67
+.github/workflows/ci.yml:generic-api-key:69
+src/lib/demo/token.test.ts:generic-api-key:21
+.env.example:generic-api-key:31
+.env.example:generic-api-key:36
+# SEC-001 con reglas personalizadas (.gitleaks.toml), revocado el 13 oct 2026.
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:supabase-personal-access-token:4
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:opencode-or-auth-json-file:0
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:supabase-auth-json-token:4
+9e1660fca99e6a52c7d77a6f0a0203ef3aa59cbc:.opencode/supabase-auth.json:supabase-auth-json-token:5
+# Ficheros .opencode/ ya versionados y sin secretos (regla de ruta).
+d6780f11458e7b9cac59c809d7455fdd7456cf90:.opencode/opencode.json:opencode-or-auth-json-file:0
+894d0ca3b8139082bc50bda4efa0065cb063d690:.opencode/plans/leads-filters-compact.md:opencode-or-auth-json-file:0
+274d0c7ff66e29080de1ce0aa28a814c0cc5fee1:.opencode/skill/ui-ux-pro-max:opencode-or-auth-json-file:0
+.opencode/opencode.json:opencode-or-auth-json-file:0
+.opencode/skill/ui-ux-pro-max:opencode-or-auth-json-file:0
+.opencode/plans/leads-filters-compact.md:opencode-or-auth-json-file:0
