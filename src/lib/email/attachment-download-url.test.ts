@@ -7,6 +7,7 @@ describe("isTrustedResendDownloadUrl (GDW-SEC-023)", () => {
     "https://cdn.resend.com/y",
     "https://resend.com/a",
     "https://files.resend.dev/a",
+    "https://cdn.resend.app/receiving/id/attachments/id?Expires=1&Signature=x",
   ])("acepta %s", (u) => expect(isTrustedResendDownloadUrl(u)).toBe(true));
 
   it.each([
@@ -14,6 +15,7 @@ describe("isTrustedResendDownloadUrl (GDW-SEC-023)", () => {
     "https://evil.com/x",
     "https://resend.com.evil.com/x",
     "https://evilresend.com/x",
+    "https://resend.app.evil.com/x",
     "https://user:pw@cdn.resend.com/x",
     "javascript:alert(1)",
     "not a url",
