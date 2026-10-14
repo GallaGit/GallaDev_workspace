@@ -276,61 +276,18 @@ function MessageCard({
 
 function AttachmentButton({ attachment }: { attachment: EmailAttachment }) {
   const t = useTranslations("correo");
-  const [pending, setPending] = useState(false);
   const previewable = isPreviewableContentType(attachment.content_type);
   const sizeLabel = formatAttachmentSize(attachment.size_bytes);
   const meta = [attachment.content_type, sizeLabel].filter(Boolean).join(" · ");
-
-  const onActivate = async () => {
-    if (pending) return;
-    setPending(true);
-    try {
-      const res = await fetch(`/api/email/attachments/${attachment.id}`);
-      if (res.status === 410) {
-        toast.error(t("attachmentExpired"));
-        return;
-      }
-      const data = await readJsonResponse<{
-        url: string;
-        filename: string;
-        previewable?: boolean;
-        reason?: string;
-      }>(res, t("attachmentUnavailable"));
-
-      const openInline = data.previewable ?? previewable;
-      if (openInline) {
-        const win = window.open(data.url, "_blank", "noopener,noreferrer");
-        if (!win) {
-          window.location.assign(data.url);
-        }
-        return;
-      }
-
-      const a = document.createElement("a");
-      a.href = data.url;
-      a.download = data.filename || attachment.filename;
-      a.rel = "noopener noreferrer";
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : t("attachmentUnavailable");
-      if (/410|expir|conserva|30\s*d[ií]as|no longer/i.test(message)) {
-        toast.error(t("attachmentExpired"));
-      } else {
-        toast.error(message);
-      }
-    } finally {
-      setPending(false);
-    }
-  };
+  // Proxy de mismo origen: una sola navegación (pestaña nueva o descarga).
+  const href = `/api/email/attachments/${attachment.id}/file`;
 
   return (
-    <button
-      type="button"
-      onClick={onActivate}
-      disabled={pending}
+    <a
+      href={href}
+      {...(previewable
+        ? { target: "_blank", rel: "noopener noreferrer" }
+        : { download: attachment.filename || true })}
       title={meta}
       aria-label={
         previewable
@@ -340,7 +297,6 @@ function AttachmentButton({ attachment }: { attachment: EmailAttachment }) {
       className={cn(
         "inline-flex max-w-full items-center gap-1.5 rounded border border-gris-200 dark:border-gris-700 bg-gris-50 dark:bg-gris-800 px-2 py-1 text-left text-[11px] text-gris-700 dark:text-gris-200",
         "hover:border-rojo/40 hover:bg-rojo/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rojo/40",
-        "disabled:cursor-wait disabled:opacity-60",
       )}
     >
       {previewable ? (
@@ -352,10 +308,7 @@ function AttachmentButton({ attachment }: { attachment: EmailAttachment }) {
       {sizeLabel ? (
         <span className="shrink-0 text-gris-500 dark:text-gris-400">{sizeLabel}</span>
       ) : null}
-      {pending ? (
-        <span className="sr-only">{t("attachmentOpening")}</span>
-      ) : null}
-    </button>
+    </a>
   );
 }
 

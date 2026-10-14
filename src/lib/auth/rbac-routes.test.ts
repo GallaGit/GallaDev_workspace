@@ -320,6 +320,9 @@ describe("correo: solo Admin", () => {
     const reply = await import("@/app/api/email/threads/[id]/reply/route");
     const backfill = await import("@/app/api/email/backfill-bodies/route");
     const attachments = await import("@/app/api/email/attachments/[id]/route");
+    const attachmentFile = await import(
+      "@/app/api/email/attachments/[id]/file/route"
+    );
     const ctx = {
       params: Promise.resolve({
         id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
@@ -348,6 +351,14 @@ describe("correo: solo Admin", () => {
       await attachments.GET(
         new Request(
           "http://localhost/api/email/attachments/ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+        ),
+        ctx,
+      ),
+    );
+    await expectForbidden(
+      await attachmentFile.GET(
+        new Request(
+          "http://localhost/api/email/attachments/ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd/file",
         ),
         ctx,
       ),

@@ -23,7 +23,7 @@ const RATE_MAX = 30;
  * Devuelve una URL firmada temporal de Resend para el adjunto.
  * Auth: requireAdmin + RLS. El id es el UUID de email_attachments
  * (nunca un id de Resend en la URL → evita IDOR entre correos).
- * No hace proxy del fichero.
+ * El fichero se sirve vía proxy en /api/email/attachments/[id]/file.
  */
 async function getAttachment(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
