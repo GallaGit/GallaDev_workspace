@@ -56,6 +56,19 @@ El login puede ofrecer **Entrar como visitante** («Ver demo sin cuenta»). La s
 
 Para desactivarla en producción sin cambiar código: `DEMO_MODE_ENABLED=false` o borrar la variable, y reiniciar o redesplegar para que el proceso lea el entorno. La entrada está limitada (8 peticiones / 15 minutos / IP). El servidor de Playwright enciende el flag solo para el E2E; producción sigue apagada hasta que definas las variables.
 
+## Rate limiting persistente (Upstash Redis)
+
+Todas las rutas con cupo (login, ingesta pública, análisis IA, demo de visitante, cambio de rol en Equipo y los endpoints de Correo) pasan por un único helper, `consumeRateLimit` en `src/lib/rate-limit.ts`. Con Upstash configurado el cupo lo comparten todas las instancias de Vercel (`@upstash/ratelimit`, ventana deslizante, claves con prefijo `gdw:rl:<namespace>`). Los límites, las claves y las respuestas 429 son los mismos con o sin Redis.
+
+Configuración (una de las dos):
+
+1. **Vercel Marketplace → Upstash (Redis)**: crea la base desde el proyecto de Vercel (Storage / Marketplace → Upstash → Redis) y conéctala al proyecto en Production y Preview. La integración inyecta `KV_REST_API_URL` y `KV_REST_API_TOKEN`.
+2. **upstash.com (plan gratuito)**: crea una base Redis, copia la REST URL y el token desde la página de la base y añádelos en Vercel → Settings → Environment Variables (Production + Preview) como `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`.
+
+Redespliega después de añadir las variables. `UPSTASH_REDIS_REST_*` tiene prioridad sobre `KV_REST_API_*`. La URL debe ser `https://`.
+
+Fallback: sin variables, cada instancia usa su contador en memoria (el comportamiento anterior; sirve en local, no es global en Vercel). Si Redis falla o tarda más de 1,5 s, la petición vuelve al contador en memoria y el servidor registra `[rate-limit] Upstash no disponible, uso memoria`. Nunca devuelve 500 porque Redis esté caído.
+
 ## Errores y logs
 
 `src/app/error.tsx` y `src/app/global-error.tsx` muestran un fallback con reintento y enlace al inicio (`global-error` cubre un fallo del layout raíz). Los catch de ingesta y análisis escriben una línea JSON mediante `src/lib/route-log.ts`. Campos: `route`, `errorClass`, `status` cuando se informa, y `requestId` si la petición ya traía un `x-request-id` o `x-vercel-id` válido. `leadId` es opcional. Sin cuerpos, tokens ni datos personales.
