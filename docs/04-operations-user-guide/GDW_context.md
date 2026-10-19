@@ -56,6 +56,19 @@ The login page can offer **Entrar como visitante** / “Ver demo sin cuenta”. 
 
 To disable in production without a code change, set `DEMO_MODE_ENABLED=false` or remove it, then redeploy/restart so the process picks up the env. Entry is rate-limited (8 requests / 15 minutes / IP). The Playwright server sets the flag only for E2E; production stays off until you set the variables.
 
+## Persistent rate limiting (Upstash Redis)
+
+All rate-limited routes (login, public ingest, AI analysis, visitor demo, Team role changes and the Correo endpoints) go through one helper, `consumeRateLimit` in `src/lib/rate-limit.ts`. With Upstash configured the quota is shared by every Vercel instance (`@upstash/ratelimit`, sliding window, keys prefixed `gdw:rl:<namespace>`). Limits, keys, and 429 responses are the same with or without Redis.
+
+Setup (either option):
+
+1. **Vercel Marketplace → Upstash (Redis)**: create the database from the Vercel project (Storage / Marketplace → Upstash → Redis) and connect it to the project for Production and Preview. The integration injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+2. **upstash.com (free tier)**: create a Redis database, copy the REST URL and token from the database page, and add them in Vercel → Settings → Environment Variables (Production + Preview) as `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+
+Redeploy after adding the variables. `UPSTASH_REDIS_REST_*` takes precedence over `KV_REST_API_*`. The URL must be `https://`.
+
+Fallback: with no variables, each instance keeps its own in-memory counter (the old behavior; fine locally, not global on Vercel). If Redis fails or takes more than 1.5 s, the request falls back to the in-memory counter and the server logs `[rate-limit] Upstash no disponible, uso memoria`. It never returns 500 because Redis is down.
+
 ## Errors and logs
 
 `src/app/error.tsx` and `src/app/global-error.tsx` render a fallback with retry and a link home (`global-error` covers a failure in the root layout). Ingest and analyze catches log one JSON line through `src/lib/route-log.ts`. Fields: `route`, `errorClass`, `status` when set, and `requestId` when the request already carried a safe `x-request-id` or `x-vercel-id`. Optional `leadId`. No request bodies, tokens, or personal data.

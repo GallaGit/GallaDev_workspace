@@ -41,7 +41,7 @@ Variables clave (ver `.env.example` para la lista completa):
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Smoke de login opcional en Playwright. `critical-paths` omite ese login si están vacías. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Usuarios Admin y Seller para `tests/e2e/auth-sync-roles.spec.ts`. CI no tiene credenciales E2E de Viewer. |
 | `INGEST_SECRET` | Secreto de `POST /api/ingest/lead`. Genera con `openssl rand -hex 32`. Solo en servidor (Cloudflare), nunca en el bundle del navegador. |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Almacén opcional del límite de tasa. Si faltan, el cupo queda en memoria en cada instancia. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (o `KV_REST_API_URL`, `KV_REST_API_TOKEN` de la integración Upstash del Vercel Marketplace) | Almacén opcional del límite de tasa (`@upstash/ratelimit`). Si faltan o Redis falla, el cupo vuelve a memoria en cada instancia. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Email transaccional tras ingesta web (fail-open: el lead se guarda aunque falle el email). |
 
 Los secretos de producción viven en las **variables de entorno de Vercel**, nunca en git.

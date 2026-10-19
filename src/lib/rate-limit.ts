@@ -6,11 +6,22 @@
  * `x-forwarded-for`). Sin esa cabecera se usa el último salto de
  * `x-forwarded-for`, luego `x-real-ip` o `request.ip`.
  *
- * El contador en memoria es por instancia. Con `UPSTASH_REDIS_REST_URL` y
- * `UPSTASH_REDIS_REST_TOKEN` el cupo es compartido (ventana fija en Redis).
- * Si faltan o Redis no responde, se vuelve a la memoria: la app no se cae,
- * y el tope deja de ser global. El cupo de IA sigue siendo por id de usuario.
+ * El contador en memoria es por instancia. Con Upstash configurado el cupo es
+ * compartido entre instancias: `@upstash/ratelimit` con ventana deslizante
+ * (`Ratelimit.slidingWindow`) sobre `@upstash/redis`, claves con prefijo
+ * `gdw:rl:<namespace>`. Credenciales: `UPSTASH_REDIS_REST_URL` /
+ * `UPSTASH_REDIS_REST_TOKEN` o, si faltan, `KV_REST_API_URL` /
+ * `KV_REST_API_TOKEN` (los nombres que inyecta la integración Upstash del
+ * Vercel Marketplace).
+ *
+ * Sin credenciales se usa la memoria, sin aviso. Si Redis falla o pasa el
+ * timeout (1,5 s), se registra un `console.warn` y se vuelve al contador de
+ * esta instancia (fail-open): la app no devuelve 500 y el tope deja de ser
+ * global. El cupo de IA sigue siendo por id de usuario.
  */
+
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 const UNKNOWN_IP = "unknown";
 
@@ -81,59 +92,96 @@ export function isRateLimited(
   return false;
 }
 
-/** Solo para tests: vacía todos los contadores. */
-export function resetRateLimits(): void {
-  stores.clear();
+interface UpstashConfig {
+  url: string;
+  token: string;
 }
 
-function upstashConfig(): { url: string; token: string } | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim().replace(/\/$/, "") ?? "";
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ?? "";
+const UPSTASH_TIMEOUT_MS = 1500;
+const IDENTIFIER_MAX_LENGTH = 180;
+
+let redisClient: Redis | null = null;
+let redisClientKey: string | null = null;
+const limiters = new Map<string, Ratelimit>();
+
+/** Solo para tests: vacía contadores, cliente Redis y limitadores. */
+export function resetRateLimits(): void {
+  stores.clear();
+  redisClient = null;
+  redisClientKey = null;
+  limiters.clear();
+}
+
+function envValue(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+/** Lee el entorno en cada llamada: los tests lo sustituyen. */
+function upstashConfig(): UpstashConfig | null {
+  const url = envValue("UPSTASH_REDIS_REST_URL", "KV_REST_API_URL").replace(
+    /\/$/,
+    "",
+  );
+  const token = envValue("UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_TOKEN");
   if (!url.startsWith("https://") || !token) return null;
   return { url, token };
 }
 
-function redisKey(namespace: string, key: string, bucket: number): string {
-  const safe = `${namespace}:${key}`
-    .replace(/[^A-Za-z0-9:._-]/g, "_")
-    .slice(0, 180);
-  return `gdw:rl:${safe}:${bucket}`;
+/** Cliente único por par url/token; se rehace si cambian. */
+function redisFor(config: UpstashConfig): Redis {
+  const key = `${config.url}|${config.token}`;
+  if (!redisClient || redisClientKey !== key) {
+    redisClient = new Redis({
+      url: config.url,
+      token: config.token,
+      retry: { retries: 0 },
+      enableTelemetry: false,
+    });
+    redisClientKey = key;
+    limiters.clear();
+  }
+  return redisClient;
 }
 
-async function upstashLimited(
+function limiterFor(
+  config: UpstashConfig,
   namespace: string,
-  key: string,
-  options: RateLimitOptions,
-  now: number,
-): Promise<boolean> {
-  const config = upstashConfig();
-  if (!config) return isRateLimited(namespace, key, options, now);
-  const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
-  const max = options.max ?? DEFAULT_MAX;
-  const bucket = Math.floor(now / windowMs);
-  const id = redisKey(namespace, key, bucket);
-  const response = await fetch(`${config.url}/pipeline`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify([
-      ["INCR", id],
-      ["PEXPIRE", id, String(windowMs)],
-    ]),
-    signal: AbortSignal.timeout(1500),
+  windowMs: number,
+  max: number,
+): Ratelimit {
+  const cacheKey = `${namespace}|${max}|${windowMs}`;
+  const redis = redisFor(config);
+  const cached = limiters.get(cacheKey);
+  if (cached) return cached;
+  const limiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(max, `${windowMs} ms`),
+    prefix: `gdw:rl:${namespace}`,
+    analytics: false,
+    ephemeralCache: false,
+    timeout: UPSTASH_TIMEOUT_MS,
   });
-  if (!response.ok) throw new Error("upstash");
-  const data = (await response.json()) as { result?: unknown }[];
-  const count = Number(data[0]?.result);
-  if (!Number.isFinite(count)) throw new Error("upstash");
-  return count > max;
+  limiters.set(cacheKey, limiter);
+  return limiter;
+}
+
+function identifier(key: string): string {
+  return key
+    .replace(/[^A-Za-z0-9:._@-]/g, "_")
+    .slice(0, IDENTIFIER_MAX_LENGTH);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**
  * Igual que `isRateLimited`, y en Redis si Upstash está configurado.
- * Un fallo de Redis vuelve al contador de esta instancia.
+ * Cualquier fallo de Redis vuelve al contador de esta instancia.
  */
 export async function consumeRateLimit(
   namespace: string,
@@ -141,14 +189,22 @@ export async function consumeRateLimit(
   options: RateLimitOptions = {},
   now = Date.now(),
 ): Promise<boolean> {
-  if (upstashConfig()) {
-    try {
-      return await upstashLimited(namespace, key, options, now);
-    } catch {
-      return isRateLimited(namespace, key, options, now);
-    }
+  const config = upstashConfig();
+  if (!config) return isRateLimited(namespace, key, options, now);
+  const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
+  const max = options.max ?? DEFAULT_MAX;
+  try {
+    const limiter = limiterFor(config, namespace, windowMs, max);
+    const result = await limiter.limit(identifier(key));
+    if (result.reason === "timeout") throw new Error("timeout de Upstash");
+    return !result.success;
+  } catch (error) {
+    console.warn(
+      "[rate-limit] Upstash no disponible, uso memoria:",
+      errorMessage(error),
+    );
+    return isRateLimited(namespace, key, options, now);
   }
-  return isRateLimited(namespace, key, options, now);
 }
 
 export type CappedJsonResult =

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clientIp,
   consumeRateLimit,
@@ -6,6 +6,37 @@ import {
   readCappedJson,
   resetRateLimits,
 } from "./rate-limit";
+
+const limitMock = vi.hoisted(() => vi.fn());
+const ratelimitOptions = vi.hoisted<unknown[]>(() => []);
+const redisOptions = vi.hoisted<unknown[]>(() => []);
+const slidingWindowMock = vi.hoisted(() =>
+  vi.fn((tokens: number, window: string) => ({
+    kind: "slidingWindow",
+    tokens,
+    window,
+  })),
+);
+
+vi.mock("@upstash/ratelimit", () => {
+  class Ratelimit {
+    static slidingWindow = slidingWindowMock;
+    limit = limitMock;
+    constructor(options: unknown) {
+      ratelimitOptions.push(options);
+    }
+  }
+  return { Ratelimit };
+});
+
+vi.mock("@upstash/redis", () => {
+  class Redis {
+    constructor(options: unknown) {
+      redisOptions.push(options);
+    }
+  }
+  return { Redis };
+});
 
 function requestWith(
   headers: Record<string, string> = {},
@@ -82,34 +113,127 @@ describe("isRateLimited", () => {
 });
 
 describe("consumeRateLimit", () => {
+  beforeEach(() => {
+    for (const name of [
+      "UPSTASH_REDIS_REST_URL",
+      "UPSTASH_REDIS_REST_TOKEN",
+      "KV_REST_API_URL",
+      "KV_REST_API_TOKEN",
+    ]) {
+      vi.stubEnv(name, "");
+    }
+    limitMock.mockReset();
+    ratelimitOptions.length = 0;
+    redisOptions.length = 0;
+    slidingWindowMock.mockClear();
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("sin Upstash usa el contador de esta instancia", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
     expect(await consumeRateLimit("ns", "1.1.1.1", { max: 1 }, 0)).toBe(false);
     expect(await consumeRateLimit("ns", "1.1.1.1", { max: 1 }, 1)).toBe(true);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(redisOptions).toHaveLength(0);
+    expect(ratelimitOptions).toHaveLength(0);
+    expect(limitMock).not.toHaveBeenCalled();
   });
 
-  it("con Upstash cuenta en Redis y no abre otro cupo por cabecera", async () => {
+  it("con Upstash cuenta en Redis con ventana deslizante y namespace", async () => {
     vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
     vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
-    const fetchMock = vi.fn(async () =>
-      Response.json([{ result: 2 }, { result: 1 }]),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    limitMock.mockResolvedValue({ success: false });
     expect(
       await consumeRateLimit("ingest:n8n", "203.0.113.8", { max: 1 }, 5_000),
     ).toBe(true);
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const init = (fetchMock.mock.calls as unknown as [string, { body?: string }][])[0]?.[1];
-    const body = JSON.parse(String(init?.body));
-    expect(body[0][0]).toBe("INCR");
-    expect(String(body[0][1])).toContain("ingest:n8n");
+    expect(limitMock).toHaveBeenCalledWith("203.0.113.8");
+    expect(ratelimitOptions).toHaveLength(1);
+    const options = ratelimitOptions[0] as {
+      prefix: string;
+      limiter: { kind: string; tokens: number; window: string };
+    };
+    expect(options.prefix).toContain("ingest:n8n");
+    expect(options.limiter).toEqual({
+      kind: "slidingWindow",
+      tokens: 1,
+      window: "60000 ms",
+    });
+  });
+
+  it("devuelve false cuando Upstash deja pasar la petición", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
+    limitMock.mockResolvedValue({ success: true });
+    expect(await consumeRateLimit("ns", "9.9.9.9", { max: 1 }, 0)).toBe(false);
+  });
+
+  it("el cupo de Upstash manda aunque la memoria diga lo contrario", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
+    limitMock.mockResolvedValue({ success: true });
+    expect(await consumeRateLimit("ns", "2.2.2.2", { max: 1 }, 0)).toBe(false);
+    expect(await consumeRateLimit("ns", "2.2.2.2", { max: 1 }, 1)).toBe(false);
+    expect(limitMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("con KV_REST_API_* de Vercel KV también usa Redis", async () => {
+    vi.stubEnv("KV_REST_API_URL", "https://kv.example.upstash.io/");
+    vi.stubEnv("KV_REST_API_TOKEN", "kv-token");
+    limitMock.mockResolvedValue({ success: true });
+    expect(await consumeRateLimit("ns", "3.3.3.3", { max: 5 }, 0)).toBe(false);
+    expect(limitMock).toHaveBeenCalledWith("3.3.3.3");
+    expect(redisOptions[0]).toMatchObject({
+      url: "https://kv.example.upstash.io",
+      token: "kv-token",
+    });
+  });
+
+  it("rehace el limitador si cambian las credenciales de Upstash", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-a");
+    limitMock.mockResolvedValue({ success: true });
+    expect(await consumeRateLimit("ns", "7.7.7.7", { max: 1 }, 0)).toBe(false);
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-b");
+    expect(await consumeRateLimit("ns", "7.7.7.7", { max: 1 }, 1)).toBe(false);
+    expect(redisOptions).toHaveLength(2);
+    expect(redisOptions[1]).toMatchObject({ token: "token-b" });
+    expect(ratelimitOptions).toHaveLength(2);
+  });
+
+  it("si Upstash lanza vuelve a memoria y avisa sin romperse", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    limitMock.mockRejectedValue(new Error("boom upstash"));
+    expect(await consumeRateLimit("ns", "4.4.4.4", { max: 1 }, 0)).toBe(false);
+    expect(await consumeRateLimit("ns", "4.4.4.4", { max: 1 }, 1)).toBe(true);
+    expect(warn).toHaveBeenCalledWith(
+      "[rate-limit] Upstash no disponible, uso memoria:",
+      "boom upstash",
+    );
+    expect(warn.mock.calls.flat().join(" ")).not.toContain("token-test");
+  });
+
+  it("un timeout de Upstash se trata como fallo y cae a memoria", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    limitMock.mockResolvedValue({ success: true, reason: "timeout" });
+    expect(await consumeRateLimit("ns", "5.5.5.5", { max: 1 }, 0)).toBe(false);
+    expect(await consumeRateLimit("ns", "5.5.5.5", { max: 1 }, 1)).toBe(true);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("una URL que no es https se trata como no configurada", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "http://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token-test");
+    expect(await consumeRateLimit("ns", "6.6.6.6", { max: 1 }, 0)).toBe(false);
+    expect(await consumeRateLimit("ns", "6.6.6.6", { max: 1 }, 1)).toBe(true);
+    expect(redisOptions).toHaveLength(0);
+    expect(ratelimitOptions).toHaveLength(0);
+    expect(limitMock).not.toHaveBeenCalled();
   });
 });
 

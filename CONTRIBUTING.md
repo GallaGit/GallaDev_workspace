@@ -42,7 +42,7 @@ Key env facts (see `.env.example` for the full list):
 | `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` | Optional Playwright login smoke. `critical-paths` skips that login when they are empty. |
 | `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_SELLER_EMAIL`, `E2E_SELLER_PASSWORD` | Admin and Seller users for `tests/e2e/auth-sync-roles.spec.ts`. CI has no Viewer E2E credentials. |
 | `INGEST_SECRET` | Shared secret for `POST /api/ingest/lead` only. Generate with `openssl rand -hex 32`. Keep it on the server (Cloudflare), never in the browser bundle. |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Optional shared rate-limit store. If unset, limits stay in memory on each instance. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`, `KV_REST_API_TOKEN` from the Vercel Marketplace Upstash integration) | Optional shared rate-limit store (`@upstash/ratelimit`). If unset or Redis fails, limits fall back to memory on each instance. |
 | `RESEND_API_KEY`, `EMAIL_FROM_CLIENTS`, `EMAIL_NOTIFY_TO` | Transactional email after web ingest (fail-open: the lead is still saved if email fails). |
 
 Production secrets live in **Vercel environment variables**, never in git.
