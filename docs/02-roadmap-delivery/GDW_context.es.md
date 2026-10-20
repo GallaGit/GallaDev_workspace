@@ -59,7 +59,8 @@ Se añade en el login y convive con «Entrar como visitante». El título visibl
 
 - **CodeQL** (también el último ítem de higiene de M1). No es check obligatorio. Repo público: el default setup no necesita Advanced Security.
 - **Tests E2E de Viewer (403).** Las credenciales E2E de CI son solo Admin y Seller (`E2E_ADMIN_*`, `E2E_SELLER_*`, más `E2E_TEST_*`). No hay secreto de Viewer, así que los 403 de escritura los cubren tests unitarios (`src/lib/auth/rbac-routes.test.ts`) y no Playwright.
-- **Rate limiting distribuido.** `src/lib/rate-limit.ts` es un mapa en memoria por instancia. No se comparte entre instancias serverless.
+- ~~**Rate limiting distribuido.**~~ **Hecho (commit `657c539`).** `src/lib/rate-limit.ts` usa un cupo persistente con Upstash (`@upstash/ratelimit`) cuando está configurado, con fallback en memoria por instancia.
+- ~~**Retención de datos personales.**~~ **Hecho (commit `833e856`).** Borrado automático de datos personales (12 meses / 6 años).
 - **Historial de auditoría.** Especificado, no implementado. Ver abajo.
 
 ### Planificado: historial de auditoría (especificado, no implementado)
@@ -73,6 +74,21 @@ registro de auditoría en sí, no. No tratarlo como comportamiento actual.
 
 - **Portal de cliente (traza del proyecto).** Especificado, no implementado, y no entra en M2. Ver [`client-portal.es.md`](./client-portal.es.md). Cuando un lead pasa a `Cliente`, un rol nuevo `client` (hoy `app_role` es solo Admin, Seller y Viewer) vería su proyecto en `/portal`. Decisiones de producto aprobadas por Ociel el 26 Sep 2026.
 - **Gestión de emails en la plataforma GDW** («Correo», `/correo`). **Implementada el 30 Sep 2026 (PR #65).** Es la misma spec que el email de empresa: [`company-email.es.md`](./company-email.es.md) (EN: [`company-email.md`](./company-email.md)). El placeholder anterior (sin spec) queda cerrado por la decisión del 29 Sep 2026.
+
+## Roadmap por versiones
+
+Las versiones siguen SemVer (pre-1.0: un `feat` sube la minor). Milestones de GitHub: `v0.3.0`, `v0.4.0`.
+
+- **v0.1.0 (publicada, 23 Sep 2026):** go-live Auth + Supabase (M1).
+- **v0.2.0 (ya en `master`, pendiente de publicar):** módulo Correo (hola@ / ociel@, redactar, borradores, bandeja, búsqueda FTS, adjuntos), i18n en inglés, cierre de hallazgos de seguridad SEC-005 a SEC-023, gitleaks, retirada de n8n, rate limiting persistente con Upstash y retención automática de datos.
+- **v0.3.0 (resto de M2):** CodeQL, tests E2E de Viewer (403), historial de auditoría, limpieza de mocks de Notion y sección «¿Qué es?».
+- **v0.4.0+ (M3):** portal de cliente, billing, realtime.
+
+## Releases
+
+Las releases se automatizan con [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release-please.yml`, `release-please-config.json`, `.release-please-manifest.json`). En cada push a `master`, la acción lee los Conventional Commits y mantiene una PR de release que sube la versión de `package.json` y actualiza `CHANGELOG.md`. Al mergearla (manual, Ociel) se crean el tag `vX.Y.Z` y la GitHub Release. `build`, `chore`, `ci`, `test`, `refactor` y `style` no salen en el changelog.
+
+Para que el CI obligatorio se ejecute en la PR de release, crear un PAT fine-grained (solo repo `GallaDev_workspace`; Contents: Read and write; Pull requests: Read and write) y guardarlo como secreto de Actions `RELEASE_PLEASE_TOKEN`. Sin él, el workflow usa `GITHUB_TOKEN` y el CI no se dispara solo en esa PR.
 
 ## Reglas de entrega
 

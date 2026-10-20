@@ -1,0 +1,22 @@
+name: Release Please
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    steps:
+      # Con RELEASE_PLEASE_TOKEN (PAT fine-grained) la release PR dispara el CI obligatorio.
+      # Sin él, usa GITHUB_TOKEN (funciona, pero el CI no se lanza solo en la release PR).
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
