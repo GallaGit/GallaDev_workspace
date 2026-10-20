@@ -41,3 +41,6 @@ d6780f11458e7b9cac59c809d7455fdd7456cf90:.opencode/opencode.json:opencode-or-aut
 .opencode/opencode.json:opencode-or-auth-json-file:0
 .opencode/skill/ui-ux-pro-max:opencode-or-auth-json-file:0
 .opencode/plans/leads-filters-compact.md:opencode-or-auth-json-file:0
+# PR #90 (retención): secreto ficticio de test, no es una credencial real.
+fb3a9fd118ea9c9ce61be289ff1274e988c64c2d:src/lib/retention/retention-route.test.ts:generic-api-key:9
+fb3a9fd118ea9c9ce61be289ff1274e988c64c2d:src/lib/retention/retention.test.ts:generic-api-key:16

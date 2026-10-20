@@ -69,6 +69,21 @@ Redespliega después de añadir las variables. `UPSTASH_REDIS_REST_*` tiene prio
 
 Fallback: sin variables, cada instancia usa su contador en memoria (el comportamiento anterior; sirve en local, no es global en Vercel). Si Redis falla o tarda más de 1,5 s, la petición vuelve al contador en memoria y el servidor registra `[rate-limit] Upstash no disponible, uso memoria`. Nunca devuelve 500 porque Redis esté caído.
 
+## Retención de datos (borrado automático)
+
+Requisito legal (RGPD art. 5.1.e; política de privacidad, apartados 4 y 8). Plazos:
+
+- **Leads / contactos que no son clientes:** se borran tras **12 meses sin actividad**.
+- **Clientes** (`status = 'Cliente'`, o cualquier lead cuya actividad mencione «Cliente»): se conservan **6 años** desde la última actividad y después se borran (art. 30 Código de Comercio).
+
+«Última actividad» es la fecha más reciente entre `created_at`, `updated_at`, `discovered_at`, `notion_last_edited_time`, `last_activity`, `last_contact`, `next_follow_up`, la última entrada de `lead_activities`, el último mensaje de sus hilos de correo y el último borrador ligado. Ante la duda se conserva.
+
+Al borrar un lead caen en cascada sus actividades y borradores; sus hilos de correo se borran solo si el último mensaje tiene más de 12 meses (los más recientes se conservan sin enlace al lead). Las rutas de adjuntos en Storage se borran si `EMAIL_ATTACHMENTS_BUCKET` está definido.
+
+Implementación: función SQL `public.purge_expired_personal_data(dry_run)` (migración `20261020100000_data_retention.sql`, SECURITY DEFINER, solo `service_role`) llamada a diario por `GET /api/cron/retention` (Vercel Cron, `CRON_SECRET`). Por defecto es **dry-run**; borra solo con `RETENTION_ENABLED=true`. `?dry_run=1` fuerza el modo prueba. El log es una línea con recuentos, sin datos personales.
+
+Prueba manual: `curl -H "Authorization: Bearer $CRON_SECRET" "https://<host>/api/cron/retention?dry_run=1"`.
+
 ## Errores y logs
 
 `src/app/error.tsx` y `src/app/global-error.tsx` muestran un fallback con reintento y enlace al inicio (`global-error` cubre un fallo del layout raíz). Los catch de ingesta y análisis escriben una línea JSON mediante `src/lib/route-log.ts`. Campos: `route`, `errorClass`, `status` cuando se informa, y `requestId` si la petición ya traía un `x-request-id` o `x-vercel-id` válido. `leadId` es opcional. Sin cuerpos, tokens ni datos personales.
