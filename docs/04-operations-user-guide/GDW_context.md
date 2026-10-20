@@ -69,6 +69,21 @@ Redeploy after adding the variables. `UPSTASH_REDIS_REST_*` takes precedence ove
 
 Fallback: with no variables, each instance keeps its own in-memory counter (the old behavior; fine locally, not global on Vercel). If Redis fails or takes more than 1.5 s, the request falls back to the in-memory counter and the server logs `[rate-limit] Upstash no disponible, uso memoria`. It never returns 500 because Redis is down.
 
+## Data retention (automatic deletion)
+
+Legal requirement (GDPR art. 5.1.e; privacy policy sections 4 and 8). Periods:
+
+- **Leads / contacts that are not clients:** deleted after **12 months without activity**.
+- **Clients** (`status = 'Cliente'`, or any lead whose activity mentions "Cliente"): kept **6 years** after last activity, then deleted (Spanish Commercial Code art. 30).
+
+"Last activity" is the latest of `created_at`, `updated_at`, `discovered_at`, `notion_last_edited_time`, `last_activity`, `last_contact`, `next_follow_up`, the latest `lead_activities` row, the latest message of linked email threads and the latest linked draft. When in doubt, the record is kept.
+
+Deleting a lead cascades to its activities and drafts; linked email threads are deleted only if their last message is older than 12 months (newer threads are kept, unlinked). Storage attachment paths are removed when `EMAIL_ATTACHMENTS_BUCKET` is set.
+
+Implementation: SQL function `public.purge_expired_personal_data(dry_run)` (migration `20261020100000_data_retention.sql`, SECURITY DEFINER, `service_role` only) called daily by `GET /api/cron/retention` (Vercel Cron, `CRON_SECRET`). Default is **dry-run**; it deletes only with `RETENTION_ENABLED=true`. `?dry_run=1` forces dry-run. The log is one line with counts, no personal data.
+
+Manual check: `curl -H "Authorization: Bearer $CRON_SECRET" "https://<host>/api/cron/retention?dry_run=1"`.
+
 ## Errors and logs
 
 `src/app/error.tsx` and `src/app/global-error.tsx` render a fallback with retry and a link home (`global-error` covers a failure in the root layout). Ingest and analyze catches log one JSON line through `src/lib/route-log.ts`. Fields: `route`, `errorClass`, `status` when set, and `requestId` when the request already carried a safe `x-request-id` or `x-vercel-id`. Optional `leadId`. No request bodies, tokens, or personal data.

@@ -29,6 +29,7 @@ We aim to acknowledge within 72 hours, share a remediation plan, and credit repo
 - Never put real keys, tokens, passwords, or customer data in issues, PRs, logs, or test fixtures.
 - Local secrets belong in gitignored `.env.local` / `data/settings.local.json`; production secrets in Vercel environment variables.
 - If you suspect a leak, rotate the credential immediately and notify a maintainer — deleting it in a later commit is not enough (git history retains it).
+- **Data retention:** non-client leads are deleted after 12 months without activity and clients after 6 years (daily cron `/api/cron/retention`, protected by `CRON_SECRET`, dry-run by default). Details in `docs/04-operations-user-guide/GDW_context.md`.
 
 ## Scope notes
 

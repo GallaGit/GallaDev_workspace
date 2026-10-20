@@ -29,6 +29,7 @@ Objetivo: confirmar recepción en 72 horas, compartir un plan de remediación y 
 - Nunca pongas claves reales, tokens, contraseñas ni datos de clientes en issues, PRs, logs o fixtures de test.
 - Los secretos locales van en `.env.local` / `data/settings.local.json` (gitignoreados); los de producción, en las variables de entorno de Vercel.
 - Si sospechas una filtración, rota la credencial de inmediato y avisa a un maintainer — borrarla en un commit posterior no basta (el historial de git la conserva).
+- **Retención de datos:** los leads no clientes se borran tras 12 meses sin actividad y los clientes tras 6 años (cron diario `/api/cron/retention`, protegido con `CRON_SECRET`, dry-run por defecto). Detalle en `docs/04-operations-user-guide/GDW_context.es.md`.
 
 ## Notas de alcance
 

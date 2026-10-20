@@ -96,6 +96,10 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/api/email/inbound") {
     return forward();
   }
+  // Cron de retención: auth por CRON_SECRET, no por sesión.
+  if (pathname === "/api/cron/retention") {
+    return forward();
+  }
   if (pathname.startsWith("/login")) {
     return forward();
   }
