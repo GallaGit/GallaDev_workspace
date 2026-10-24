@@ -14,6 +14,7 @@ import {
   filterReadableLeads,
 } from "@/lib/leads/enforce-lead-write";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
+import { logAudit } from "@/lib/audit/log-audit";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,13 @@ export async function POST(request: Request) {
         : { ...result.value, responsibleId: null };
     const repo = await getSessionLeadRepository();
     const lead = await repo.create(input);
+    await logAudit({
+      actorId: actor.id,
+      action: "create",
+      entity: "lead",
+      entityId: lead.id,
+      diff: { after: input },
+    });
     return NextResponse.json({ lead }, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al crear el lead";
@@ -123,6 +131,7 @@ export async function PATCH(request: Request) {
       );
     }
     const { ids, patch } = validated.value;
+    const actor = await getApiSession();
     const repo = await getSessionLeadRepository();
     const updated = [];
     for (const id of ids) {
@@ -132,6 +141,15 @@ export async function PATCH(request: Request) {
       }
       const lead = await repo.update(id, gate.patch);
       updated.push(lead);
+      if (actor) {
+        await logAudit({
+          actorId: actor.id,
+          action: "update",
+          entity: "lead",
+          entityId: lead.id,
+          diff: { patch: gate.patch },
+        });
+      }
     }
     return NextResponse.json({ leads: updated });
   } catch (e) {
