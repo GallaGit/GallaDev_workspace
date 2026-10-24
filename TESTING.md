@@ -151,7 +151,7 @@ describe('normalizeEmail', () => {
 
 ### Mocking
 
-`vitest.setup.ts` does not start MSW. It stubs browser APIs (`matchMedia`, `localStorage`, `ResizeObserver`). `tests/mocks/handlers.ts` still registers `https://api.notion.com/v1/data-sources/:id/query`, and `tests/mocks/server.ts` is not imported by the setup. That pair is leftover from the Notion runtime. Do not copy it. Route and auth tests mock modules with `vi.mock` (see `src/lib/demo/*.test.ts` and `src/lib/auth/rbac-routes.test.ts`). Retargeting `handlers.ts` is a follow-up; this docs pass does not change that file.
+`vitest.setup.ts` does not start MSW. It stubs browser APIs (`matchMedia`, `localStorage`, `ResizeObserver`). MSW mocks were removed with Notion, and there is no `tests/mocks` directory. Route and auth tests mock modules with `vi.mock` (see `src/lib/demo/*.test.ts` and `src/lib/auth/rbac-routes.test.ts`).
 
 ---
 
