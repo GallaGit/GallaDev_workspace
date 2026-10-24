@@ -3,6 +3,7 @@ import { getApiSession, requireAdmin } from "@/lib/api-auth";
 import { isAppRole, type AppRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
+import { logAudit } from "@/lib/audit/log-audit";
 
 const ROLE_RATE_WINDOW_MS = 60_000;
 const ROLE_RATE_MAX = 20;
@@ -138,6 +139,13 @@ export async function PATCH(request: Request) {
         { status: 500 },
       );
     }
+    await logAudit({
+      actorId: actor.id,
+      action: "role_change",
+      entity: "profile",
+      entityId: id,
+      diff: { role },
+    });
     return NextResponse.json({ ok: true, member: { id, role } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al asignar el rol";
