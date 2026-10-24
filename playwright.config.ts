@@ -56,6 +56,8 @@ export default defineConfig({
       E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? '',
       E2E_SELLER_EMAIL: process.env.E2E_SELLER_EMAIL ?? '',
       E2E_SELLER_PASSWORD: process.env.E2E_SELLER_PASSWORD ?? '',
+      E2E_VIEWER_EMAIL: process.env.E2E_VIEWER_EMAIL ?? '',
+      E2E_VIEWER_PASSWORD: process.env.E2E_VIEWER_PASSWORD ?? '',
       // La demo del E2E no usa E2E_* ni Supabase. Solo el servidor de pruebas.
       // Secreto del job (E2E_DEMO_SESSION_SECRET) o uno generado para este proceso.
       DEMO_MODE_ENABLED: 'true',
