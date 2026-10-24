@@ -16,7 +16,7 @@ const createMockLead = (overrides: Partial<Lead> = {}): Lead => {
   const slug = id.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
   return {
     id,
-    url: `https://notion.so/${slug}`,
+    url: `https://example.com/leads/${slug}`,
     companyName: `Company ${slug}`,
     website: `https://${slug}.example.com`,
     phone: `+34 600 ${slug.slice(-3).padStart(3, '0')} 111`,
