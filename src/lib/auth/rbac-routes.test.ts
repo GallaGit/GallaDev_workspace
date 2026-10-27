@@ -474,6 +474,20 @@ describe("GET /api/team", () => {
       ),
     );
   });
+
+  it("Viewer no asigna roles", async () => {
+    asRole("Viewer");
+    const { PATCH } = await import("@/app/api/team/route");
+    await expectForbidden(
+      await PATCH(
+        jsonRequest("http://localhost/api/team", "PATCH", {
+          id: "11111111-1111-4111-8111-111111111111",
+          role: "Admin",
+        }),
+      ),
+    );
+    expect(adminClient).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/session", () => {
