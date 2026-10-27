@@ -42,7 +42,7 @@ function baseRow(overrides: Partial<LeadRow> = {}): LeadRow {
     next_follow_up: "2026-09-20",
     favorite: true,
     ai_analysis: "Dolor: facturación manual",
-    url: "https://notion.so/abc",
+    url: "https://example.com/leads/abc",
     notion_last_edited_time: "2026-09-12T10:00:00.000Z",
     archived: false,
     tags: [],
