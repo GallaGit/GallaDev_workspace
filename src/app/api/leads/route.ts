@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       action: "create",
       entity: "lead",
       entityId: lead.id,
-      diff: { after: input },
+      changedFields: Object.keys(input),
     });
     return NextResponse.json({ lead }, { status: 201 });
   } catch (e) {
@@ -147,7 +147,7 @@ export async function PATCH(request: Request) {
           action: "update",
           entity: "lead",
           entityId: lead.id,
-          diff: { patch: gate.patch },
+          changedFields: Object.keys(gate.patch),
         });
       }
     }

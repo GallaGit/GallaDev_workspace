@@ -32,7 +32,7 @@ describe("logAudit", () => {
       action: "create",
       entity: "lead",
       entityId: "l1",
-      diff: { after: { name: "Acme" } },
+      changedFields: ["name", "email", "name"],
     });
 
     expect(insertMock).toHaveBeenCalledWith({
@@ -40,8 +40,16 @@ describe("logAudit", () => {
       action: "create",
       entity: "lead",
       entity_id: "l1",
-      diff: { after: { name: "Acme" } },
+      diff: { fields: ["email", "name"] },
     });
+    const row = insertMock.mock.calls[0][0];
+    expect(JSON.stringify(row)).not.toContain("Acme");
+  });
+
+  it("stores empty field list when none given", async () => {
+    const { logAudit } = await import("./log-audit");
+    await logAudit({ actorId: "u1", action: "delete", entity: "lead", entityId: "l1" });
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ diff: { fields: [] } }));
   });
 
   it("swallows insert errors and thrown errors", async () => {
@@ -92,7 +100,7 @@ describe("logAudit", () => {
       action: "role_change",
       entity: "profile",
       entityId: "u2",
-      diff: { role: "Admin" },
+      changedFields: ["role"],
     });
     expect(insertMock).not.toHaveBeenCalled();
   });

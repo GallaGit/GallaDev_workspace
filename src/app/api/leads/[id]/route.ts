@@ -66,7 +66,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
         action: "update",
         entity: "lead",
         entityId: id,
-        diff: { patch: gate.patch },
+        changedFields: Object.keys(gate.patch),
       });
     }
     return NextResponse.json({ lead });
@@ -94,7 +94,7 @@ export async function DELETE(request: Request, ctx: Ctx) {
         action: "delete",
         entity: "lead",
         entityId: id,
-        diff: { archived: true },
+        changedFields: ["archived"],
       });
     }
     return NextResponse.json({ ok: true });

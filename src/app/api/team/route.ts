@@ -144,7 +144,7 @@ export async function PATCH(request: Request) {
       action: "role_change",
       entity: "profile",
       entityId: id,
-      diff: { role },
+      changedFields: ["role"],
     });
     return NextResponse.json({ ok: true, member: { id, role } });
   } catch (e) {
