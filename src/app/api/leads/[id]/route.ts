@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireApiSession, requireLeadWriter } from "@/lib/api-auth";
+import { getApiSession, requireApiSession, requireLeadWriter } from "@/lib/api-auth";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
 import {
   constrainLeadPatch,
   filterReadableLeads,
 } from "@/lib/leads/enforce-lead-write";
 import { validateLeadPatch } from "@/lib/leads/validate-lead-patch";
+import { logAudit } from "@/lib/audit/log-audit";
 
 export const dynamic = "force-dynamic";
 
@@ -52,12 +53,22 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
   try {
     const { id } = await ctx.params;
+    const actor = await getApiSession();
     const repo = await getSessionLeadRepository();
     const gate = await constrainLeadPatch(repo, id, parsed.value);
     if (!gate.ok) {
       return NextResponse.json({ error: gate.error }, { status: gate.status });
     }
     const lead = await repo.update(id, gate.patch);
+    if (actor) {
+      await logAudit({
+        actorId: actor.id,
+        action: "update",
+        entity: "lead",
+        entityId: id,
+        changedFields: Object.keys(gate.patch),
+      });
+    }
     return NextResponse.json({ lead });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al actualizar lead";
@@ -70,12 +81,22 @@ export async function DELETE(request: Request, ctx: Ctx) {
   if (denied) return denied;
   try {
     const { id } = await ctx.params;
+    const actor = await getApiSession();
     const repo = await getSessionLeadRepository();
     const gate = await constrainLeadPatch(repo, id, {});
     if (!gate.ok) {
       return NextResponse.json({ error: gate.error }, { status: gate.status });
     }
     await repo.archive(id);
+    if (actor) {
+      await logAudit({
+        actorId: actor.id,
+        action: "delete",
+        entity: "lead",
+        entityId: id,
+        changedFields: ["archived"],
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error al archivar lead";
