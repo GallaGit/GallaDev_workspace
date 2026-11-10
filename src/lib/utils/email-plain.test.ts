@@ -86,3 +86,12 @@ describe('utils/email-plain - domainFromUrl', () => {
     expect(domainFromUrl('https://example.com/path?query=1')).toBe('example.com')
   })
 })
+
+describe('utils/email-plain - htmlEmailToPlain sanitization', () => {
+  it('does not double-unescape entities', () => {
+    expect(htmlEmailToPlain('&amp;lt;b&amp;gt;')).toBe('&lt;b&gt;')
+  })
+  it('removes nested/split tags completely', () => {
+    expect(htmlEmailToPlain('<scr<script>ipt>alert(1)</script>')).not.toMatch(/<|>/)
+  })
+})

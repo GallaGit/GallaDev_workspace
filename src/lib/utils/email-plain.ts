@@ -1,17 +1,25 @@
 /** Convert Notion/n8n HTML-ish email drafts to plain text. */
 export function htmlEmailToPlain(raw: string | null | undefined): string {
   if (!raw) return "";
-  return raw
+  let text = raw
     .replace(/\\\[/g, "[")
     .replace(/\\\]/g, "]")
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<p[^>]*>/gi, "")
+    .replace(/<\/p>/gi, "\n");
+  // Strip tags until stable so nested/split tags cannot survive a single pass.
+  let prev: string;
+  do {
+    prev = text;
+    text = text.replace(/<[^<>]*>/g, "");
+  } while (text !== prev);
+  // Remove any stray angle brackets left over, then decode entities once
+  // (&amp; last to avoid double-unescaping like "&amp;lt;" -> "<").
+  return text
+    .replace(/[<>]/g, "")
     .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
-    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/gi, "&")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }

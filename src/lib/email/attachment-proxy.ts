@@ -43,7 +43,7 @@ export function contentDisposition(
   filename: string,
   inline: boolean,
 ): string {
-  const clean = (filename || "adjunto").replace(/[\r\n\u0000-\u001f\u007f]/g, "").trim() || "adjunto";
+  const clean = (filename || "adjunto").replace(/[\x00-\x1f\x7f]/g, "").trim() || "adjunto";
   const ascii = clean
     .normalize("NFKD")
     .replace(/[^\x20-\x7e]/g, "")

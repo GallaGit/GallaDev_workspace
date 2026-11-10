@@ -25,7 +25,23 @@ export interface LeadCreateValidationResult {
   value: LeadCreateInput | null;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_MAX_LENGTH = 254;
+const EMAIL_NO_WS_OR_AT = /^[^\s@]+$/;
+
+/**
+ * Linear-time email check (no backtracking): one "@", non-empty local part,
+ * domain with a "." that has characters on both sides, no whitespace.
+ */
+export function isValidEmail(value: string): boolean {
+  if (value.length === 0 || value.length > EMAIL_MAX_LENGTH) return false;
+  const at = value.indexOf("@");
+  if (at <= 0 || at !== value.lastIndexOf("@")) return false;
+  const local = value.slice(0, at);
+  const domain = value.slice(at + 1);
+  if (!EMAIL_NO_WS_OR_AT.test(local) || !EMAIL_NO_WS_OR_AT.test(domain)) return false;
+  // Same as /[^\s@]+\.[^\s@]+$/ on the domain: a dot with chars on both sides.
+  return domain.length >= 3 && domain.slice(1, -1).includes(".");
+}
 const PHONE_RE = /^[+()\d\s.\-]{7,20}$/;
 
 function emptyToNull(v: string | null | undefined): string | null {
@@ -82,21 +98,21 @@ export function validateLeadCreate(
       "Indica al menos un canal de contacto: correo general, teléfono o web";
   }
 
-  if (email && !EMAIL_RE.test(email)) {
+  if (email && !isValidEmail(email)) {
     errors.email = "Correo no válido";
   }
 
   const emailCommercial = emptyToNull(
     typeof raw.emailCommercial === "string" ? raw.emailCommercial : null,
   );
-  if (emailCommercial && !EMAIL_RE.test(emailCommercial)) {
+  if (emailCommercial && !isValidEmail(emailCommercial)) {
     errors.emailCommercial = "Correo comercial no válido";
   }
 
   const emailManager = emptyToNull(
     typeof raw.emailManager === "string" ? raw.emailManager : null,
   );
-  if (emailManager && !EMAIL_RE.test(emailManager)) {
+  if (emailManager && !isValidEmail(emailManager)) {
     errors.emailManager = "Correo del gerente no válido";
   }
 
