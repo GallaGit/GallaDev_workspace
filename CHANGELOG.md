@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/GallaGit/GallaDev_workspace/compare/v0.2.0...v0.3.0) (2026-11-10)
+
+
+### Features
+
+* **audit:** add audit_log table and log lead and role writes ([#95](https://github.com/GallaGit/GallaDev_workspace/issues/95)) ([b7c7695](https://github.com/GallaGit/GallaDev_workspace/commit/b7c7695102a99c00885de7fc14f96cc905908550))
+
+
+### Bug Fixes
+
+* **security:** sanitize-html 2.18.1, vite 8.3.x, ReDoS-safe email check, control-char filter, safer HTML-to-plain ([#98](https://github.com/GallaGit/GallaDev_workspace/issues/98)) ([92486ba](https://github.com/GallaGit/GallaDev_workspace/commit/92486baafce54e5d586fda8b175d064994ef21ec))
+
 ## [0.2.0](https://github.com/GallaGit/GallaDev_workspace/compare/v0.1.0...v0.2.0) (2026-10-20)
 
 
