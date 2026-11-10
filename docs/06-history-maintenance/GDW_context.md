@@ -38,7 +38,7 @@ Passwordless read-only session (HMAC httpOnly cookie, off by default). `getSessi
 
 ### Product decision 26-27 Sep 2026 (Ociel)
 
-One slice specified, with no implementation on this date. The visitor demo stays; activation in Vercel Production is still pending. The “What is it?” section (ES: «¿Qué es?») is added on the login page, alongside “Entrar como visitante”: text and static fictional screenshots, no session. See `docs/02-roadmap-delivery/`.
+The “What is it?” section (ES: «¿Qué es?») is on the login page, alongside “Entrar como visitante”: text and static fictional screenshots, no session, following the ES/EN locale switcher. The visitor demo stays; activation in Vercel Production is still pending. See `docs/02-roadmap-delivery/`.
 
 ## Archive policy
 

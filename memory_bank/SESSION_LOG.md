@@ -154,3 +154,10 @@ Diario operativo de trabajo. No sustituye `docs/` (contexto canónico GDW).
 - Recomendación A (Cloudflare Email Routing + «Enviar como» en Gmail por SMTP de Resend), pendiente de decisión de Ociel. B (Google Workspace) cuando haya clientes o equipo.
 - Spec: `docs/02-roadmap-delivery/company-email.es.md` y `company-email.md`. Va por delante de «¿Qué es?» y de los pendientes de M2.
 - Solo documentación. Sin claves en el repo.
+
+## 2026-11-10 — Implementación de la sección «¿Qué es?»
+
+- Sección pública en `/login`, al lado del formulario en pantallas anchas y debajo en las estrechas. No pide sesión y no depende de `DEMO_MODE_ENABLED`.
+- Texto ES/EN según el selector de idioma del login (PR #74). Capturas estáticas de tema claro en `public/what-it-is/`, con datos ficticios (`example.com`, asesorías inventadas).
+- La demo de visitante, las variables `DEMO_*` y sus tests no se tocan.
+- Spec actualizada en `docs/02-roadmap-delivery/what-it-is.md` y `what-it-is.es.md`.

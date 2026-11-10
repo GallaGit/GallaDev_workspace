@@ -47,13 +47,13 @@ Demo sin contraseña para reclutadores y revisores. Se mantiene. `DEMO_MODE_ENAB
 
 **Email de empresa (`galladev.com`).** Decisión de Ociel, 29 Sep 2026: solo `hola@galladev.com` recibe correo. Sin catch-all, sin Gmail, sin Google Workspace. La entrada y la salida pasan por Resend. **Implementado el 30 Sep 2026 (PR #65).** El buzón es el módulo Correo dentro de GDW (`/correo`), que reutiliza auth, RBAC y Supabase. Spec: [`company-email.es.md`](./company-email.es.md) (EN: [`company-email.md`](./company-email.md)). Sustituye la recomendación del 27 Sep (Cloudflare Email Routing).
 
-Es el paso nº 1. Va por delante de la implementación de «¿Qué es?» y de los pendientes de M2: CodeQL, tests E2E de Viewer (403), rate limiting distribuido, historial de auditoría, y la limpieza de mocks de Notion (`tests/mocks/handlers.ts`, follow-up en `TESTING.md`).
+Fue el paso nº 1 y ya está implementado (PR #65). La sección «¿Qué es?» del login (spec [`what-it-is.es.md`](./what-it-is.es.md)) se implementó el 10 nov 2026. El resto de M2 de la v0.3.0 (CodeQL, tests E2E de Viewer, historial de auditoría, limpieza de mocks de Notion) ya está en `master`.
 
-### Slice siguiente: «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026)
+### Slice «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026; implementado 10 nov 2026)
 
-Especificado, no implementado. No es comportamiento actual. La demo de visitante no entra en este slice: se queda como está.
+Implementado en el login. La demo de visitante no entra en este slice: se queda como está.
 
-Se añade en el login y convive con «Entrar como visitante». El título visible es «¿Qué es?» (EN: “What is it?”). Texto y capturas estáticas con datos ficticios, sin sesión. [`what-it-is.es.md`](./what-it-is.es.md) (EN: [`what-it-is.md`](./what-it-is.md)).
+Convive con «Entrar como visitante». El título visible es «¿Qué es?» en español y “What is it?” en inglés, según el selector de idioma del login (añadido en la PR #74, después de la spec). Texto y capturas estáticas con datos ficticios, sin sesión. [`what-it-is.es.md`](./what-it-is.es.md) (EN: [`what-it-is.md`](./what-it-is.md)).
 
 ### Pendiente de M2
 

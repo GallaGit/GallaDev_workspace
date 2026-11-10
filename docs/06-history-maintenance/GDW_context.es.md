@@ -38,7 +38,7 @@ Sesión de solo lectura sin contraseña (cookie httpOnly HMAC, apagada por defec
 
 ### Decisión de producto 26-27 Sep 2026 (Ociel)
 
-Un slice especificado, sin implementación en esta fecha. La demo de visitante se mantiene; la activación en Vercel Production sigue pendiente. La sección «¿Qué es?» (EN: “What is it?”) se añade en el login, junto al botón «Entrar como visitante»: texto y capturas estáticas ficticias, sin sesión. Ver `docs/02-roadmap-delivery/`.
+La sección «¿Qué es?» (EN: “What is it?”) está en el login, junto al botón «Entrar como visitante»: texto y capturas estáticas ficticias, sin sesión, y sigue el selector de idioma ES/EN. La demo de visitante se mantiene; la activación en Vercel Production sigue pendiente. Ver `docs/02-roadmap-delivery/`.
 
 ## Política de archivo
 

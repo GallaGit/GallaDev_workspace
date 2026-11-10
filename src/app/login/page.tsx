@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
 import { AuthFlashBanner } from "@/components/auth-flash-banner";
+import { WhatIsItSection } from "@/components/auth/what-it-is-section";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { isDemoConfigured } from "@/lib/demo/config";
 
@@ -24,28 +25,31 @@ export default async function LoginPage() {
   }).split(linkText);
 
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-md dark:bg-gris-800">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-              {t("brand")}
-            </p>
-            <h1 className="mt-1 text-xl font-bold">{t("title")}</h1>
+    <div className="flex min-h-full flex-1 items-start justify-center p-6 lg:items-center">
+      <div className="flex w-full max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-14">
+        <div className="w-full max-w-sm shrink-0 rounded-lg bg-white p-8 shadow-md dark:bg-gris-800 lg:sticky lg:top-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                {t("brand")}
+              </p>
+              <h1 className="mt-1 text-xl font-bold">{t("title")}</h1>
+            </div>
+            <LocaleSwitcher size="md" />
           </div>
-          <LocaleSwitcher size="md" />
+          <p className="mt-1 text-sm text-gray-500">
+            {subtitleBefore}
+            <a className="underline" href="https://galladev.com">
+              {linkText}
+            </a>
+            {subtitleAfter.join(linkText)}
+          </p>
+          <AuthFlashBanner kind="goodbye" />
+          <Suspense>
+            <LoginForm demoEnabled={isDemoConfigured()} />
+          </Suspense>
         </div>
-        <p className="mt-1 text-sm text-gray-500">
-          {subtitleBefore}
-          <a className="underline" href="https://galladev.com">
-            {linkText}
-          </a>
-          {subtitleAfter.join(linkText)}
-        </p>
-        <AuthFlashBanner kind="goodbye" />
-        <Suspense>
-          <LoginForm demoEnabled={isDemoConfigured()} />
-        </Suspense>
+        <WhatIsItSection />
       </div>
     </div>
   );
