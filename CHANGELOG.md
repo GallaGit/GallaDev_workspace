@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/GallaGit/GallaDev_workspace/compare/v0.3.0...v0.4.0) (2026-11-10)
+
+
+### Features
+
+* **login:** sección «¿Qué es?» con texto ES/EN y capturas estáticas ([#103](https://github.com/GallaGit/GallaDev_workspace/issues/103)) ([9c4aac8](https://github.com/GallaGit/GallaDev_workspace/commit/9c4aac848c0cfb8120bd337d855f6f9a1be9db98))
+
 ## [0.3.0](https://github.com/GallaGit/GallaDev_workspace/compare/v0.2.0...v0.3.0) (2026-11-10)
 
 
