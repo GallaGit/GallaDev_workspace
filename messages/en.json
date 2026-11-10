@@ -69,6 +69,34 @@
       "goodbye0": "Signed out successfully. See you soon.",
       "goodbye1": "Thanks for today's work. See you next time.",
       "goodbye2": "You have safely left the workspace."
+    },
+    "whatIsIt": {
+      "title": "What is it?",
+      "p1": "GallaDev Workspace is a CRM for reviewing, qualifying, and managing leads for asesorías y gestorías (advisory and accounting firms).",
+      "p2": "Supabase (PostgreSQL) is the source of truth. Leads come in through web ingest or manual entry. The team qualifies them with AI pain analysis, follows them on a Kanban board, reviews statistics, and works with roles: Admin, Seller, and Viewer.",
+      "p3": "This explanation can be read without signing in. CRM access still asks for email and password. There is no public signup. When the visitor demo is on, “Entrar como visitante” opens the same tool read-only, with fictional data.",
+      "shots": {
+        "leads": {
+          "lead": "Lead list.",
+          "caption": "Fictional companies, with a filter and a status. They are not real clients.",
+          "alt": "Light-theme lead list: three fictional advisory firms with sample status and city."
+        },
+        "kanban": {
+          "lead": "Kanban.",
+          "caption": "The nine pipeline states, from Nuevo to Cliente or Descartado, with sample cards.",
+          "alt": "Light-theme Kanban board with pipeline columns and cards for fictional companies."
+        },
+        "stats": {
+          "lead": "Statistics.",
+          "caption": "Pipeline volume and distribution. Invented figures.",
+          "alt": "Light-theme statistics page: a bar chart with fictional pipeline figures."
+        },
+        "detail": {
+          "lead": "Lead detail.",
+          "caption": "Pain analysis (evidence, inference, and speculation) for an invented firm.",
+          "alt": "Light-theme panel for a fictional lead, with the pain-analysis block visible."
+        }
+      }
     }
   },
   "demo": {

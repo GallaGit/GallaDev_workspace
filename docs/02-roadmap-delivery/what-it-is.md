@@ -1,8 +1,8 @@
 # “What is it?” Section — Alongside The Visitor Demo
 
-> **Status:** specified, not implemented · decision by Ociel, 26-27 Sep 2026; adjusted 27 Sep 2026 · **Updated:** 2026-09-27
+> **Status:** implemented (10 Nov 2026) · decision by Ociel, 26-27 Sep 2026; adjusted 27 Sep 2026 · **Updated:** 2026-11-10
 > ES: [`what-it-is.es.md`](./what-it-is.es.md). Company email comes before this section ([`company-email.md`](./company-email.md); Ociel’s decision, 29 Sep 2026: Correo module in GDW, `hola@` only).
-> Do not present this as current behavior. Login is still the form in `src/app/login/page.tsx`. The visitor demo (PR #55) stays as it is: code, `DEMO_*` variables, and the docs that describe how it behaves. Activation in Vercel Production is still pending.
+> Login is the form in `src/app/login/page.tsx` plus the “What is it?” section. The visitor demo (PR #55) stays as it is: code, `DEMO_*` variables, and the docs that describe how it behaves. Activation in Vercel Production is still pending.
 
 ## 1. Decision
 
@@ -17,7 +17,7 @@ The same login page **gains** a public **What is it?** section (ES: **¿Qué es?
 
 The section is added to the form and the demo button. Email and password remain the CRM door. There is no public signup. When the demo is on, the button stays on the form.
 
-The page stays Spanish and shows the heading «¿Qué es?» plus the Spanish text below. “What is it?” is the heading of the same section in the English docs, with its text. There is no language switcher.
+The page shows the heading and body of the active locale. In Spanish the heading is «¿Qué es?» and the body is the Spanish text below. In English the heading is “What is it?” and the body is the English text in this file. The login ES/EN switcher (PR #74, after this spec) chooses the locale; the section has no switcher of its own.
 
 The section is visible when the demo is off: it does not depend on `DEMO_MODE_ENABLED`.
 
@@ -63,7 +63,7 @@ Path: `public/what-it-is/`. Optimized static images (modest weight, modern forma
 
 ## 5. Work in this slice (when implemented)
 
-The section is not in the app today. The demo is, and this slice does not change it.
+The section is on the login page. The demo is unchanged.
 
 1. Add the “What is it?” / «¿Qué es?» section and its screenshots on the login page, next to the form.
 2. Leave the “Entrar como visitante” button, the route, the cookie, `DEMO_*` handling, `.env.example`, and the demo tests as they are.
@@ -71,9 +71,9 @@ The section is not in the app today. The demo is, and this slice does not change
 
 ## 6. Acceptance criteria
 
-Checkable once an implementation exists. The section does not meet them today; the demo is still in the code.
+Checkable in this implementation. The demo stays in the code and is unchanged.
 
-1. `src/app/login/page.tsx` shows the section with no session, including when `DEMO_MODE_ENABLED` is off. The visible title is «¿Qué es?». The body is the Spanish text in section 2. The English title “What is it?” and its body are in this file.
+1. `src/app/login/page.tsx` shows the section with no session, including when `DEMO_MODE_ENABLED` is off. With locale `es`, the visible title is «¿Qué es?» and the body is the Spanish text in section 2. With locale `en`, the title is “What is it?” and the body is the English text in this file.
 2. When the demo is on, the same page shows the section and the “Entrar como visitante” button. `POST /api/demo/enter`, `POST /api/demo/exit`, the `gdw_visitor` cookie, and `DemoLeadRepository` stay in place.
 3. `DEMO_MODE_ENABLED` and `DEMO_SESSION_SECRET` are read as they are today and remain in `.env.example` and in the operations guide.
 4. The four images are in `public/what-it-is/`, static, light theme, fictional data, with the caption and alt text from section 3.

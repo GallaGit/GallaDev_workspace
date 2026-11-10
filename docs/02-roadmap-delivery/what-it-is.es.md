@@ -1,8 +1,8 @@
 # Sección «¿Qué es?» — Junto A La Demo De Visitante
 
-> **Estado:** especificado, no implementado · decisión de Ociel, 26-27 Sep 2026; matizada el 27 Sep 2026 · **Actualizado:** 2026-09-27
+> **Estado:** implementado (10 nov 2026) · decisión de Ociel, 26-27 Sep 2026; matizada el 27 Sep 2026 · **Actualizado:** 2026-11-10
 > EN: [`what-it-is.md`](./what-it-is.md). El email de empresa va por delante de esta sección ([`company-email.es.md`](./company-email.es.md); decisión de Ociel, 29 Sep 2026: módulo Correo en GDW, solo `hola@`).
-> No presentar como comportamiento actual. El login sigue siendo el formulario de `src/app/login/page.tsx`. La demo de visitante (PR #55) se mantiene tal cual: código, variables `DEMO_*` y documentación de su comportamiento. Su activación en Vercel Production sigue pendiente.
+> El login es el formulario de `src/app/login/page.tsx` más la sección «¿Qué es?». La demo de visitante (PR #55) se mantiene tal cual: código, variables `DEMO_*` y documentación de su comportamiento. Su activación en Vercel Production sigue pendiente.
 
 ## 1. Decisión
 
@@ -17,7 +17,7 @@ En la misma página de login se **añade** una sección pública **¿Qué es?** 
 
 La sección se suma al formulario y al botón de la demo. Email y contraseña siguen siendo la puerta del CRM. No hay alta pública. Con la demo encendida, el botón sigue en el formulario.
 
-La página, que sigue en español, muestra el título «¿Qué es?» y el texto de abajo. “What is it?” es el título de la misma sección en la documentación en inglés, con su texto. No hay selector de idioma.
+La página muestra el título y el texto del idioma activo. En español el título es «¿Qué es?» y el cuerpo es el de abajo. En inglés el título es “What is it?” y el cuerpo es el de [`what-it-is.md`](./what-it-is.md). El selector ES/EN del login (PR #74, posterior a esta spec) determina el idioma; la sección no tiene un selector propio.
 
 La sección se ve también con la demo apagada: no depende de `DEMO_MODE_ENABLED`.
 
@@ -63,7 +63,7 @@ Ruta: `public/what-it-is/`. Imágenes optimizadas y estáticas (peso contenido, 
 
 ## 5. Trabajo de este slice (cuando se implemente)
 
-Hoy la sección no está. La demo sí, y no se toca.
+La sección está en el login. La demo no se toca.
 
 1. Añadir la sección «¿Qué es?» y sus capturas en la página de login, junto al formulario.
 2. Dejar el botón «Entrar como visitante», la ruta, la cookie, el manejo de `DEMO_*`, `.env.example` y los tests de la demo como están.
@@ -71,9 +71,9 @@ Hoy la sección no está. La demo sí, y no se toca.
 
 ## 6. Criterios de aceptación
 
-Comprobables cuando exista implementación. Hoy la sección no se cumple; la demo sí sigue en el código.
+Comprobables en esta implementación. La demo sigue en el código y no se modifica.
 
-1. `src/app/login/page.tsx` muestra la sección sin sesión, también con `DEMO_MODE_ENABLED` apagado. El título visible es «¿Qué es?». El cuerpo es el español de la sección 2. El título inglés “What is it?” y su cuerpo están en [`what-it-is.md`](./what-it-is.md).
+1. `src/app/login/page.tsx` muestra la sección sin sesión, también con `DEMO_MODE_ENABLED` apagado. Con el locale `es`, el título visible es «¿Qué es?» y el cuerpo es el español de la sección 2. Con el locale `en`, el título es “What is it?” y el cuerpo es el de [`what-it-is.md`](./what-it-is.md).
 2. Con la demo encendida, la misma página muestra la sección y el botón «Entrar como visitante». `POST /api/demo/enter`, `POST /api/demo/exit`, la cookie `gdw_visitor` y `DemoLeadRepository` siguen en su sitio.
 3. `DEMO_MODE_ENABLED` y `DEMO_SESSION_SECRET` se leen igual que hoy y siguen en `.env.example` y en la guía de operación.
 4. Las cuatro imágenes están en `public/what-it-is/`, son estáticas, de tema claro, con datos ficticios, pie y alt de la sección 3.

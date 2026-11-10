@@ -47,13 +47,13 @@ Passwordless demo for recruiters and reviewers. It stays. `DEMO_MODE_ENABLED` de
 
 **Company email (`galladev.com`).** Ociel’s decision, 29 Sep 2026: only `hola@galladev.com` receives mail. No catch-all, no Gmail, no Google Workspace. Inbound and outbound both go through Resend . The inbox is the Correo module inside GDW (`/correo`), reusing auth, RBAC, and Supabase. **Implemented 30 Sep 2026 (PR #65).** Spec: [`company-email.md`](./company-email.md) (ES: [`company-email.es.md`](./company-email.es.md)). This replaces the 27 Sep recommendation (Cloudflare Email Routing).
 
-This is item 1. It comes before implementing “What is it?” and before pending M2 work: CodeQL, Viewer E2E 403 tests, distributed rate limiting, the audit trail, and the Notion mock cleanup (`tests/mocks/handlers.ts`, follow-up in `TESTING.md`).
+This was item 1 and is already implemented (PR #65). The login “What is it?” section (spec [`what-it-is.md`](./what-it-is.md)) was implemented on 10 Nov 2026. The rest of v0.3.0 M2 work (CodeQL, Viewer E2E tests, audit trail, Notion mock cleanup) is already on `master`.
 
-### Next slice: «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026)
+### Slice: «¿Qué es?» / “What is it?” (Ociel, 26-27 Sep 2026; implemented 10 Nov 2026)
 
-Specified, not implemented. Not current behavior. The visitor demo is not part of this slice: it stays as it is.
+Implemented on the login page. The visitor demo is not part of this slice: it stays as it is.
 
-Added on the login page, alongside “Entrar como visitante”. The visible title is «¿Qué es?» (EN: “What is it?”). Text and static screenshots with fictional data, no session. [`what-it-is.md`](./what-it-is.md) (ES: [`what-it-is.es.md`](./what-it-is.es.md)).
+It sits alongside “Entrar como visitante”. The visible title is «¿Qué es?» in Spanish and “What is it?” in English, following the login locale switcher (added in PR #74, after the spec). Text and static screenshots with fictional data, no session. [`what-it-is.md`](./what-it-is.md) (ES: [`what-it-is.es.md`](./what-it-is.es.md)).
 
 ### M2 pending
 

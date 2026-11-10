@@ -69,6 +69,34 @@
       "goodbye0": "Sesión cerrada correctamente. Hasta pronto.",
       "goodbye1": "Gracias por el trabajo de hoy. Nos vemos.",
       "goodbye2": "Has salido del workspace de forma segura."
+    },
+    "whatIsIt": {
+      "title": "¿Qué es?",
+      "p1": "GallaDev Workspace es un CRM para revisar, cualificar y gestionar leads de asesorías y gestorías.",
+      "p2": "Supabase (PostgreSQL) es la fuente de verdad. Los leads entran por la ingesta web o por un alta manual. El equipo los cualifica con un análisis de dolores por IA, los sigue en un Kanban, consulta estadísticas y trabaja con roles: Admin, Seller y Viewer.",
+      "p3": "Esta explicación se lee sin iniciar sesión. Entrar al CRM sigue pidiendo email y contraseña. No hay alta pública. Con la demo encendida, «Entrar como visitante» abre la misma herramienta en solo lectura, con datos ficticios.",
+      "shots": {
+        "leads": {
+          "lead": "Lista de leads.",
+          "caption": "Empresas ficticias, con filtro y estado. No son clientes reales.",
+          "alt": "Lista de leads en tema claro: tres asesorías ficticias con estado y ciudad de ejemplo."
+        },
+        "kanban": {
+          "lead": "Kanban.",
+          "caption": "Los nueve estados del pipeline, de Nuevo a Cliente o Descartado, con tarjetas de ejemplo.",
+          "alt": "Tablero Kanban en tema claro con columnas del pipeline y tarjetas de empresas ficticias."
+        },
+        "stats": {
+          "lead": "Estadísticas.",
+          "caption": "Volumen y distribución del pipeline. Cifras inventadas.",
+          "alt": "Página de estadísticas en tema claro: gráfico de barras con cifras ficticias del pipeline."
+        },
+        "detail": {
+          "lead": "Detalle de un lead.",
+          "caption": "Análisis de dolores (evidencia, inferencia y especulación) de una asesoría inventada.",
+          "alt": "Panel de un lead ficticio en tema claro, con el bloque de análisis de dolores visible."
+        }
+      }
     }
   },
   "demo": {
