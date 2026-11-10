@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateLeadCreate } from '@/lib/leads/validate-lead'
+import { isValidEmail, validateLeadCreate } from '@/lib/leads/validate-lead'
 import type { LeadCreateInput } from '@/lib/domain/lead'
 
 describe('validate-lead - validateLeadCreate', () => {
@@ -126,5 +126,27 @@ describe('validate-lead - validateLeadCreate', () => {
     })
     expect(result.ok).toBe(false)
     expect(Object.keys(result.errors).length).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('leads/validate-lead - isValidEmail (linear, ReDoS-safe)', () => {
+  it('accepts typical emails', () => {
+    expect(isValidEmail('ana@empresa.es')).toBe(true)
+    expect(isValidEmail('a.b+c@sub.dominio.com')).toBe(true)
+  })
+  it('rejects malformed emails', () => {
+    for (const v of ['', 'a', 'a@b', '@b.c', 'a@.c', 'a@b.', 'a@@b.c', 'a@b@c.d', 'a b@c.d', 'a@b .c']) {
+      expect(isValidEmail(v)).toBe(false)
+    }
+  })
+  it('rejects emails over 254 chars', () => {
+    expect(isValidEmail(`${'a'.repeat(250)}@b.co`)).toBe(false)
+  })
+  it('handles pathological input fast', () => {
+    const evil = `a@${'.'.repeat(50000)}`
+    const t = performance.now()
+    expect(isValidEmail(evil)).toBe(false)
+    expect(isValidEmail(`a@${'a.'.repeat(50000)}`)).toBe(false)
+    expect(performance.now() - t).toBeLessThan(50)
   })
 })
