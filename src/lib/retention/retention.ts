@@ -16,6 +16,9 @@ export type RetentionResult = {
   email_messages: number;
   email_attachments: number;
   email_drafts: number;
+  trashed_threads: number;
+  trashed_messages: number;
+  trashed_attachments: number;
   storage_paths: string[];
 };
 
@@ -67,6 +70,9 @@ export function parseRetentionResult(data: unknown): RetentionResult {
     "email_messages",
     "email_attachments",
     "email_drafts",
+    "trashed_threads",
+    "trashed_messages",
+    "trashed_attachments",
   ] as const;
   for (const key of counts) {
     const value = raw[key];
@@ -89,6 +95,9 @@ export function parseRetentionResult(data: unknown): RetentionResult {
     email_messages: raw.email_messages as number,
     email_attachments: raw.email_attachments as number,
     email_drafts: raw.email_drafts as number,
+    trashed_threads: raw.trashed_threads as number,
+    trashed_messages: raw.trashed_messages as number,
+    trashed_attachments: raw.trashed_attachments as number,
     storage_paths: paths as string[],
   };
 }
@@ -99,7 +108,9 @@ export function formatRetentionLog(r: RetentionResult): string {
     `[retention] dry_run=${r.dry_run} leads=${r.leads} clients=${r.clients}` +
     ` activities=${r.activities} email_threads=${r.email_threads}` +
     ` email_messages=${r.email_messages} email_attachments=${r.email_attachments}` +
-    ` email_drafts=${r.email_drafts} storage_files=${r.storage_paths.length}`
+    ` email_drafts=${r.email_drafts} trashed_threads=${r.trashed_threads}` +
+    ` trashed_messages=${r.trashed_messages} trashed_attachments=${r.trashed_attachments}` +
+    ` storage_files=${r.storage_paths.length}`
   );
 }
 

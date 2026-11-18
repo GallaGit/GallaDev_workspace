@@ -7,6 +7,9 @@ export const MAX_EMAIL_SUBJECT_CHARS = 500;
 /** Dirección suelta (RFC 5321, tope práctico). */
 export const MAX_EMAIL_ADDRESS_CHARS = 320;
 
+/** Adjunto entrante máximo a persistir en Storage (50 MiB). */
+export const MAX_ATTACHMENT_BYTES = 52_428_800;
+
 /**
  * JSON de compose, respuesta o borrador: dos cuerpos más un margen
  * para el resto de campos. Por encima, la ruta responde 413.

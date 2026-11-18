@@ -38,6 +38,9 @@ const DRY_RESULT: RetentionResult = {
   email_messages: 7,
   email_attachments: 4,
   email_drafts: 1,
+  trashed_threads: 6,
+  trashed_messages: 8,
+  trashed_attachments: 2,
   storage_paths: ["mail/2024/a.pdf"],
 };
 
@@ -114,12 +117,20 @@ describe("GET /api/cron/retention", () => {
       email_messages: 7,
       email_attachments: 4,
       email_drafts: 1,
+      trashed_threads: 6,
+      trashed_messages: 8,
+      trashed_attachments: 2,
       storage_files: 1,
       storage_removed: 0,
     });
     expect(body).not.toHaveProperty("storage_paths");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("[retention] dry_run=true"));
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "trashed_threads=6 trashed_messages=8 trashed_attachments=2",
+      ),
+    );
     expect(storageFrom).not.toHaveBeenCalled();
   });
 

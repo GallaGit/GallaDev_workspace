@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { errorClassOf, logRouteError } from "@/lib/route-log";
+import { persistInboundAttachments } from "./attachment-persist";
 import type { InboundEmailEvent } from "./inbound-verify";
 import {
   defaultMailbox,
@@ -126,11 +128,13 @@ export async function storeInboundEmail(
       }));
 
     if (attachmentRows.length > 0) {
-      const { error: attErr } = await admin
-        .from("email_attachments")
-        .insert(attachmentRows);
-      if (attErr) {
-        console.warn("[inbound-store] Failed to insert attachments", attErr.message);
+      try {
+        await persistInboundAttachments(admin, data.email_id, attachmentRows);
+      } catch (e) {
+        logRouteError(
+          { route: "inbound-store", errorClass: errorClassOf(e) },
+          "warn",
+        );
       }
     }
   }
