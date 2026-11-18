@@ -5,6 +5,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { isCompanyMailbox } from "@/lib/email/mailboxes";
 import { THREAD_VIEWS, type ThreadView, type UnreadCounts } from "@/lib/email/thread-state";
+import {
+  applyThreadViewFilter,
+  threadCountSelect,
+} from "@/lib/email/thread-view-query";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +17,7 @@ export const dynamic = "force-dynamic";
  *
  * Auth: requireAdmin y RLS. Solo cuenta (HEAD), no devuelve filas.
  * Query: mailbox (opcional, allowlist).
- * Respuesta: { ok, counts: { inbox, archived, trash } }
+ * Respuesta: { ok, counts: { inbox, sent, archived, trash } }
  */
 async function unreadCount(request: Request) {
   const denied = await requireAdmin();
@@ -28,17 +32,9 @@ async function unreadCount(request: Request) {
     const countFor = async (view: ThreadView) => {
       let query = supabase
         .from("email_threads")
-        .select("id", { count: "exact", head: true })
+        .select(threadCountSelect(view), { count: "exact", head: true })
         .eq("is_read", false);
-      if (view === "trash") {
-        query = query.not("trashed_at", "is", null);
-      } else {
-        query = query.is("trashed_at", null);
-        query =
-          view === "archived"
-            ? query.not("archived_at", "is", null)
-            : query.is("archived_at", null);
-      }
+      query = applyThreadViewFilter(query, view);
       if (isCompanyMailbox(mailboxParam)) {
         query = query.eq("mailbox_address", mailboxParam);
       }

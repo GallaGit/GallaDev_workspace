@@ -1,15 +1,17 @@
 import type { ThreadPatch, ThreadStatePatch } from "./email-payload";
 
 /**
- * Estado de bandeja de un hilo (Recibidos / Archivados / Papelera) y
- * leído/no leído. Lógica pura: la usan las rutas PATCH y la UI.
+ * Estado de bandeja de un hilo (Recibidos / Enviados / Archivados / Papelera)
+ * y leído/no leído. Lógica pura: la usan las rutas PATCH y la UI.
  *
  * - Recibidos: archived_at IS NULL y trashed_at IS NULL.
+ * - Enviados: tiene al menos un mensaje outbound y no está en Papelera
+ *   (puede coincidir con Recibidos o Archivados; no es excluyente).
  * - Archivados: archived_at con fecha y trashed_at IS NULL.
- * - Papelera: trashed_at con fecha (se podrá purgar a los 30 días).
+ * - Papelera: trashed_at con fecha (purga a los 30 días).
  */
 
-export const THREAD_VIEWS = ["inbox", "archived", "trash"] as const;
+export const THREAD_VIEWS = ["inbox", "sent", "archived", "trash"] as const;
 export type ThreadView = (typeof THREAD_VIEWS)[number];
 
 /** Días en Papelera antes de que una purga futura pueda borrar el hilo. */
@@ -32,6 +34,18 @@ export function threadViewOf(thread: ThreadStateRow): ThreadView {
   if (thread.trashed_at) return "trash";
   if (thread.archived_at) return "archived";
   return "inbox";
+}
+
+/**
+ * Si el hilo debe seguir visible en la vista tras un PATCH optimista.
+ * En Enviados se queda al archivar/desarchivar; sale al pasarlo a Papelera.
+ */
+export function threadStaysInView(
+  thread: ThreadStateRow,
+  view: ThreadView,
+): boolean {
+  if (view === "sent") return !thread.trashed_at;
+  return threadViewOf(thread) === view;
 }
 
 export type ThreadDbPatch = {
@@ -83,6 +97,7 @@ export type UnreadCounts = Record<ThreadView, number>;
 
 export const EMPTY_UNREAD_COUNTS: UnreadCounts = {
   inbox: 0,
+  sent: 0,
   archived: 0,
   trash: 0,
 };

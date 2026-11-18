@@ -605,6 +605,7 @@
     "views": {
       "label": "Bandejas",
       "inbox": "Recibidos",
+      "sent": "Enviados",
       "archived": "Archivados",
       "trash": "Papelera"
     },
@@ -627,6 +628,7 @@
     "restoredToast": "{count, plural, one {Hilo restaurado} other {# hilos restaurados}}",
     "inboxToast": "{count, plural, one {Hilo movido a Recibidos} other {# hilos movidos a Recibidos}}",
     "emptyArchived": "No hay hilos archivados.",
+    "emptySent": "No hay mensajes enviados.",
     "emptyTrash": "La papelera está vacía.",
     "trashNotice": "Los hilos de la papelera se podrán borrar definitivamente a los {days} días.",
     "search": {

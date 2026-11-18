@@ -27,7 +27,7 @@ import {
   applyThreadPatch,
   formatUnreadBadge,
   stateToastKey,
-  threadViewOf,
+  threadStaysInView,
   type ThreadView as MailView,
 } from "@/lib/email/thread-state";
 import { BulkToolbar } from "@/components/correo/thread-actions";
@@ -283,7 +283,7 @@ export function InboxPage() {
         )
         // En «buscar en todas las bandejas» las filas se quedan aunque cambien de vista.
         .filter(
-          (thread) => (searching && searchAll) || threadViewOf(thread) === view,
+          (thread) => (searching && searchAll) || threadStaysInView(thread, view),
         );
       const stillVisible = new Set(next.map((thread) => thread.id));
       threadsRef.current = next;
@@ -393,6 +393,7 @@ export function InboxPage() {
   const someChecked = checkedList.length > 0 && !allChecked;
   const viewLabels: Record<MailView, string> = {
     inbox: t("views.inbox"),
+    sent: t("views.sent"),
     archived: t("views.archived"),
     trash: t("views.trash"),
   };
@@ -403,9 +404,11 @@ export function InboxPage() {
       ? t("emptyArchived")
       : view === "trash"
         ? t("emptyTrash")
-        : mailboxFilter === "all"
-          ? t("emptyAll")
-          : t("emptyMailbox", { mailbox: mailboxFilter });
+        : view === "sent"
+          ? t("emptySent")
+          : mailboxFilter === "all"
+            ? t("emptyAll")
+            : t("emptyMailbox", { mailbox: mailboxFilter });
 
   return (
     <>

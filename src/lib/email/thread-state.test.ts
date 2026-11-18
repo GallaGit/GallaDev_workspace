@@ -8,6 +8,7 @@ import {
   parseThreadView,
   stateToastKey,
   threadDbPatch,
+  threadStaysInView,
   threadViewOf,
 } from "./thread-state";
 
@@ -15,8 +16,9 @@ const NOW = new Date("2026-10-09T15:00:00.000Z");
 const STAMP = NOW.toISOString();
 
 describe("parseThreadView", () => {
-  it("acepta las tres vistas y cae en inbox con valores raros", () => {
+  it("acepta las vistas conocidas y cae en inbox con valores raros", () => {
     expect(parseThreadView("inbox")).toBe("inbox");
+    expect(parseThreadView("sent")).toBe("sent");
     expect(parseThreadView(" Archived ")).toBe("archived");
     expect(parseThreadView("trash")).toBe("trash");
     expect(parseThreadView("spam")).toBe("inbox");
@@ -35,6 +37,17 @@ describe("threadViewOf", () => {
     expect(threadViewOf({ is_read: true, archived_at: null, trashed_at: null })).toBe(
       "inbox",
     );
+  });
+});
+
+describe("threadStaysInView", () => {
+  it("Enviados se queda al archivar y sale al ir a Papelera", () => {
+    const open = { is_read: true, archived_at: null, trashed_at: null };
+    expect(threadStaysInView(open, "sent")).toBe(true);
+    expect(threadStaysInView({ ...open, archived_at: STAMP }, "sent")).toBe(true);
+    expect(threadStaysInView({ ...open, trashed_at: STAMP }, "sent")).toBe(false);
+    expect(threadStaysInView({ ...open, archived_at: STAMP }, "inbox")).toBe(false);
+    expect(threadStaysInView({ ...open, archived_at: STAMP }, "archived")).toBe(true);
   });
 });
 
@@ -115,7 +128,7 @@ describe("formatUnreadBadge", () => {
   });
 
   it("contadores vacíos y retención documentada", () => {
-    expect(EMPTY_UNREAD_COUNTS).toEqual({ inbox: 0, archived: 0, trash: 0 });
+    expect(EMPTY_UNREAD_COUNTS).toEqual({ inbox: 0, sent: 0, archived: 0, trash: 0 });
     expect(TRASH_RETENTION_DAYS).toBe(30);
   });
 });
