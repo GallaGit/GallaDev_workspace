@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/GallaGit/GallaDev_workspace/compare/v0.4.0...v0.5.0) (2026-11-19)
+
+
+### Features
+
+* **correo:** paginación, purga de Papelera, Enviados y adjuntos en Storage ([#106](https://github.com/GallaGit/GallaDev_workspace/issues/106)) ([7096c79](https://github.com/GallaGit/GallaDev_workspace/commit/7096c79558d15006602fc132f11a9623ed4d7bbf))
+
 ## [0.4.0](https://github.com/GallaGit/GallaDev_workspace/compare/v0.3.0...v0.4.0) (2026-11-10)
 
 
