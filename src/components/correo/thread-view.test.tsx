@@ -127,3 +127,57 @@ describe("ThreadView adjuntos (proxy en una sola pestaña)", () => {
     open.mockRestore();
   });
 });
+
+describe("ThreadView Cc y Cco", () => {
+  const base = {
+    resend_email_id: "r1",
+    message_id: null,
+    from_name: "GallaDev",
+    to_addresses: ["ana@example.com"],
+    cc_addresses: ["copia@example.com"],
+    subject: "Presupuesto",
+    body_html: null,
+    body_text: "Hola",
+    send_status: "delivered",
+    received_at: "2026-10-02T12:00:00.000Z",
+    created_at: "2026-10-02T12:00:00.000Z",
+  };
+
+  function stubMessages(messages: unknown[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, messages, attachments: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+  }
+
+  it("muestra CCO solo en mensajes enviados por nosotros", async () => {
+    stubMessages([
+      {
+        ...base,
+        id: "out",
+        direction: "outbound",
+        from_address: "hola@galladev.com",
+        bcc_addresses: ["jefe@example.com"],
+      },
+      {
+        ...base,
+        id: "in",
+        direction: "inbound",
+        from_address: "ana@example.com",
+        bcc_addresses: ["hola@galladev.com"],
+      },
+    ]);
+    const { findByText, queryAllByText } = renderWithIntl(
+      <ThreadView thread={thread} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    expect(await findByText("CCO: jefe@example.com")).toBeInTheDocument();
+    expect(queryAllByText(/^CCO:/)).toHaveLength(1);
+    expect(queryAllByText("CC: copia@example.com")).toHaveLength(2);
+  });
+});
