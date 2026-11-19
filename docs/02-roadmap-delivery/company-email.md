@@ -164,7 +164,7 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 ## 8. Future: folders (partial)
 
-**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). Gmail-like dense list (sender, subject, last-message snippet, short date, attachment clip, bold when unread), filterable by `mailbox_address`. **Inbox / Archived / Trash** views with unread counts per view and on the Correo sidebar entry. Read/unread, archive, trash and restore, single or bulk via checkboxes. Compose/reply via Resend. No Sent or Spam folders. **Reply drafts** on an open thread are not implemented yet (send only).
+**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). Gmail-like dense list (sender, subject, last-message snippet, short date, attachment clip, bold when unread), filterable by `mailbox_address`. **Inbox / Archived / Trash** views with unread counts per view and on the Correo sidebar entry. Read/unread, archive, trash and restore, single or bulk via checkboxes. Compose/reply via Resend. No Sent or Spam folders. **Reply drafts** on an open thread exist (`email_drafts.thread_id`, per-thread autosave; see the Spanish spec, Phase 3). Compose, reply and forward support Cc/Bcc, a per-mailbox signature and outbound attachments (see the Spanish spec, «Redactar: Cc/Cco, autoguardado, firma y adjuntos»).
 
 **Folders (Oct 9, 2026).** Migration `20261009180000_email_thread_inbox_state.sql` (apply manually in the SQL editor **before** deploying): `email_threads.archived_at`, `trashed_at`, `last_snippet`, `has_attachments` (the last two kept up to date by triggers, with backfill). RLS unchanged. API: `GET /api/email/threads?view=`, bulk `PATCH /api/email/threads`, `PATCH /api/email/threads/[id]` (`archived`, `trashed`), `GET /api/email/threads/unread-count`, all `requireAdmin` + zod. **Pending:** purging Trash after 30 days (scheduled job TBD); nothing is deleted today.
 
@@ -177,7 +177,7 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 | Inbox | Threads with recent inbound / not archived | Default view; do not confuse with the address filter (`hola@` / `ociel@`). |
 | Sent | Messages or threads with outbound | May be a filter/view on `email_messages.direction = outbound`, not necessarily another table. |
 | Spam | Unwanted mail | Needs a source: manual mark and/or provider signal. Today only off-allowlist is dropped. |
-| Drafts | Unsent replies or messages | **Partial:** new messages in `email_drafts`. Reply-drafts still future; do not mix with `/email` (lead drafts). |
+| Drafts | Unsent replies or messages | **Done (partial):** new messages and per-thread reply drafts in `email_drafts` (no stored attachments). Do not mix with `/email` (lead drafts). |
 | Archive (optional) | Threads out of Inbox without delete | Column or flag on `email_threads`, not a physical folder. |
 
 **Constraints.**
