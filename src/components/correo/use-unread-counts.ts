@@ -16,7 +16,7 @@ export function notifyUnreadChanged(): void {
 }
 
 /**
- * Hilos no leídos por vista (Recibidos / Archivados / Papelera).
+ * Hilos no leídos por vista (Recibidos / Enviados / Archivados / Papelera).
  * Solo pide datos si `enabled` (sesión Admin). Refresca con el evento
  * `correo:unread-changed`, al volver a la pestaña y cada minuto.
  */
@@ -44,6 +44,7 @@ export function useUnreadCounts(
         if (cancelled || !next) return;
         setCounts({
           inbox: Number(next.inbox) || 0,
+          sent: Number(next.sent) || 0,
           archived: Number(next.archived) || 0,
           trash: Number(next.trash) || 0,
         });

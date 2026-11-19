@@ -112,7 +112,8 @@ export function StateActionButtons({
   if (showReadToggle) buttons.push(read, unread);
   else if (isRead !== undefined) buttons.push(isRead ? unread : read);
 
-  if (view === "inbox") {
+  if (view === "inbox" || view === "sent") {
+    // Enviados puede mezclar hilos de Recibidos y Archivados: archivar es idempotente.
     buttons.push({ key: "archive", label: t("archive"), icon: Archive, patch: { archived: true } });
   } else if (view === "archived") {
     buttons.push({

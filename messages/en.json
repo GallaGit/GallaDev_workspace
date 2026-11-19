@@ -524,6 +524,8 @@
     "drafts": "Drafts",
     "draftCount": "Drafts · {count}",
     "threadCount": "Threads · {count}",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more…",
     "loadThreadsError": "Error loading threads",
     "loadMailboxError": "Error loading the mailbox",
     "loadDraftsError": "Error loading drafts",
@@ -603,6 +605,7 @@
     "views": {
       "label": "Folders",
       "inbox": "Inbox",
+      "sent": "Sent",
       "archived": "Archived",
       "trash": "Trash"
     },
@@ -625,6 +628,7 @@
     "restoredToast": "{count, plural, one {Thread restored} other {# threads restored}}",
     "inboxToast": "{count, plural, one {Thread moved to Inbox} other {# threads moved to Inbox}}",
     "emptyArchived": "No archived threads.",
+    "emptySent": "No sent messages.",
     "emptyTrash": "Trash is empty.",
     "trashNotice": "Threads in trash may be permanently deleted after {days} days.",
     "search": {

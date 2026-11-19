@@ -6,6 +6,11 @@ import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { readCappedJson } from "@/lib/rate-limit";
 import { parseThreadBulkPatch } from "@/lib/email/email-payload";
 import { parseThreadView, threadDbPatch } from "@/lib/email/thread-state";
+import {
+  applyThreadViewFilter,
+  stripMessageEmbed,
+  threadListSelect,
+} from "@/lib/email/thread-view-query";
 import { isCompanyMailbox } from "@/lib/email/mailboxes";
 import {
   MAX_SEARCH_THREADS,
@@ -16,9 +21,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const THREAD_LIST_COLUMNS =
-  "id, subject, from_address, from_name, mailbox_address, last_message_at, is_read, message_count, lead_id, created_at, archived_at, trashed_at, last_snippet, has_attachments";
-
 /**
  * GET /api/email/threads — lista de hilos del buzón.
  *
@@ -28,7 +30,7 @@ const THREAD_LIST_COLUMNS =
  *   - offset (default 0)
  *   - unread (si "true", solo no leídos)
  *   - mailbox (hola@galladev.com | ociel@galladev.com; omitir = todos)
- *   - view (inbox | archived | trash; default inbox)
+ *   - view (inbox | sent | archived | trash; default inbox)
  *   - q (opcional, máx. 200 caracteres): busca por remitente, asunto y cuerpo
  *     con FTS (`search_tsv`, config spanish, prefijo por palabra)
  *   - scope (view | all; default view): `all` busca en todas las vistas
@@ -97,7 +99,7 @@ async function listThreads(request: Request) {
 
     let query = supabase
       .from("email_threads")
-      .select(THREAD_LIST_COLUMNS)
+      .select(threadListSelect(view, scope))
       .order("last_message_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -105,16 +107,8 @@ async function listThreads(request: Request) {
       query = query.in("id", matchIds);
     }
 
-    if (scope === "all") {
-      // Búsqueda en todas las vistas: sin filtro de archivado/papelera.
-    } else if (view === "trash") {
-      query = query.not("trashed_at", "is", null);
-    } else {
-      query = query.is("trashed_at", null);
-      query =
-        view === "archived"
-          ? query.not("archived_at", "is", null)
-          : query.is("archived_at", null);
+    if (scope !== "all") {
+      query = applyThreadViewFilter(query, view);
     }
 
     if (unreadOnly) {
@@ -145,7 +139,7 @@ async function listThreads(request: Request) {
       view,
       scope,
       q: search.q,
-      threads: data ?? [],
+      threads: stripMessageEmbed(data ?? []),
     });
   } catch (e) {
     logRouteError({

@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchReceivingEmail = vi.hoisted(() => vi.fn());
 const findThreadForMessage = vi.hoisted(() => vi.fn());
+const persistInboundAttachments = vi.hoisted(() => vi.fn());
 
 vi.mock("./thread-match", () => ({ findThreadForMessage }));
+vi.mock("./attachment-persist", () => ({ persistInboundAttachments }));
 
 vi.mock("./receiving-fetch", () => ({
   fetchReceivingEmail,
@@ -152,6 +154,8 @@ describe("storeInboundEmail", () => {
   beforeEach(() => {
     fetchReceivingEmail.mockReset();
     findThreadForMessage.mockReset();
+    persistInboundAttachments.mockReset();
+    persistInboundAttachments.mockResolvedValue(undefined);
   });
 
   it("passes In-Reply-To, References, subject and sender to the matcher", async () => {
@@ -311,11 +315,47 @@ describe("storeInboundEmail", () => {
       },
     });
 
-    expect(admin._attachmentInsert).toHaveBeenCalledWith([
-      expect.objectContaining({
-        resend_attachment_id: "att-1",
-        size_bytes: 1200,
-      }),
-    ]);
+    expect(persistInboundAttachments).toHaveBeenCalledWith(
+      admin,
+      "em_abc",
+      [
+        expect.objectContaining({
+          resend_attachment_id: "att-1",
+          size_bytes: 1200,
+        }),
+      ],
+    );
+  });
+
+  it("guarda el correo aunque falle la persistencia del fichero", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchReceivingEmail.mockResolvedValue({
+      ok: true,
+      data: { html: null, text: "hi", headers: null, messageId: null, attachments: [] },
+    });
+    persistInboundAttachments.mockRejectedValue(new Error("upload failed"));
+    const admin = mockAdmin();
+
+    const result = await storeInboundEmail(admin, {
+      ...baseEvent,
+      data: {
+        ...baseEvent.data,
+        attachments: [
+          {
+            id: "att-1",
+            filename: "doc.pdf",
+            content_type: "application/pdf",
+          },
+        ],
+      },
+    });
+
+    expect(result).toEqual({
+      stored: true,
+      threadId: "thread-new",
+      messageId: "msg-new",
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

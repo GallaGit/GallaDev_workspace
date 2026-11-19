@@ -13,6 +13,17 @@ export { isPreviewableContentType } from "./attachment-meta";
  * No hace proxy del fichero: solo devuelve download_url + expires_at.
  */
 
+/** Datos de la fila autorizada por RLS, sin contactar con Resend todavía. */
+export type AttachmentRowContext = {
+  filename: string;
+  contentType: string;
+  sizeBytes: number | null;
+  storagePath: string | null;
+  resendAttachmentId: string;
+  resendEmailId: string;
+  direction: "inbound" | "outbound";
+};
+
 export type AttachmentDownloadResult =
   | {
       ok: true;
@@ -39,28 +50,19 @@ export async function resolveAttachmentDownload(
   attachmentId: string,
   client?: Resend | null,
 ): Promise<AttachmentDownloadResult> {
-  const { data: att, error: attErr } = await supabase
-    .from("email_attachments")
-    .select("id, message_id, filename, content_type, size_bytes, resend_attachment_id")
-    .eq("id", attachmentId)
-    .maybeSingle();
-
-  if (attErr || !att) {
+  const context = await resolveAttachmentContext(supabase, attachmentId);
+  if (!context) {
     return { ok: false, reason: "not-found" };
   }
 
-  const { data: msg, error: msgErr } = await supabase
-    .from("email_messages")
-    .select("id, resend_email_id, direction, received_at")
-    .eq("id", att.message_id)
-    .maybeSingle();
-
-  // IDOR / huérfano: el adjunto debe pertenecer a un mensaje legible (RLS).
-  if (msgErr || !msg?.resend_email_id) {
-    return { ok: false, reason: "not-found" };
-  }
-
-  const resendAttachmentId = String(att.resend_attachment_id ?? "").trim();
+  const {
+    resendAttachmentId,
+    resendEmailId: emailId,
+    direction,
+    filename,
+    contentType,
+    sizeBytes,
+  } = context;
   if (!resendAttachmentId) {
     return { ok: false, reason: "no-resend-id" };
   }
@@ -69,9 +71,6 @@ export async function resolveAttachmentDownload(
   if (!resend) {
     return { ok: false, reason: "no-client" };
   }
-
-  const emailId = String(msg.resend_email_id);
-  const direction = msg.direction === "outbound" ? "outbound" : "inbound";
 
   try {
     const result =
@@ -141,11 +140,11 @@ export async function resolveAttachmentDownload(
       ok: true,
       downloadUrl: data.download_url,
       expiresAt: data.expires_at,
-      filename: att.filename || data.filename || "adjunto",
-      contentType: att.content_type || data.content_type || "application/octet-stream",
+      filename: filename || data.filename || "adjunto",
+      contentType: contentType || data.content_type || "application/octet-stream",
       sizeBytes:
-        typeof att.size_bytes === "number"
-          ? att.size_bytes
+        typeof sizeBytes === "number"
+          ? sizeBytes
           : typeof data.size === "number"
             ? data.size
             : null,
@@ -163,6 +162,47 @@ export async function resolveAttachmentDownload(
     );
     return { ok: false, reason: "resend-error" };
   }
+}
+
+/**
+ * Fila legible por RLS (adjunto + mensaje), sin pedir aún la URL a Resend.
+ * La usa /file para intentar Storage antes de caer al proxy firmado.
+ */
+export async function resolveAttachmentContext(
+  supabase: SupabaseClient,
+  attachmentId: string,
+): Promise<AttachmentRowContext | null> {
+  const { data: att, error: attErr } = await supabase
+    .from("email_attachments")
+    .select(
+      "message_id, filename, content_type, size_bytes, storage_path, resend_attachment_id",
+    )
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (attErr || !att) return null;
+
+  const { data: msg, error: msgErr } = await supabase
+    .from("email_messages")
+    .select("id, resend_email_id, direction")
+    .eq("id", att.message_id)
+    .maybeSingle();
+
+  // IDOR / huérfano: el adjunto debe pertenecer a un mensaje legible (RLS).
+  if (msgErr || !msg?.resend_email_id) return null;
+
+  return {
+    filename: att.filename || "adjunto",
+    contentType: att.content_type || "application/octet-stream",
+    sizeBytes: typeof att.size_bytes === "number" ? att.size_bytes : null,
+    storagePath:
+      typeof att.storage_path === "string" && att.storage_path.trim()
+        ? att.storage_path.trim()
+        : null,
+    resendAttachmentId: String(att.resend_attachment_id ?? "").trim(),
+    resendEmailId: String(msg.resend_email_id),
+    direction: msg.direction === "outbound" ? "outbound" : "inbound",
+  };
 }
 
 const TRUSTED_RESEND_DOMAINS = ["resend.com", "resend.dev", "resend.app"];

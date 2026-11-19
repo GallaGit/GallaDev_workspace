@@ -24,6 +24,9 @@ const VALID: RetentionResult = {
   email_messages: 7,
   email_attachments: 4,
   email_drafts: 1,
+  trashed_threads: 6,
+  trashed_messages: 8,
+  trashed_attachments: 2,
   storage_paths: ["mail/2024/a.pdf", "mail/2024/b.pdf"],
 };
 
@@ -93,6 +96,9 @@ describe("parseRetentionResult", () => {
     { leads: "2" },
     { email_threads: NaN },
     { email_drafts: Infinity },
+    { trashed_threads: -1 },
+    { trashed_messages: 1.5 },
+    { trashed_attachments: "2" },
   ])("rechaza el resultado %j con contadores inválidos", (patch) => {
     expect(() => parseRetentionResult({ ...VALID, ...patch })).toThrow(
       "invalid_retention_result",
@@ -120,7 +126,8 @@ describe("formatRetentionLog", () => {
     const log = formatRetentionLog(VALID);
     expect(log).toBe(
       "[retention] dry_run=true leads=2 clients=1 activities=5 email_threads=3" +
-        " email_messages=7 email_attachments=4 email_drafts=1 storage_files=2",
+        " email_messages=7 email_attachments=4 email_drafts=1 trashed_threads=6" +
+        " trashed_messages=8 trashed_attachments=2 storage_files=2",
     );
     expect(log).not.toContain("mail/2024/a.pdf");
     expect(log).not.toContain("mail/2024");

@@ -5,13 +5,22 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
-import { resolveAttachmentDownload } from "@/lib/email/attachment-download";
+import {
+  resolveAttachmentContext,
+  resolveAttachmentDownload,
+} from "@/lib/email/attachment-download";
+import {
+  attachmentsBucket,
+  downloadPersistedAttachment,
+  isPersistedStoragePath,
+} from "@/lib/email/attachment-persist";
 import {
   contentDisposition,
   fetchTrustedUpstream,
   isInlineContentType,
   safeResponseContentType,
 } from "@/lib/email/attachment-proxy";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +40,18 @@ const ERRORS = {
   "resend-error": { status: 502, error: "No se pudo obtener el adjunto de Resend" },
   "untrusted-url": { status: 502, error: "Resend devolvió una URL de descarga no válida" },
 } as const;
+
+function fileHeaders(contentType: string, filename: string): Headers {
+  return new Headers({
+    "Content-Type": safeResponseContentType(contentType),
+    "Content-Disposition": contentDisposition(
+      filename,
+      isInlineContentType(contentType),
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "private, no-store",
+  });
+}
 
 function errorResponse(reason: keyof typeof ERRORS) {
   const body = ERRORS[reason];
@@ -66,6 +87,39 @@ async function getAttachmentFile(request: Request, ctx: Ctx) {
 
   try {
     const supabase = await createSupabaseServerClient();
+
+    // Storage primero: se autoriza la fila con la sesión (RLS) antes de usar
+    // el cliente admin, que es el único con acceso al bucket privado.
+    const bucket = attachmentsBucket();
+    const context = bucket ? await resolveAttachmentContext(supabase, id) : null;
+    let stored: Blob | null = null;
+    if (bucket && context?.storagePath && isPersistedStoragePath(context.storagePath)) {
+      let admin: ReturnType<typeof createSupabaseAdminClient>;
+      try {
+        admin = createSupabaseAdminClient();
+        stored = await downloadPersistedAttachment(
+          admin,
+          bucket,
+          context.storagePath,
+        );
+      } catch (e) {
+        logRouteError(
+          {
+            route: `GET /api/email/attachments/${id}/file`,
+            errorClass: errorClassOf(e),
+            requestId,
+          },
+          "warn",
+        );
+      }
+    }
+
+    if (stored && context) {
+      const headers = fileHeaders(context.contentType, context.filename);
+      headers.set("Content-Length", String(stored.size));
+      return new Response(await stored.arrayBuffer(), { status: 200, headers });
+    }
+
     const result = await resolveAttachmentDownload(supabase, id);
     if (!result.ok) return errorResponse(result.reason);
 
@@ -82,13 +136,7 @@ async function getAttachmentFile(request: Request, ctx: Ctx) {
       return errorResponse(upstream.reason);
     }
 
-    const inline = isInlineContentType(result.contentType);
-    const headers = new Headers({
-      "Content-Type": safeResponseContentType(result.contentType),
-      "Content-Disposition": contentDisposition(result.filename, inline),
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "private, no-store",
-    });
+    const headers = fileHeaders(result.contentType, result.filename);
     const len = upstream.response.headers.get("content-length");
     if (len && /^\d+$/.test(len)) headers.set("Content-Length", len);
 

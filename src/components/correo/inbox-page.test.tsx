@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { renderWithIntl } from "@/test/i18n-wrapper";
-import { InboxPage, type EmailThread } from "./inbox-page";
+import { InboxPage, THREAD_PAGE_SIZE, type EmailThread } from "./inbox-page";
 
 vi.mock("sonner", () => {
   const toastFn = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -39,6 +39,26 @@ function thread(id: string, overrides: Partial<EmailThread> = {}): EmailThread {
 type FetchCall = { url: string; method: string; body: unknown };
 let calls: FetchCall[] = [];
 let patchStatus = 200;
+let listPage: (params: URLSearchParams) => EmailThread[];
+
+function defaultListPage(params: URLSearchParams): EmailThread[] {
+  const view = params.get("view");
+  if (params.get("q")) {
+    return params.get("q") === "bruno" ? [thread(B, { is_read: true })] : [];
+  }
+  return view === "inbox" ? [thread(A), thread(B, { is_read: true })] : [];
+}
+
+function pageThread(index: number): EmailThread {
+  const id = `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+  return thread(id, { subject: `Asunto ${index}` });
+}
+
+function fullPage(): EmailThread[] {
+  return Array.from({ length: THREAD_PAGE_SIZE }, (_, index) =>
+    pageThread(index),
+  );
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -52,6 +72,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   calls = [];
   patchStatus = 200;
+  listPage = defaultListPage;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -60,21 +81,11 @@ beforeEach(() => {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ url, method, body });
       if (url.startsWith("/api/email/threads/unread-count")) {
-        return json({ ok: true, counts: { inbox: 2, archived: 0, trash: 1 } });
+        return json({ ok: true, counts: { inbox: 2, sent: 0, archived: 0, trash: 1 } });
       }
       if (url.startsWith("/api/email/threads?") && method === "GET") {
         const sp = new URL(url, "http://x").searchParams;
-        const view = sp.get("view");
-        if (sp.get("q")) {
-          return json({
-            ok: true,
-            threads: sp.get("q") === "bruno" ? [thread(B, { is_read: true })] : [],
-          });
-        }
-        return json({
-          ok: true,
-          threads: view === "inbox" ? [thread(A), thread(B, { is_read: true })] : [],
-        });
+        return json({ ok: true, threads: listPage(sp) });
       }
       if (url === "/api/email/threads" && method === "PATCH") {
         return patchStatus === 200
@@ -171,6 +182,40 @@ describe("InboxPage (bandeja tipo Gmail)", () => {
     expect(calls.some((c) => c.url === "/api/email/threads?view=trash")).toBe(true);
     expect(screen.getByText(/30 días/)).toBeTruthy();
   });
+
+  it("abre Enviados, pide esa vista y muestra el vacío", async () => {
+    renderWithIntl(<InboxPage />);
+    await screen.findByText("Ana");
+    fireEvent.click(screen.getByRole("button", { name: /Enviados/ }));
+    await screen.findByText("No hay mensajes enviados.");
+    expect(calls.some((c) => c.url === "/api/email/threads?view=sent")).toBe(true);
+  });
+
+  it("en Enviados archivar no quita el hilo de la lista; la papelera sí", async () => {
+    listPage = (params) =>
+      params.get("view") === "sent" ? [thread(A), thread(B, { is_read: true })] : [];
+    renderWithIntl(<InboxPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /Enviados/ }));
+    await screen.findByText("Ana");
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar hilo de Ana" }));
+    const toolbar = screen.getByRole("toolbar", { name: "Acciones sobre la selección" });
+    await act(async () => {
+      fireEvent.click(within(toolbar).getByRole("button", { name: "Archivar" }));
+    });
+    expect(
+      calls.find((c) => c.method === "PATCH" && c.url === "/api/email/threads")?.body,
+    ).toEqual({ ids: [A], archived: true });
+    expect(screen.getByText("Ana")).toBeTruthy();
+    expect(screen.getByText("Bruno")).toBeTruthy();
+    expect(screen.getByText("1 seleccionado")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(within(toolbar).getByRole("button", { name: "Mover a la papelera" }));
+    });
+    await waitFor(() => expect(screen.queryByText("Ana")).toBeNull());
+    expect(screen.getByText("Bruno")).toBeTruthy();
+  });
 });
 
 describe("InboxPage: búsqueda", () => {
@@ -200,5 +245,124 @@ describe("InboxPage: búsqueda", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Borrar búsqueda" }));
     await screen.findByText("Ana");
+  });
+});
+
+describe("InboxPage: paginación", () => {
+  it("muestra «Cargar más» cuando la primera página está llena", async () => {
+    listPage = (params) => (params.get("offset") ? [] : fullPage());
+    renderWithIntl(<InboxPage />);
+
+    await screen.findByText("Asunto 0");
+    expect(screen.getAllByRole("option")).toHaveLength(THREAD_PAGE_SIZE);
+    expect(screen.getByRole("button", { name: "Cargar más" })).toBeTruthy();
+  });
+
+  it("añade la segunda página con el offset correcto sin perder la selección", async () => {
+    listPage = (params) =>
+      params.get("offset") === String(THREAD_PAGE_SIZE)
+        ? [pageThread(THREAD_PAGE_SIZE)]
+        : fullPage();
+    renderWithIntl(<InboxPage />);
+
+    await screen.findByText("Asunto 0");
+    const firstRow = screen.getAllByRole("option")[0];
+    const firstCheckbox = within(firstRow).getByRole("checkbox");
+    fireEvent.click(firstCheckbox);
+    expect(screen.getByText("1 seleccionado")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cargar más" }));
+    await screen.findByText(`Asunto ${THREAD_PAGE_SIZE}`);
+
+    expect(
+      calls.filter(
+        (c) => c.url === `/api/email/threads?view=inbox&offset=${THREAD_PAGE_SIZE}`,
+      ),
+    ).toHaveLength(1);
+    expect(screen.getAllByRole("option")).toHaveLength(THREAD_PAGE_SIZE + 1);
+    expect(screen.queryByRole("button", { name: "Cargar más" })).toBeNull();
+    expect(screen.getByText("1 seleccionado")).toBeTruthy();
+    expect(
+      within(screen.getAllByRole("option")[0]).getByRole("checkbox"),
+    ).toBeChecked();
+  });
+
+  it("no muestra el botón cuando la página es corta", async () => {
+    renderWithIntl(<InboxPage />);
+
+    await screen.findByText("Ana");
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Cargar más" })).toBeNull();
+  });
+
+  it("cambiar de vista descarta las páginas cargadas", async () => {
+    listPage = (params) => {
+      if (params.get("view") === "trash") {
+        return [thread(B, { subject: "Papelera", trashed_at: "2026-10-01T00:00:00Z" })];
+      }
+      return params.get("offset") === String(THREAD_PAGE_SIZE)
+        ? [pageThread(THREAD_PAGE_SIZE)]
+        : fullPage();
+    };
+    renderWithIntl(<InboxPage />);
+
+    await screen.findByText("Asunto 0");
+    fireEvent.click(screen.getByRole("button", { name: "Cargar más" }));
+    await screen.findByText(`Asunto ${THREAD_PAGE_SIZE}`);
+    fireEvent.click(screen.getByRole("button", { name: /Papelera/ }));
+
+    await screen.findByText("Papelera");
+    expect(screen.queryByText("Asunto 0")).toBeNull();
+    expect(screen.queryByText(`Asunto ${THREAD_PAGE_SIZE}`)).toBeNull();
+    expect(calls.some((c) => c.url === "/api/email/threads?view=trash")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Cargar más" })).toBeNull();
+  });
+
+  it("buscar de nuevo reinicia la paginación", async () => {
+    listPage = (params) => {
+      if (params.get("q")) {
+        return params.get("q") === "bruno" ? [thread(B, { is_read: true })] : [];
+      }
+      return params.get("offset") === String(THREAD_PAGE_SIZE)
+        ? [pageThread(THREAD_PAGE_SIZE)]
+        : fullPage();
+    };
+    renderWithIntl(<InboxPage />);
+
+    await screen.findByText("Asunto 0");
+    fireEvent.click(screen.getByRole("button", { name: "Cargar más" }));
+    await screen.findByText(`Asunto ${THREAD_PAGE_SIZE}`);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar en el correo" }), {
+      target: { value: "bruno" },
+    });
+    await screen.findByText("Bruno");
+
+    expect(screen.queryByText("Asunto 0")).toBeNull();
+    expect(screen.queryByText(`Asunto ${THREAD_PAGE_SIZE}`)).toBeNull();
+    expect(
+      calls.some((c) => c.url === "/api/email/threads?view=inbox&q=bruno"),
+    ).toBe(true);
+    expect(screen.queryByRole("button", { name: "Cargar más" })).toBeNull();
+  });
+
+  it("Cargar más en Enviados mantiene view=sent y el offset", async () => {
+    listPage = (params) => {
+      if (params.get("view") !== "sent") return [];
+      return params.get("offset") === String(THREAD_PAGE_SIZE)
+        ? [pageThread(THREAD_PAGE_SIZE)]
+        : fullPage();
+    };
+    renderWithIntl(<InboxPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /Enviados/ }));
+    await screen.findByText("Asunto 0");
+    fireEvent.click(screen.getByRole("button", { name: "Cargar más" }));
+    await screen.findByText(`Asunto ${THREAD_PAGE_SIZE}`);
+    expect(
+      calls.some(
+        (c) => c.url === `/api/email/threads?view=sent&offset=${THREAD_PAGE_SIZE}`,
+      ),
+    ).toBe(true);
+    expect(screen.getAllByRole("option")).toHaveLength(THREAD_PAGE_SIZE + 1);
   });
 });

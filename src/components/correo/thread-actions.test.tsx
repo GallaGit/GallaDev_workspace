@@ -30,6 +30,14 @@ describe("StateActionButtons", () => {
     expect(onAction).toHaveBeenLastCalledWith({ archived: false });
   });
 
+  it("Enviados: archivar y papelera, como Recibidos", () => {
+    const onAction = vi.fn();
+    renderWithIntl(<StateActionButtons view="sent" isRead onAction={onAction} />);
+    expect(labels()).toEqual(["Marcar como no leído", "Archivar", "Mover a la papelera"]);
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    expect(onAction).toHaveBeenLastCalledWith({ archived: true });
+  });
+
   it("Papelera: restaurar en vez de papelera", () => {
     const onAction = vi.fn();
     renderWithIntl(<StateActionButtons view="trash" onAction={onAction} />);

@@ -27,7 +27,7 @@ import {
   applyThreadPatch,
   formatUnreadBadge,
   stateToastKey,
-  threadViewOf,
+  threadStaysInView,
   type ThreadView as MailView,
 } from "@/lib/email/thread-state";
 import { BulkToolbar } from "@/components/correo/thread-actions";
@@ -86,6 +86,29 @@ export interface EmailAttachment {
 type ListMode = "threads" | "drafts";
 type MailboxFilter = "all" | CompanyMailbox;
 
+/** Tamaño de página del API (default del servidor); una página llena => hay más. */
+export const THREAD_PAGE_SIZE = 50;
+
+function threadListParams(
+  view: MailView,
+  searchQuery: string,
+  searchAll: boolean,
+  mailboxFilter: MailboxFilter,
+  offset?: number,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("view", view);
+  if (searchQuery) {
+    params.set("q", searchQuery);
+    if (searchAll) params.set("scope", "all");
+  }
+  if (mailboxFilter !== "all") {
+    params.set("mailbox", mailboxFilter);
+  }
+  if (offset !== undefined) params.set("offset", String(offset));
+  return params;
+}
+
 function formatDraftDate(iso: string, locale: string): string {
   return new Date(iso).toLocaleDateString(locale, {
     day: "numeric",
@@ -99,6 +122,8 @@ export function InboxPage() {
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mailboxFilter, setMailboxFilter] = useState<MailboxFilter>("all");
   const [listMode, setListMode] = useState<ListMode>("threads");
@@ -112,6 +137,8 @@ export function InboxPage() {
   const searching = searchQuery.length > 0;
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const threadsRef = useRef<EmailThread[]>([]);
+  const loadingMoreRef = useRef(false);
+  const listGenRef = useRef(0);
   useEffect(() => {
     threadsRef.current = threads;
   }, [threads]);
@@ -132,24 +159,20 @@ export function InboxPage() {
     if (listMode !== "threads") return;
     let cancelled = false;
     async function load() {
+      const gen = ++listGenRef.current;
       setLoading(true);
+      setHasMore(false);
       try {
-        const params = new URLSearchParams();
-        params.set("view", view);
-        if (searchQuery) {
-          params.set("q", searchQuery);
-          if (searchAll) params.set("scope", "all");
-        }
-        if (mailboxFilter !== "all") {
-          params.set("mailbox", mailboxFilter);
-        }
+        const params = threadListParams(view, searchQuery, searchAll, mailboxFilter);
         const res = await fetch(`/api/email/threads?${params.toString()}`);
         const data = await readJsonResponse<{ threads?: EmailThread[] }>(
           res,
           t("loadThreadsError"),
         );
-        if (cancelled) return;
-        setThreads(data.threads ?? []);
+        if (cancelled || gen !== listGenRef.current) return;
+        const page = data.threads ?? [];
+        setThreads(page);
+        setHasMore(page.length === THREAD_PAGE_SIZE);
         setSelectedId(null);
         setCheckedIds(new Set());
       } catch (e) {
@@ -167,6 +190,39 @@ export function InboxPage() {
       cancelled = true;
     };
   }, [mailboxFilter, listMode, threadsReloadKey, view, searchQuery, searchAll, t]);
+
+  const loadMore = useCallback(async () => {
+    if (listMode !== "threads" || loadingMoreRef.current || !hasMore) return;
+    const gen = listGenRef.current;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const params = threadListParams(
+        view,
+        searchQuery,
+        searchAll,
+        mailboxFilter,
+        threadsRef.current.length,
+      );
+      const res = await fetch(`/api/email/threads?${params.toString()}`);
+      const data = await readJsonResponse<{ threads?: EmailThread[] }>(
+        res,
+        t("loadThreadsError"),
+      );
+      if (gen !== listGenRef.current) return;
+      const page = data.threads ?? [];
+      setThreads((prev) => {
+        const seen = new Set(prev.map((thread) => thread.id));
+        return [...prev, ...page.filter((thread) => !seen.has(thread.id))];
+      });
+      setHasMore(page.length === THREAD_PAGE_SIZE);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("loadThreadsError"));
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [listMode, hasMore, view, searchQuery, searchAll, mailboxFilter, t]);
 
   useEffect(() => {
     if (listMode !== "drafts") return;
@@ -227,7 +283,7 @@ export function InboxPage() {
         )
         // En «buscar en todas las bandejas» las filas se quedan aunque cambien de vista.
         .filter(
-          (thread) => (searching && searchAll) || threadViewOf(thread) === view,
+          (thread) => (searching && searchAll) || threadStaysInView(thread, view),
         );
       const stillVisible = new Set(next.map((thread) => thread.id));
       threadsRef.current = next;
@@ -337,6 +393,7 @@ export function InboxPage() {
   const someChecked = checkedList.length > 0 && !allChecked;
   const viewLabels: Record<MailView, string> = {
     inbox: t("views.inbox"),
+    sent: t("views.sent"),
     archived: t("views.archived"),
     trash: t("views.trash"),
   };
@@ -347,9 +404,11 @@ export function InboxPage() {
       ? t("emptyArchived")
       : view === "trash"
         ? t("emptyTrash")
-        : mailboxFilter === "all"
-          ? t("emptyAll")
-          : t("emptyMailbox", { mailbox: mailboxFilter });
+        : view === "sent"
+          ? t("emptySent")
+          : mailboxFilter === "all"
+            ? t("emptyAll")
+            : t("emptyMailbox", { mailbox: mailboxFilter });
 
   return (
     <>
@@ -543,6 +602,21 @@ export function InboxPage() {
               onToggleChecked={toggleChecked}
             />
           )}
+
+          {listMode === "threads" && !loading && hasMore ? (
+            <div className="p-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                loading={loadingMore}
+                onClick={() => void loadMore()}
+              >
+                {loadingMore ? t("loadingMore") : t("loadMore")}
+              </Button>
+            </div>
+          ) : null}
         </aside>
         <div className="min-w-0 flex-1 overflow-y-auto">
           {listMode === "drafts" ? (

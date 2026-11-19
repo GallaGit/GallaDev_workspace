@@ -181,6 +181,17 @@ describe("GET /api/email/threads?view=", () => {
       ["is", "archived_at", null],
     ]);
   });
+
+  it("Enviados: outbound, fuera de Papelera, con inner join", async () => {
+    const { body, filters, select } = await filtersFor("?view=sent");
+    expect(body.view).toBe("sent");
+    expect(select).toContain("email_messages!inner(id)");
+    expect(filters).toEqual([
+      ["eq", "email_messages.direction", "outbound"],
+      ["is", "trashed_at", null],
+    ]);
+    expect(filters.some((f) => f[1] === "archived_at")).toBe(false);
+  });
 });
 
 describe("GET /api/email/threads/unread-count", () => {
@@ -192,17 +203,23 @@ describe("GET /api/email/threads/unread-count", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       ok: true,
-      counts: { inbox: 3, archived: 3, trash: 3 },
+      counts: { inbox: 3, sent: 3, archived: 3, trash: 3 },
     });
     const selects = fake.calls.filter((c) => c.method === "select");
-    expect(selects).toHaveLength(3);
+    expect(selects).toHaveLength(4);
     for (const s of selects) {
       expect(s.args[1]).toEqual({ count: "exact", head: true });
     }
+    expect(selects.some((s) => s.args[0] === "id, email_messages!inner(id)")).toBe(true);
     const readFilters = fake.calls.filter(
       (c) => c.method === "eq" && c.args[0] === "is_read",
     );
-    expect(readFilters).toHaveLength(3);
+    expect(readFilters).toHaveLength(4);
+    expect(
+      fake.calls.some(
+        (c) => c.method === "eq" && c.args[0] === "email_messages.direction" && c.args[1] === "outbound",
+      ),
+    ).toBe(true);
     expect(readFilters.every((c) => c.args[1] === false)).toBe(true);
   });
 

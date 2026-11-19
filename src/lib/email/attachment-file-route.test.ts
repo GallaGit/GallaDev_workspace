@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { resolveAttachmentDownload } from "@/lib/email/attachment-download";
+import {
+  resolveAttachmentContext,
+  resolveAttachmentDownload,
+} from "@/lib/email/attachment-download";
 import { GET } from "@/app/api/email/attachments/[id]/file/route";
 
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: vi.fn(async () => null) }));
@@ -15,6 +18,21 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/email/attachment-download", async (orig) => ({
   ...(await orig<typeof import("@/lib/email/attachment-download")>()),
   resolveAttachmentDownload: vi.fn(),
+  resolveAttachmentContext: vi.fn(async () => null),
+}));
+
+const storageDownload = vi.hoisted(() =>
+  vi.fn<(path: string) => Promise<{ data: Blob | null; error: unknown }>>(
+    async () => ({ data: null, error: null }),
+  ),
+);
+
+const storageFrom = vi.hoisted(() =>
+  vi.fn((bucket: string) => ({ bucket, download: storageDownload })),
+);
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: () => ({ storage: { from: storageFrom } }),
 }));
 
 const ID = "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd";
@@ -38,10 +56,16 @@ describe("GET /api/email/attachments/[id]/file", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireAdmin).mockResolvedValue(null);
+    vi.stubEnv("EMAIL_ATTACHMENTS_BUCKET", undefined);
+    vi.mocked(resolveAttachmentContext).mockResolvedValue(null);
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response("%PDF", { status: 200, headers: { "content-length": "4" } })),
     );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("respeta requireAdmin", async () => {
@@ -101,5 +125,102 @@ describe("GET /api/email/attachments/[id]/file", () => {
     const res = await call();
     expect(res.status).toBe(502);
     expect((await res.json()).reason).toBe("untrusted-url");
+  });
+
+  it("sirve desde Storage cuando la fila tiene storage_path", async () => {
+    vi.stubEnv("EMAIL_ATTACHMENTS_BUCKET", "adjuntos");
+    vi.mocked(resolveAttachmentContext).mockResolvedValue({
+      filename: "factura.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 4,
+      storagePath: `email/11111111-1111-4111-8111-111111111111/${ID}`,
+      resendAttachmentId: "att-1",
+      resendEmailId: "em_1",
+      direction: "inbound",
+    });
+    storageDownload.mockResolvedValue({
+      data: new Blob(["%PDF"], { type: "application/pdf" }),
+      error: null,
+    });
+    vi.mocked(resolveAttachmentDownload).mockResolvedValue({
+      ok: false,
+      reason: "expired",
+    });
+
+    const res = await call();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+    expect(res.headers.get("content-disposition")).toMatch(/^inline; filename="factura.pdf"/);
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(res.headers.get("content-length")).toBe("4");
+    expect(await res.text()).toBe("%PDF");
+    expect(storageFrom).toHaveBeenCalledWith("adjuntos");
+    expect(storageDownload).toHaveBeenCalledWith(
+      `email/11111111-1111-4111-8111-111111111111/${ID}`,
+    );
+    expect(resolveAttachmentDownload).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("cae al proxy de Resend si Storage falla", async () => {
+    vi.stubEnv("EMAIL_ATTACHMENTS_BUCKET", "adjuntos");
+    vi.mocked(resolveAttachmentContext).mockResolvedValue({
+      filename: "factura.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 4,
+      storagePath: `email/11111111-1111-4111-8111-111111111111/${ID}`,
+      resendAttachmentId: "att-1",
+      resendEmailId: "em_1",
+      direction: "inbound",
+    });
+    storageDownload.mockResolvedValue({ data: null, error: { message: "missing" } });
+    resolved("application/pdf");
+
+    const res = await call();
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("%PDF");
+    expect(resolveAttachmentDownload).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("410 si fallan Storage y Resend", async () => {
+    vi.stubEnv("EMAIL_ATTACHMENTS_BUCKET", "adjuntos");
+    vi.mocked(resolveAttachmentContext).mockResolvedValue({
+      filename: "factura.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 4,
+      storagePath: `email/11111111-1111-4111-8111-111111111111/${ID}`,
+      resendAttachmentId: "att-1",
+      resendEmailId: "em_1",
+      direction: "inbound",
+    });
+    storageDownload.mockResolvedValue({ data: null, error: { message: "missing" } });
+    vi.mocked(resolveAttachmentDownload).mockResolvedValue({
+      ok: false,
+      reason: "expired",
+    });
+
+    const res = await call();
+    expect(res.status).toBe(410);
+    expect((await res.json()).reason).toBe("expired");
+  });
+  it("ignora una ruta de Storage no opaca y cae a Resend", async () => {
+    vi.stubEnv("EMAIL_ATTACHMENTS_BUCKET", "adjuntos");
+    vi.mocked(resolveAttachmentContext).mockResolvedValue({
+      filename: "factura.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 4,
+      storagePath: "../otros/secreto.pdf",
+      resendAttachmentId: "att-1",
+      resendEmailId: "em_1",
+      direction: "inbound",
+    });
+    resolved("application/pdf");
+
+    const res = await call();
+    expect(res.status).toBe(200);
+    expect(storageDownload).not.toHaveBeenCalled();
+    expect(resolveAttachmentDownload).toHaveBeenCalled();
   });
 });
