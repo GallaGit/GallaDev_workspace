@@ -7,6 +7,11 @@ import {
   type CompanyMailbox,
 } from "./mailboxes";
 import {
+  exceedsRecipientTotal,
+  MAX_RECIPIENT_FIELD_CHARS,
+  parseRecipientList,
+} from "./recipients";
+import {
   MAX_EMAIL_ADDRESS_CHARS,
   MAX_EMAIL_BODY_CHARS,
   MAX_EMAIL_SUBJECT_CHARS,
@@ -32,17 +37,25 @@ export type ComposePayload = {
   html?: string;
   draftId?: string;
   leadId?: string | null;
+  /** Copia (Cc) y copia oculta (Cco), ya validadas y en minúsculas. */
+  cc?: string[];
+  bcc?: string[];
 };
 
 export type ReplyPayload = {
   text: string;
   html?: string;
   mode?: "reply" | "replyAll";
+  /** Cc/Cco adicionales a los de «Responder a todos». */
+  cc?: string[];
+  bcc?: string[];
 };
 
 export type ForwardPayload = {
   to: string;
   text: string;
+  cc?: string[];
+  bcc?: string[];
 };
 
 export type DraftPayload = {
@@ -51,6 +64,9 @@ export type DraftPayload = {
   to: string;
   subject: string;
   bodyText: string;
+  /** Texto libre de Cc/Cco (puede tener direcciones a medio escribir). */
+  cc?: string;
+  bcc?: string;
   leadId: string | null;
   /** Borrador de respuesta de un hilo (uno por hilo). */
   threadId?: string;
@@ -180,6 +196,14 @@ const draftSchema = z.strictObject(
     bodyText: z
       .string({ error: "El cuerpo debe ser texto" })
       .max(MAX_EMAIL_BODY_CHARS, { error: "El cuerpo es demasiado largo" }),
+    cc: z
+      .string({ error: "Cc debe ser texto" })
+      .max(MAX_RECIPIENT_FIELD_CHARS, { error: "Cc es demasiado largo" })
+      .optional(),
+    bcc: z
+      .string({ error: "Cco debe ser texto" })
+      .max(MAX_RECIPIENT_FIELD_CHARS, { error: "Cco es demasiado largo" })
+      .optional(),
     leadId: uuidField.nullable(),
     threadId: uuidField.optional(),
     replyMode: z.enum(["reply", "replyAll"], { error: "Modo de respuesta no válido" }).optional(),
@@ -235,6 +259,30 @@ function optionalUuid(
   return { ok: true, value: body[key].trim() };
 }
 
+const CC_LABEL = "Cc";
+const BCC_LABEL = "Cco";
+
+/** Cc y Cco de la petición (opcionales). Solo incluye las claves con datos. */
+function parseCopyFields(
+  raw: Record<string, unknown>,
+  to: string[],
+): { ok: true; value: { cc?: string[]; bcc?: string[] } } | { ok: false; error: string } {
+  const cc = parseRecipientList(raw.cc, CC_LABEL);
+  if (!cc.ok) return cc;
+  const bcc = parseRecipientList(raw.bcc, BCC_LABEL);
+  if (!bcc.ok) return bcc;
+  if (exceedsRecipientTotal({ to, cc: cc.value, bcc: bcc.value })) {
+    return { ok: false, error: "Demasiados destinatarios" };
+  }
+  return {
+    ok: true,
+    value: {
+      ...(cc.value.length > 0 ? { cc: cc.value } : {}),
+      ...(bcc.value.length > 0 ? { bcc: bcc.value } : {}),
+    },
+  };
+}
+
 export function parseComposeBody(raw: unknown): EmailPayloadResult<ComposePayload> {
   if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };
   const unknown = unknownField(raw, [
@@ -245,6 +293,8 @@ export function parseComposeBody(raw: unknown): EmailPayloadResult<ComposePayloa
     "html",
     "draftId",
     "leadId",
+    "cc",
+    "bcc",
   ]);
   if (unknown) return { ok: false, error: unknown };
   const draftId = optionalUuid(raw, "draftId");
@@ -274,6 +324,8 @@ export function parseComposeBody(raw: unknown): EmailPayloadResult<ComposePayloa
   if (!isCompanyMailbox(mailbox)) {
     return { ok: false, error: "Buzón de origen no válido" };
   }
+  const copies = parseCopyFields(raw, [parsed.data.to]);
+  if (!copies.ok) return copies;
   return {
     ok: true,
     value: {
@@ -284,13 +336,14 @@ export function parseComposeBody(raw: unknown): EmailPayloadResult<ComposePayloa
       html: parsed.data.html,
       draftId: parsed.data.draftId,
       leadId: parsed.data.leadId,
+      ...copies.value,
     },
   };
 }
 
 export function parseReplyBody(raw: unknown): EmailPayloadResult<ReplyPayload> {
   if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };
-  const unknown = unknownField(raw, ["text", "html", "mode"]);
+  const unknown = unknownField(raw, ["text", "html", "mode", "cc", "bcc"]);
   if (unknown) return { ok: false, error: unknown };
   const normalized: Record<string, unknown> = {
     text: typeof raw.text === "string" ? raw.text.trim() : raw.text,
@@ -300,26 +353,34 @@ export function parseReplyBody(raw: unknown): EmailPayloadResult<ReplyPayload> {
   else if ("html" in raw && raw.html != null && raw.html !== "") normalized.html = raw.html;
   const parsed = replySchema.safeParse(normalized);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  const copies = parseCopyFields(raw, []);
+  if (!copies.ok) return copies;
   return {
     ok: true,
     value: {
       text: parsed.data.text,
       html: parsed.data.html,
       ...(parsed.data.mode ? { mode: parsed.data.mode } : {}),
+      ...copies.value,
     },
   };
 }
 
 export function parseForwardBody(raw: unknown): EmailPayloadResult<ForwardPayload> {
   if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };
-  const unknown = unknownField(raw, ["to", "text"]);
+  const unknown = unknownField(raw, ["to", "text", "cc", "bcc"]);
   if (unknown) return { ok: false, error: unknown };
   const parsed = forwardSchema.safeParse({
     to: typeof raw.to === "string" ? raw.to.trim() : raw.to,
     text: typeof raw.text === "string" ? raw.text.trim() : raw.text ?? "",
   });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  return { ok: true, value: { to: parsed.data.to, text: parsed.data.text } };
+  const copies = parseCopyFields(raw, [parsed.data.to]);
+  if (!copies.ok) return copies;
+  return {
+    ok: true,
+    value: { to: parsed.data.to, text: parsed.data.text, ...copies.value },
+  };
 }
 
 export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
@@ -330,6 +391,8 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
     "to",
     "subject",
     "bodyText",
+    "cc",
+    "bcc",
     "leadId",
     "threadId",
     "replyMode",
@@ -355,6 +418,8 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
     bodyText: typeof raw.bodyText === "string" ? raw.bodyText : raw.bodyText ?? "",
     leadId,
   };
+  if (raw.cc !== undefined) normalized.cc = typeof raw.cc === "string" ? raw.cc.trim() : raw.cc;
+  if (raw.bcc !== undefined) normalized.bcc = typeof raw.bcc === "string" ? raw.bcc.trim() : raw.bcc;
   if (id.value) normalized.id = id.value;
   if (threadId.value) normalized.threadId = threadId.value;
   if (raw.replyMode !== undefined) normalized.replyMode = raw.replyMode;
@@ -371,6 +436,8 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
       to: parsed.data.to,
       subject: parsed.data.subject,
       bodyText: parsed.data.bodyText,
+      ...(parsed.data.cc ? { cc: parsed.data.cc } : {}),
+      ...(parsed.data.bcc ? { bcc: parsed.data.bcc } : {}),
       leadId: parsed.data.leadId,
       ...(parsed.data.threadId ? { threadId: parsed.data.threadId } : {}),
       ...(parsed.data.replyMode ? { replyMode: parsed.data.replyMode } : {}),

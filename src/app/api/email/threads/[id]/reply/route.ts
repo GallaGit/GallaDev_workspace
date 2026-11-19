@@ -4,9 +4,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseReplyBody } from "@/lib/email/email-payload";
-import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
+import { readOutboundRequest } from "@/lib/email/outbound-request";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,8 @@ const RATE_MAX = 10;
  * Auth: requireAdmin antes del cliente admin. La lectura del hilo usa la
  * sesión (RLS). El insert del mensaje saliente no tiene GRANT para
  * authenticated, así que la escritura sigue en service role después del gate.
- * Body: { text: string, html?: string, mode?: "reply" | "replyAll" }
+ * Body JSON: { text, html?, mode?: "reply" | "replyAll", cc?, bcc? }
+ * o multipart/form-data con `payload` (ese JSON) y `files` (adjuntos).
  */
 async function postReply(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
@@ -49,20 +50,17 @@ async function postReply(request: Request, ctx: Ctx) {
   }
 
   try {
-    const read = await readCappedJson(request, EMAIL_JSON_MAX_BYTES);
+    const read = await readOutboundRequest(
+      request,
+      "El texto de la respuesta es demasiado largo",
+    );
     if (!read.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          error:
-            read.status === 413
-              ? "El texto de la respuesta es demasiado largo"
-              : "Datos del correo no válidos",
-        },
+        { ok: false, error: read.error },
         { status: read.status },
       );
     }
-    const parsed = parseReplyBody(read.value);
+    const parsed = parseReplyBody(read.json);
     if (!parsed.ok) {
       return NextResponse.json(
         { ok: false, error: parsed.error },
@@ -91,6 +89,9 @@ async function postReply(request: Request, ctx: Ctx) {
       bodyText: parsed.value.text,
       bodyHtml: parsed.value.html,
       mode: parsed.value.mode,
+      cc: parsed.value.cc,
+      bcc: parsed.value.bcc,
+      attachments: read.attachments,
     });
 
     if (!result.sent) {
@@ -100,6 +101,7 @@ async function postReply(request: Request, ctx: Ctx) {
         "invalid-body": 400,
         "invalid-mailbox": 400,
         "invalid-recipient": 400,
+        "invalid-attachments": 400,
         "send-failed": 502,
         "db-error": 500,
       };
@@ -109,6 +111,7 @@ async function postReply(request: Request, ctx: Ctx) {
         "invalid-body": "El texto de la respuesta no es válido",
         "invalid-mailbox": "Buzón de origen no válido",
         "invalid-recipient": "El destinatario de la respuesta no es válido",
+        "invalid-attachments": "Adjuntos no válidos",
       };
       logRouteError({
         route: `POST /api/email/threads/${id}/reply`,
