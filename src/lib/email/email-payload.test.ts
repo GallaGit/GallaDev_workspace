@@ -3,6 +3,7 @@ import { MAX_EMAIL_BODY_CHARS, MAX_EMAIL_SUBJECT_CHARS } from "./limits";
 import {
   parseComposeBody,
   parseDraftBody,
+  parseForwardBody,
   parseReplyBody,
   parseThreadBulkPatch,
   parseThreadPatch,
@@ -214,5 +215,102 @@ describe("reply mode, forward and reply drafts", () => {
       value: { threadId: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd", replyMode: "replyAll" },
     });
     expect(p({ threadId: "x", mailbox: "hola@galladev.com", bodyText: "" }).ok).toBe(false);
+  });
+});
+
+describe("Cc y Cco", () => {
+  const base = {
+    mailbox: "hola@galladev.com",
+    to: "ana@example.com",
+    subject: "Hola",
+    text: "Cuerpo",
+  };
+
+  it("compose: acepta Cc/Cco como lista o texto y los normaliza", () => {
+    const parsed = parseComposeBody({
+      ...base,
+      cc: ["Bob <BOB@example.com>", "bob@example.com"],
+      bcc: "carla@example.com, dani@example.com",
+    });
+    expect(parsed).toMatchObject({
+      ok: true,
+      value: {
+        cc: ["bob@example.com"],
+        bcc: ["carla@example.com", "dani@example.com"],
+      },
+    });
+  });
+
+  it("compose: sin Cc/Cco no añade las claves", () => {
+    const parsed = parseComposeBody(base);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value).not.toHaveProperty("cc");
+      expect(parsed.value).not.toHaveProperty("bcc");
+    }
+  });
+
+  it("compose: rechaza direcciones no válidas, tipos raros y exceso de destinatarios", () => {
+    expect(parseComposeBody({ ...base, cc: ["nope"] })).toEqual({
+      ok: false,
+      error: "Cc no válido",
+    });
+    expect(parseComposeBody({ ...base, bcc: "ok@example.com, nope" })).toEqual({
+      ok: false,
+      error: "Cco no válido",
+    });
+    expect(parseComposeBody({ ...base, cc: 7 }).ok).toBe(false);
+    const many = Array.from({ length: 21 }, (_, i) => `u${i}@example.com`);
+    expect(parseComposeBody({ ...base, cc: many }).ok).toBe(false);
+    const overTotal = parseComposeBody({
+      ...base,
+      cc: many.slice(0, 20),
+      bcc: Array.from({ length: 20 }, (_, i) => `v${i}@example.com`),
+    });
+    expect(overTotal.ok).toBe(true);
+  });
+
+  it("compose: rechaza inyección de cabeceras en Cc", () => {
+    expect(
+      parseComposeBody({ ...base, cc: ["a@example.com\r\nBcc: evil@example.com"] }).ok,
+    ).toBe(false);
+  });
+
+  it("reply y forward aceptan Cc/Cco", () => {
+    expect(parseForwardBody({ to: "a@example.com", text: "", cc: "b@example.com" })).toMatchObject({
+      ok: true,
+      value: { cc: ["b@example.com"] },
+    });
+    expect(parseReplyBody({ text: "hola", cc: ["a@example.com"], bcc: ["b@example.com"] })).toMatchObject({
+      ok: true,
+      value: { cc: ["a@example.com"], bcc: ["b@example.com"] },
+    });
+    expect(parseReplyBody({ text: "hola", cc: ["x"] }).ok).toBe(false);
+  });
+
+  it("borrador: guarda Cc/Cco como texto libre acotado", () => {
+    const parsed = parseDraftBody({
+      mailbox: "hola@galladev.com",
+      to: "",
+      cc: " a@example.com, a medio",
+      bcc: "b@example.com",
+      subject: "",
+      bodyText: "x",
+      leadId: null,
+    });
+    expect(parsed).toMatchObject({
+      ok: true,
+      value: { cc: "a@example.com, a medio", bcc: "b@example.com" },
+    });
+    expect(
+      parseDraftBody({
+        mailbox: "hola@galladev.com",
+        cc: "x".repeat(2001),
+        bodyText: "",
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseDraftBody({ mailbox: "hola@galladev.com", cc: 5, bodyText: "" }).ok,
+    ).toBe(false);
   });
 });

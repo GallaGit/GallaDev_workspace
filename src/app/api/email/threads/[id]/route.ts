@@ -45,7 +45,7 @@ async function getThread(request: Request, ctx: Ctx) {
 
     const { data: messages } = await supabase
       .from("email_messages")
-      .select("id, resend_email_id, message_id, direction, from_address, from_name, to_addresses, cc_addresses, subject, body_html, body_text, send_status, received_at, created_at")
+      .select("id, resend_email_id, message_id, direction, from_address, from_name, to_addresses, cc_addresses, bcc_addresses, subject, body_html, body_text, send_status, received_at, created_at")
       .eq("thread_id", id)
       .order("received_at", { ascending: true });
 

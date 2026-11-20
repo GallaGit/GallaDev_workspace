@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMock = vi.fn();
 const getMock = vi.hoisted(() => vi.fn());
+const listAttachmentsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./resend-client", () => ({
   getResendClient: vi.fn(() => ({
-    emails: { send: sendMock, get: getMock },
+    emails: {
+      send: sendMock,
+      get: getMock,
+      attachments: { list: listAttachmentsMock },
+    },
   })),
 }));
 
@@ -17,6 +22,8 @@ function mockAdmin(overrides: {
   insertResult?: { id: string } | null;
   insertError?: { code: string; message: string } | null;
   countResult?: number;
+  messageInsertSpy?: ReturnType<typeof vi.fn>;
+  attachmentsInsert?: ReturnType<typeof vi.fn>;
 } = {}) {
   const thread =
     overrides.thread ?? {
@@ -31,6 +38,12 @@ function mockAdmin(overrides: {
   const insertResult = overrides.insertResult ?? { id: "new-msg-1" };
   const insertError = overrides.insertError ?? null;
   const countResult = overrides.countResult ?? 2;
+  const messageInsert = overrides.messageInsertSpy ?? vi.fn();
+  messageInsert.mockReturnValue({
+    select: vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({ data: insertResult, error: insertError }),
+    }),
+  });
 
   return {
     from: vi.fn().mockImplementation((table: string) => {
@@ -60,14 +73,12 @@ function mockAdmin(overrides: {
               }),
             };
           }),
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: insertResult,
-                error: insertError,
-              }),
-            }),
-          }),
+          insert: messageInsert,
+        };
+      }
+      if (table === "email_attachments") {
+        return {
+          insert: overrides.attachmentsInsert ?? vi.fn().mockResolvedValue({ error: null }),
         };
       }
       return {};
@@ -84,6 +95,11 @@ describe("sendReply", () => {
       error: null,
     });
     sendMock.mockResolvedValue({ data: { id: "re_sent_123" }, error: null });
+    listAttachmentsMock.mockReset();
+    listAttachmentsMock.mockResolvedValue({
+      data: { data: [{ id: "ra-9", filename: "nota.txt" }] },
+      error: null,
+    });
   });
 
   it("sends reply with In-Reply-To, References, and own Message-ID", async () => {
@@ -279,5 +295,89 @@ describe("sendReply", () => {
     if (!result.sent) {
       expect(result.reason).toBe("send-failed");
     }
+  });
+
+  it("suma Cc/Cco extra a los de «Responder a todos» sin duplicar y los guarda", async () => {
+    const messageInsertSpy = vi.fn();
+    const admin = mockAdmin({
+      messageInsertSpy,
+      messages: [
+        {
+          message_id: "<msg-1@example.com>",
+          direction: "inbound",
+          from_address: "sender@example.com",
+          to_addresses: ["hola@galladev.com", "otra@example.com"],
+          cc_addresses: ["copia@example.com"],
+        },
+      ],
+    });
+    const result = await sendReply(admin, {
+      threadId: "t-1",
+      bodyText: "Hola",
+      mode: "replyAll",
+      cc: ["extra@example.com", "copia@example.com", "sender@example.com"],
+      bcc: ["oculto@example.com", "extra@example.com"],
+    });
+    expect(result.sent).toBe(true);
+    const call = sendMock.mock.calls[0][0];
+    expect(call.to).toEqual(["sender@example.com", "otra@example.com"]);
+    expect(call.cc).toEqual(["copia@example.com", "extra@example.com"]);
+    expect(call.bcc).toEqual(["oculto@example.com"]);
+    expect(messageInsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cc_addresses: ["copia@example.com", "extra@example.com"],
+        bcc_addresses: ["oculto@example.com"],
+      }),
+    );
+  });
+
+  it("responde con Cco aunque no sea «Responder a todos»", async () => {
+    await sendReply(mockAdmin(), {
+      threadId: "t-1",
+      bodyText: "Hola",
+      bcc: ["oculto@example.com"],
+    });
+    const call = sendMock.mock.calls[0][0];
+    expect(call.to).toBe("sender@example.com");
+    expect(call).not.toHaveProperty("cc");
+    expect(call.bcc).toEqual(["oculto@example.com"]);
+  });
+
+  it("rechaza Cc no válido sin enviar", async () => {
+    const result = await sendReply(mockAdmin(), {
+      threadId: "t-1",
+      bodyText: "Hola",
+      cc: ["nope"],
+    });
+    expect(result).toEqual({ sent: false, reason: "invalid-recipient" });
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("envía adjuntos y guarda sus metadatos; rechaza los no permitidos", async () => {
+    const attachmentsInsert = vi.fn().mockResolvedValue({ error: null });
+    const ok = await sendReply(mockAdmin({ attachmentsInsert }), {
+      threadId: "t-1",
+      bodyText: "Hola",
+      attachments: [{ filename: "nota.txt", contentType: "text/plain", content: Buffer.from("hola") }],
+    });
+    expect(ok.sent).toBe(true);
+    expect(sendMock.mock.calls[0][0].attachments).toEqual([
+      { filename: "nota.txt", content: Buffer.from("hola"), contentType: "text/plain" },
+    ]);
+    const rows = attachmentsInsert.mock.calls[0][0] as Record<string, unknown>[];
+    expect(rows[0]).toMatchObject({
+      message_id: "new-msg-1",
+      resend_attachment_id: "ra-9",
+      filename: "nota.txt",
+    });
+
+    sendMock.mockClear();
+    const bad = await sendReply(mockAdmin(), {
+      threadId: "t-1",
+      bodyText: "Hola",
+      attachments: [{ filename: "x.bat", contentType: "text/plain", content: Buffer.from("x") }],
+    });
+    expect(bad).toEqual({ sent: false, reason: "invalid-attachments" });
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });

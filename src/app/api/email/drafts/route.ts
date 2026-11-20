@@ -11,7 +11,7 @@ import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 const DRAFT_COLUMNS =
-  "id, mailbox_address, to_address, subject, body_text, lead_id, thread_id, reply_mode, created_at, updated_at";
+  "id, mailbox_address, to_address, cc_address, bcc_address, subject, body_text, lead_id, thread_id, reply_mode, created_at, updated_at";
 
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 30;
@@ -131,6 +131,8 @@ async function saveDraft(request: Request) {
     const row = {
       mailbox_address: parsed.value.mailbox,
       to_address: parsed.value.to,
+      cc_address: parsed.value.cc ?? "",
+      bcc_address: parsed.value.bcc ?? "",
       subject: parsed.value.subject,
       body_text: parsed.value.bodyText,
       lead_id: parsed.value.leadId,

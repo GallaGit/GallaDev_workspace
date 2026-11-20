@@ -88,4 +88,54 @@ describe("sendForward", () => {
     expect(r).toMatchObject({ sent: false, reason: "invalid-recipient" });
     expect(send).not.toHaveBeenCalled();
   });
+
+  it("envía Cc, Cco y adjuntos nuevos junto a los originales, y los guarda en el mensaje", async () => {
+    const { client, calls } = admin();
+    const r = await sendForward(
+      client as unknown as SupabaseClient,
+      {
+        threadId: "t1",
+        to: "bob@example.com",
+        bodyText: "FYI",
+        cc: ["Carla@Example.com", "bob@example.com"],
+        bcc: ["dani@example.com", "carla@example.com"],
+        attachments: [{ filename: "nota.txt", contentType: "text/plain", content: Buffer.from("hola") }],
+      },
+      { emails: { send, get } } as unknown as Resend,
+    );
+    expect(r).toMatchObject({ sent: true, attached: 1 });
+    const arg = send.mock.calls[0][0];
+    expect(arg.cc).toEqual(["carla@example.com"]);
+    expect(arg.bcc).toEqual(["dani@example.com"]);
+    expect(arg.attachments).toEqual([
+      { path: "https://cdn.resend.app/a1", filename: "doc.pdf" },
+      { filename: "nota.txt", content: Buffer.from("hola"), contentType: "text/plain" },
+    ]);
+    const ins = calls.find((c) => c.table === "email_messages" && c.op === "insert")
+      ?.payload as Record<string, unknown>;
+    expect(ins.cc_addresses).toEqual(["carla@example.com"]);
+    expect(ins.bcc_addresses).toEqual(["dani@example.com"]);
+  });
+
+  it("rechaza Cc no válido y adjuntos no permitidos sin enviar", async () => {
+    const { client } = admin();
+    const bad = await sendForward(
+      client as unknown as SupabaseClient,
+      { threadId: "t1", to: "bob@example.com", bodyText: "", cc: ["nope"] },
+      { emails: { send, get } } as unknown as Resend,
+    );
+    expect(bad).toMatchObject({ sent: false, reason: "invalid-recipient" });
+    const exe = await sendForward(
+      client as unknown as SupabaseClient,
+      {
+        threadId: "t1",
+        to: "bob@example.com",
+        bodyText: "",
+        attachments: [{ filename: "x.exe", contentType: "application/x-msdownload", content: Buffer.from("x") }],
+      },
+      { emails: { send, get } } as unknown as Resend,
+    );
+    expect(exe).toMatchObject({ sent: false, reason: "invalid-attachments" });
+    expect(send).not.toHaveBeenCalled();
+  });
 });

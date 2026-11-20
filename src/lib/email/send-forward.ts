@@ -10,7 +10,18 @@ import {
   isCompanyMailbox,
   isValidExternalEmail,
 } from "./mailboxes";
+import {
+  attachmentsAreValid,
+  storeOutboundAttachments,
+  toResendAttachments,
+  type OutboundAttachment,
+} from "./outbound-attachments-store";
 import { createOutboundMessageId } from "./receiving-fetch";
+import {
+  dedupeRecipients,
+  exceedsRecipientTotal,
+  parseAddressList,
+} from "./recipients";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
 import { fetchSentMessageId } from "./thread-match";
@@ -30,6 +41,10 @@ export interface ForwardInput {
   threadId: string;
   to: string;
   bodyText: string;
+  cc?: string[];
+  bcc?: string[];
+  /** Adjuntos nuevos, además de los del mensaje original. */
+  attachments?: OutboundAttachment[];
 }
 
 export type ForwardResult =
@@ -43,6 +58,7 @@ export type ForwardResult =
         | "invalid-mailbox"
         | "invalid-recipient"
         | "invalid-body"
+        | "invalid-attachments"
         | "send-failed"
         | "db-error";
       detail?: string;
@@ -112,6 +128,24 @@ export async function sendForward(
     return { sent: false, reason: "invalid-recipient" };
   }
 
+  const ccParsed = parseAddressList(input.cc ?? []);
+  const bccParsed = parseAddressList(input.bcc ?? []);
+  if (ccParsed.invalid.length > 0 || bccParsed.invalid.length > 0) {
+    return { sent: false, reason: "invalid-recipient" };
+  }
+  const { cc, bcc } = dedupeRecipients({
+    to: [to],
+    cc: ccParsed.valid,
+    bcc: bccParsed.valid,
+  });
+  if (exceedsRecipientTotal({ to: [to], cc, bcc })) {
+    return { sent: false, reason: "invalid-recipient" };
+  }
+  const extraFiles = input.attachments ?? [];
+  if (!attachmentsAreValid(extraFiles)) {
+    return { sent: false, reason: "invalid-attachments" };
+  }
+
   const client = clientOverride === undefined ? getResendClient() : clientOverride;
   if (!client) return { sent: false, reason: "no-client" };
 
@@ -140,7 +174,7 @@ export async function sendForward(
     .select("id, filename")
     .eq("message_id", original.id);
 
-  const attachments: { path: string; filename: string }[] = [];
+  const attachments: { path?: string; content?: Buffer; filename: string; contentType?: string }[] = [];
   const missing: string[] = [];
   for (const att of atts ?? []) {
     const resolved = await resolveAttachmentDownload(admin, att.id as string, client);
@@ -150,6 +184,8 @@ export async function sendForward(
       missing.push(String(att.filename ?? "adjunto"));
     }
   }
+
+  const allAttachments = [...attachments, ...toResendAttachments(extraFiles)];
 
   const bodies = buildForwardBodies(userText, original, missing);
   const stored = prepareStoredEmailBodies(bodies.html, bodies.text);
@@ -164,7 +200,9 @@ export async function sendForward(
       subject,
       text: stored.text ?? bodies.text,
       ...(stored.html ? { html: stored.html } : {}),
-      ...(attachments.length > 0 ? { attachments } : {}),
+      ...(cc.length > 0 ? { cc } : {}),
+      ...(bcc.length > 0 ? { bcc } : {}),
+      ...(allAttachments.length > 0 ? { attachments: allAttachments } : {}),
       headers: { "Message-ID": outboundMessageId },
     });
     if (result.error) {
@@ -198,8 +236,8 @@ export async function sendForward(
       from_address: fromMeta.address,
       from_name: fromMeta.name,
       to_addresses: [to],
-      cc_addresses: [],
-      bcc_addresses: [],
+      cc_addresses: cc,
+      bcc_addresses: bcc,
       subject,
       body_html: stored.html,
       body_text: stored.text ?? bodies.text,
@@ -209,6 +247,12 @@ export async function sendForward(
     .select("id")
     .single();
   if (dbErr || !msg) return { sent: false, reason: "db-error", detail: dbErr?.message };
+
+  await storeOutboundAttachments(admin, client, {
+    messageId: msg.id as string,
+    resendEmailId,
+    files: extraFiles,
+  });
 
   const { count } = await admin
     .from("email_messages")

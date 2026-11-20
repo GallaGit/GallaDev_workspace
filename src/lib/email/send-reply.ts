@@ -8,7 +8,18 @@ import {
   isValidExternalEmail,
 } from "./mailboxes";
 import { MAX_EMAIL_BODY_CHARS } from "./limits";
+import {
+  attachmentsAreValid,
+  storeOutboundAttachments,
+  toResendAttachments,
+  type OutboundAttachment,
+} from "./outbound-attachments-store";
 import { createOutboundMessageId } from "./receiving-fetch";
+import {
+  dedupeRecipients,
+  exceedsRecipientTotal,
+  parseAddressList,
+} from "./recipients";
 import { getResendClient } from "./resend-client";
 import { fetchSentMessageId } from "./thread-match";
 import { replyAllRecipients, replySubject } from "./threading";
@@ -32,6 +43,10 @@ export interface ReplyInput {
   bodyHtml?: string;
   /** "replyAll": To + Cc del último mensaje, sin nuestros buzones. */
   mode?: ReplyMode;
+  /** Cc/Cco adicionales (se suman a los de «Responder a todos»). */
+  cc?: string[];
+  bcc?: string[];
+  attachments?: OutboundAttachment[];
 }
 
 export type ReplyResult =
@@ -44,6 +59,7 @@ export type ReplyResult =
         | "invalid-body"
         | "invalid-mailbox"
         | "invalid-recipient"
+        | "invalid-attachments"
         | "send-failed"
         | "db-error";
       detail?: string;
@@ -60,6 +76,16 @@ export async function sendReply(
     (input.bodyHtml != null && input.bodyHtml.length > MAX_EMAIL_BODY_CHARS)
   ) {
     return { sent: false, reason: "invalid-body" };
+  }
+
+  const extraCc = parseAddressList(input.cc ?? []);
+  const extraBcc = parseAddressList(input.bcc ?? []);
+  if (extraCc.invalid.length > 0 || extraBcc.invalid.length > 0) {
+    return { sent: false, reason: "invalid-recipient" };
+  }
+  const attachments = input.attachments ?? [];
+  if (!attachmentsAreValid(attachments)) {
+    return { sent: false, reason: "invalid-attachments" };
   }
 
   const client = getResendClient();
@@ -125,6 +151,18 @@ export async function sendReply(
     }
   }
 
+  const recipients = dedupeRecipients({
+    to: toList,
+    cc: [...ccList, ...extraCc.valid],
+    bcc: extraBcc.valid,
+  });
+  toList = recipients.to;
+  ccList = recipients.cc;
+  const bccList = recipients.bcc;
+  if (exceedsRecipientTotal({ to: toList, cc: ccList, bcc: bccList })) {
+    return { sent: false, reason: "invalid-recipient" };
+  }
+
   const allMessageIds = threadMessages
     .map((m) => m.message_id)
     .filter((id): id is string => Boolean(id));
@@ -146,9 +184,13 @@ export async function sendReply(
       from: fromMeta.from,
       to: toList.length === 1 ? toList[0] : toList,
       ...(ccList.length > 0 ? { cc: ccList } : {}),
+      ...(bccList.length > 0 ? { bcc: bccList } : {}),
       subject,
       text: stored.text ?? bodyText,
       ...(stored.html ? { html: stored.html } : {}),
+      ...(attachments.length > 0
+        ? { attachments: toResendAttachments(attachments) }
+        : {}),
       headers: {
         "Message-ID": outboundMessageId,
         ...(inReplyTo ? { "In-Reply-To": inReplyTo } : {}),
@@ -191,7 +233,7 @@ export async function sendReply(
       from_name: fromMeta.name,
       to_addresses: toList,
       cc_addresses: ccList,
-      bcc_addresses: [],
+      bcc_addresses: bccList,
       subject,
       body_html: stored.html,
       body_text: stored.text ?? bodyText,
@@ -204,6 +246,12 @@ export async function sendReply(
   if (dbErr || !msg) {
     return { sent: false, reason: "db-error", detail: dbErr?.message };
   }
+
+  await storeOutboundAttachments(admin, client, {
+    messageId: msg.id,
+    resendEmailId,
+    files: attachments,
+  });
 
   const { count } = await admin
     .from("email_messages")

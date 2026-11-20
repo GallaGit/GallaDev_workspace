@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { SettingsIntegrations } from "@/components/settings/settings-integrations";
+import { SettingsSignatures } from "@/components/settings/settings-signatures";
 import { SettingsSecurity } from "@/components/settings/settings-security";
 import { SettingsTeam } from "@/components/settings/settings-team";
 
@@ -16,6 +17,7 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold">{t("integrations")}</h2>
           <SettingsTeam />
           <SettingsIntegrations />
+          <SettingsSignatures />
           <SettingsSecurity />
         </div>
       </div>
