@@ -4,9 +4,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseForwardBody } from "@/lib/email/email-payload";
-import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
+import { readOutboundRequest } from "@/lib/email/outbound-request";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/supabase/lead-lookup";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,8 @@ const RATE_MAX = 10;
  * POST /api/email/threads/[id]/forward — reenviar el último mensaje del hilo.
  *
  * Auth: requireAdmin antes del cliente admin; el hilo se lee con la sesión (RLS).
- * Body: { to: string, text?: string }. Adjuntos originales vía URL firmada de Resend.
+ * Body JSON: { to, text?, cc?, bcc? } o multipart/form-data con `payload` (ese
+ * JSON) y `files` (adjuntos nuevos). Los adjuntos originales van por URL firmada de Resend.
  */
 async function postForward(request: Request, ctx: Ctx) {
   const denied = await requireAdmin();
@@ -47,20 +48,14 @@ async function postForward(request: Request, ctx: Ctx) {
   }
 
   try {
-    const read = await readCappedJson(request, EMAIL_JSON_MAX_BYTES);
+    const read = await readOutboundRequest(request, "El texto es demasiado largo");
     if (!read.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          error:
-            read.status === 413
-              ? "El texto es demasiado largo"
-              : "Datos del correo no válidos",
-        },
+        { ok: false, error: read.error },
         { status: read.status },
       );
     }
-    const parsed = parseForwardBody(read.value);
+    const parsed = parseForwardBody(read.json);
     if (!parsed.ok) {
       return NextResponse.json(
         { ok: false, error: parsed.error },
@@ -88,6 +83,9 @@ async function postForward(request: Request, ctx: Ctx) {
       threadId: id,
       to: parsed.value.to,
       bodyText: parsed.value.text,
+      cc: parsed.value.cc,
+      bcc: parsed.value.bcc,
+      attachments: read.attachments,
     });
 
     if (!result.sent) {
@@ -98,6 +96,7 @@ async function postForward(request: Request, ctx: Ctx) {
         "invalid-body": 400,
         "invalid-mailbox": 400,
         "invalid-recipient": 400,
+        "invalid-attachments": 400,
         "send-failed": 502,
         "db-error": 500,
       };
@@ -107,6 +106,7 @@ async function postForward(request: Request, ctx: Ctx) {
         "invalid-body": "El texto no es válido",
         "invalid-mailbox": "Buzón de origen no válido",
         "invalid-recipient": "Destinatario no válido",
+        "invalid-attachments": "Adjuntos no válidos",
       };
       logRouteError({
         route: `POST /api/email/threads/${id}/forward`,

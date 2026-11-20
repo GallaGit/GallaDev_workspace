@@ -3,9 +3,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseComposeBody } from "@/lib/email/email-payload";
-import { EMAIL_JSON_MAX_BYTES } from "@/lib/email/limits";
+import { readOutboundRequest } from "@/lib/email/outbound-request";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
-import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,8 @@ const RATE_MAX = 10;
 
 /**
  * POST /api/email/compose — enviar correo nuevo desde hola@ u ociel@.
- * Body: { mailbox, to, subject, text, html?, draftId?, leadId? }
+ * Body JSON: { mailbox, to, cc?, bcc?, subject, text, html?, draftId?, leadId? }
+ * o multipart/form-data con `payload` (ese JSON) y `files` (adjuntos).
  * Auth: Admin.
  */
 async function postCompose(request: Request) {
@@ -35,20 +36,14 @@ async function postCompose(request: Request) {
   }
 
   try {
-    const read = await readCappedJson(request, EMAIL_JSON_MAX_BYTES);
+    const read = await readOutboundRequest(request, "El cuerpo es demasiado largo");
     if (!read.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          error:
-            read.status === 413
-              ? "El cuerpo es demasiado largo"
-              : "Datos del correo no válidos",
-        },
+        { ok: false, error: read.error },
         { status: read.status },
       );
     }
-    const parsed = parseComposeBody(read.value);
+    const parsed = parseComposeBody(read.json);
     if (!parsed.ok) {
       return NextResponse.json(
         { ok: false, error: parsed.error },
@@ -66,6 +61,9 @@ async function postCompose(request: Request) {
       bodyHtml: parsed.value.html,
       draftId: parsed.value.draftId,
       leadId: parsed.value.leadId,
+      cc: parsed.value.cc,
+      bcc: parsed.value.bcc,
+      attachments: read.attachments,
     });
 
     if (!result.sent) {
@@ -73,6 +71,9 @@ async function postCompose(request: Request) {
         "no-client": 503,
         "invalid-mailbox": 400,
         "invalid-to": 400,
+        "invalid-cc": 400,
+        "invalid-bcc": 400,
+        "invalid-attachments": 400,
         "empty-subject": 400,
         "empty-body": 400,
         "send-failed": 502,

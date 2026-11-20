@@ -72,6 +72,7 @@ export interface EmailMessage {
   from_name: string | null;
   to_addresses: string[];
   cc_addresses: string[];
+  bcc_addresses?: string[];
   subject: string | null;
   body_html: string | null;
   body_text: string | null;
@@ -139,6 +140,7 @@ export function InboxPage({
   const [listMode, setListMode] = useState<ListMode>("threads");
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<EmailDraft | null>(null);
+  const [composeSession, setComposeSession] = useState(0);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
   const [view, setView] = useState<MailView>("inbox");
   const [searchInput, setSearchInput] = useState("");
@@ -401,24 +403,31 @@ export function InboxPage({
 
   const openNewCompose = useCallback(() => {
     setEditingDraft(null);
+    setComposeSession((n) => n + 1);
     setComposeOpen(true);
   }, []);
 
   const openDraft = useCallback((draft: EmailDraft) => {
     setEditingDraft(draft);
+    setComposeSession((n) => n + 1);
     setComposeOpen(true);
   }, []);
 
-  const handleDraftSaved = useCallback((draft: EmailDraft) => {
-    setEditingDraft(draft);
-    setDrafts((prev) => {
-      const without = prev.filter((d) => d.id !== draft.id);
-      return [draft, ...without];
-    });
-    setListMode("drafts");
-  }, []);
+  // El diálogo se remonta solo al abrir (composeSession); guardar no lo reinicia.
+  const handleDraftSaved = useCallback(
+    (draft: EmailDraft, meta?: { auto: boolean }) => {
+      setEditingDraft(draft);
+      setDrafts((prev) => {
+        const without = prev.filter((d) => d.id !== draft.id);
+        return [draft, ...without];
+      });
+      if (!meta?.auto) setListMode("drafts");
+    },
+    [],
+  );
 
-  const handleSent = useCallback((threadId: string) => {
+  const handleSent = useCallback((threadId: string, draftId?: string) => {
+    if (draftId) setDrafts((prev) => prev.filter((d) => d.id !== draftId));
     setEditingDraft(null);
     setListMode("threads");
     setThreadsReloadKey((k) => k + 1);
@@ -701,7 +710,7 @@ export function InboxPage({
       </div>
 
       <ComposeDialog
-        key={editingDraft?.id ?? (composeOpen ? "new" : "closed")}
+        key={`compose-${composeSession}`}
         open={composeOpen}
         onOpenChange={setComposeOpen}
         defaultMailboxAddress={mailboxFilter}

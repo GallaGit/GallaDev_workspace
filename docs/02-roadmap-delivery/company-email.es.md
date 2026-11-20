@@ -171,6 +171,16 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 - [x] Responder a todos: To = remitente + To del último mensaje, Cc = su Cc, sin nuestros buzones. (`replyAllRecipients`, test: `threading.test.ts`, `send-reply.test.ts`)
 - [x] Reenviar: `POST /api/email/threads/[id]/forward` con el último mensaje citado y sus adjuntos (URL firmada de Resend como `path`); si un adjunto ya no existe, nota con el nombre. Se guarda en el mismo hilo. (`send-forward.ts`)
 - [x] Borradores de respuesta por hilo: autoguardado, se restauran al abrir el hilo y se borran al enviar. `email_drafts.thread_id` (migración `20261010120000_email_reply_drafts.sql`).
+- [x] Cc/Cco, firma por buzón y adjuntos salientes también en responder y reenviar (ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos»).
+
+### Redactar: Cc/Cco, autoguardado, firma y adjuntos (19 Nov 2026)
+
+Migración `20261119160000_email_compose_cc_signatures.sql` (**aplicar a mano antes de desplegar**): añade `email_drafts.cc_address` / `bcc_address` (texto, vacío por defecto) y crea `email_mailbox_signatures` (una fila por buzón, firma de hasta 2000 caracteres; RLS con FORCE, solo Admin). No hay variables de entorno nuevas.
+
+- **Cc/Cco.** Campos múltiples en Nuevo mensaje y en Responder/Reenviar (botón «CC / CCO»). Se normalizan (`Nombre <a@b.com>` → `a@b.com`), se deduplican entre To/Cc/Cco (To gana, luego Cc) y se validan: máx. 20 por campo y 50 en total. Salen por Resend como `cc` / `bcc` y se guardan en `email_messages.cc_addresses` / `bcc_addresses`. El Cco solo se muestra en los mensajes salientes. Helpers: `src/lib/email/recipients.ts`. Un destinatario no válido responde 400 sin enviar nada (`invalid-cc` / `invalid-bcc`).
+- **Autoguardado.** El diálogo de Nuevo mensaje guarda el borrador ~2 s después de dejar de escribir con `POST /api/email/drafts` (la misma API). Las guardas van en serie para no duplicar borradores, se vacía la cola al cerrar y no se resucita un borrador ya enviado. Indicador «Guardando… / Guardado / Error al guardar». Un borrador que solo contiene la firma no se guarda.
+- **Firma por buzón.** El Admin la edita en Ajustes → «Firmas de correo» (`GET`/`PUT /api/email/signatures`, solo Admin, RLS). Al redactar se añade al cuerpo como bloque `-- ` al final, y es editable antes de enviar. Si se cambia el buzón de origen y el texto no se tocó, se cambia la firma. Un borrador restaurado no recibe firma. Helpers: `src/lib/email/signature.ts`.
+- **Adjuntos salientes.** Selector en el diálogo y en responder/reenviar. Límites (caben en los 4,5 MB de cuerpo de Vercel): 10 ficheros, 3 MiB por fichero y 3,5 MiB en total; se bloquean extensiones ejecutables (`.exe`, `.bat`, `.js`, `.sh`, …). Si no hay adjuntos, el cliente sigue enviando JSON; con adjuntos envía `multipart/form-data` (`payload` + `files`) a las mismas rutas (`outbound-client.ts`, `outbound-request.ts`). Resend los recibe como `attachments`. Persistencia: con `EMAIL_ATTACHMENTS_BUCKET` los bytes van al bucket con la misma ruta opaca que los entrantes (`email/{message_id}/{attachment_id}`) y se sirven por `/api/email/attachments/[id]/file`; sin bucket funciona igual, se guardan solo los metadatos y, si Resend lo permite, el id del adjunto para descargarlo ~30 días. La persistencia es de mejor esfuerzo y nunca hace fallar el envío. Los borradores no guardan adjuntos.
 
 ### Vinculación automática hilo ↔ lead (mejora 6, 20 Nov 2026)
 
@@ -229,7 +239,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 ## 8. Futuro: bandejas (parcial)
 
-**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Archivados / Papelera** con contador de no leídos por vista y en la entrada Correo de la barra lateral. Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Enviados ni Spam. Los borradores de **respuesta** en un hilo abierto aún no existen (solo enviar).
+**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Archivados / Papelera** con contador de no leídos por vista y en la entrada Correo de la barra lateral. Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Enviados ni Spam. Los borradores de **respuesta** ya existen (`email_drafts.thread_id`, autoguardado por hilo; ver Fase 3). Compose, responder y reenviar admiten Cc/Cco, firma por buzón y adjuntos salientes (ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos»).
 
 **Bandejas (9 Oct 2026).** Migración `20261009180000_email_thread_inbox_state.sql` (aplicar a mano en el SQL editor **antes** de desplegar):
 
@@ -249,7 +259,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 | Entrada | Hilos con al menos un inbound reciente / no archivados | Vista por defecto; no confundir con el filtro por dirección (`hola@` / `ociel@`). |
 | Enviados | Mensajes o hilos con outbound | Puede ser filtro/vista sobre `email_messages.direction = outbound`, no necesariamente otra tabla. |
 | Spam | Correo no deseado | Requiere fuente: marca manual y/o señal del proveedor. Hoy solo se descarta fuera de allowlist. |
-| Borradores | Respuestas o mensajes no enviados | **Parcial:** mensajes nuevos en `email_drafts`. Reply-drafts y no mezclar con `/email` (borradores de leads). |
+| Borradores | Respuestas o mensajes no enviados | **Hecho (parcial):** mensajes nuevos y borradores de respuesta por hilo en `email_drafts` (sin adjuntos guardados). No mezclar con `/email` (borradores de leads). |
 | Archivo (opcional) | Hilos fuera de Entrada sin borrar | Columna o flag en `email_threads`, no carpeta física. |
 
 **Restricciones.**

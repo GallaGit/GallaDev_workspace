@@ -528,6 +528,19 @@
       "confirm": "Are you sure? This will sign out every device, including this one.",
       "confirmGlobal": "Confirm global sign-out",
       "cancel": "Cancel"
+    },
+    "signaturesPanel": {
+      "title": "Email signatures",
+      "description": "Text appended to new messages for each mailbox. It can be edited before sending. Leave it empty for no signature.",
+      "mailbox": "Mailbox",
+      "signatureOf": "Signature for {mailbox}",
+      "placeholder": "Name\nGallaDev · galladev.com",
+      "charCount": "{count} / {max}",
+      "loadError": "Could not load signatures",
+      "saveError": "Could not save the signature",
+      "networkError": "Network error saving the signature",
+      "saved": "Signature saved",
+      "save": "Save signature"
     }
   },
   "correo": {
@@ -601,7 +614,29 @@
       "bodyRequired": "Write the message body",
       "sent": "Email sent",
       "sending": "Sending…",
-      "send": "Send"
+      "send": "Send",
+      "cc": "CC",
+      "bcc": "BCC",
+      "ccPlaceholder": "cc@example.com",
+      "bccPlaceholder": "bcc@example.com",
+      "recipientsHint": "Separate several addresses with commas.",
+      "invalidAddresses": "Invalid addresses in {field}: {addresses}",
+      "tooManyRecipients": "At most {max} addresses per field",
+      "autosaving": "Saving…",
+      "autosaved": "Saved",
+      "autosaveError": "Could not autosave",
+      "signatureHint": "The {mailbox} signature is added at the end of the message. You can edit it before sending.",
+      "attach": "Attach files",
+      "attachments": "Attachments",
+      "attachmentsHint": "Up to {count} files, {file} each and {total} in total. Not stored in the draft.",
+      "removeAttachment": "Remove {name}",
+      "attachmentError": {
+        "tooMany": "At most {count} attachments per email",
+        "tooLarge": "{name} exceeds {max}",
+        "totalTooLarge": "Attachments exceed {max} in total",
+        "blocked": "File type not allowed: {name}",
+        "empty": "The file is empty: {name}"
+      }
     },
     "link": {
       "title": "Link thread to lead",
@@ -667,6 +702,11 @@
     "draftSaving": "Saving draft…",
     "draftAutoSaved": "Draft saved",
     "draftSaveError": "Could not save draft",
+    "bcc": "BCC: {recipients}",
+    "replyExtras": {
+      "toggle": "CC / BCC",
+      "attach": "Attach"
+    },
     "linkSourceAuto": "automatic",
     "linkSourceManual": "manual",
     "linkSourceHint": "Automatic link: the email matches a single lead. Use “Change lead” to fix it."

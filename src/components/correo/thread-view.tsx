@@ -274,6 +274,11 @@ function MessageCard({
             {t("cc", { recipients: message.cc_addresses.join(", ") })}
           </span>
         )}
+        {isOutbound && (message.bcc_addresses?.length ?? 0) > 0 && (
+          <span className="ml-2">
+            {t("bcc", { recipients: (message.bcc_addresses ?? []).join(", ") })}
+          </span>
+        )}
       </div>
 
       {message.body_html ? (
