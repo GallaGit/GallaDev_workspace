@@ -8,6 +8,7 @@ import {
   isValidExternalEmail,
   type CompanyMailbox,
 } from "./mailboxes";
+import { autoLinkThread } from "./lead-link";
 import { createOutboundMessageId } from "./receiving-fetch";
 import { fetchSentMessageId } from "./thread-match";
 import { getResendClient } from "./resend-client";
@@ -116,6 +117,7 @@ export async function sendCompose(
       from_name: null,
       mailbox_address: input.mailbox,
       lead_id: input.leadId ?? null,
+      ...(input.leadId ? { lead_link_source: "manual" } : {}),
       last_message_at: now,
       message_count: 1,
       is_read: true,
@@ -152,6 +154,10 @@ export async function sendCompose(
 
   if (msgErr || !msg) {
     return { sent: false, reason: "db-error", detail: msgErr?.message };
+  }
+
+  if (!input.leadId) {
+    await autoLinkThread(admin, thread.id, [to]);
   }
 
   if (input.draftId) {

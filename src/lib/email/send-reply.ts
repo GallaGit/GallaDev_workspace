@@ -8,6 +8,7 @@ import {
   isValidExternalEmail,
 } from "./mailboxes";
 import { MAX_EMAIL_BODY_CHARS } from "./limits";
+import { autoLinkThread } from "./lead-link";
 import { createOutboundMessageId } from "./receiving-fetch";
 import { getResendClient } from "./resend-client";
 import { fetchSentMessageId } from "./thread-match";
@@ -217,6 +218,8 @@ export async function sendReply(
       message_count: count ?? 1,
     })
     .eq("id", input.threadId);
+
+  await autoLinkThread(admin, input.threadId, [...toList, ...ccList]);
 
   return { sent: true, messageId: msg.id };
 }

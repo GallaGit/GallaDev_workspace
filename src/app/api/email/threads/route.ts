@@ -12,6 +12,7 @@ import {
   threadListSelect,
 } from "@/lib/email/thread-view-query";
 import { isCompanyMailbox } from "@/lib/email/mailboxes";
+import { isUuid } from "@/lib/supabase/lead-lookup";
 import {
   MAX_SEARCH_THREADS,
   buildTsQuery,
@@ -34,6 +35,8 @@ export const dynamic = "force-dynamic";
  *   - q (opcional, máx. 200 caracteres): busca por remitente, asunto y cuerpo
  *     con FTS (`search_tsv`, config spanish, prefijo por palabra)
  *   - scope (view | all; default view): `all` busca en todas las vistas
+ *   - lead_id (UUID): hilos vinculados a ese lead, de todas las bandejas
+ *     salvo Papelera (ficha del lead); ignora `view`
  */
 async function listThreads(request: Request) {
   const denied = await requireAdmin();
@@ -47,7 +50,11 @@ async function listThreads(request: Request) {
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
     const unreadOnly = url.searchParams.get("unread") === "true";
     const mailboxParam = (url.searchParams.get("mailbox") ?? "").trim().toLowerCase();
-    const view = parseThreadView(url.searchParams.get("view"));
+    const leadIdParam = url.searchParams.get("lead_id");
+    if (leadIdParam !== null && !isUuid(leadIdParam)) {
+      return NextResponse.json({ ok: false, error: "Lead no válido" }, { status: 400 });
+    }
+    const view = leadIdParam ? "inbox" : parseThreadView(url.searchParams.get("view"));
     const search = parseSearchQuery(url.searchParams.get("q"));
     if (!search.ok) {
       return NextResponse.json({ ok: false, error: search.error }, { status: 400 });
@@ -107,7 +114,9 @@ async function listThreads(request: Request) {
       query = query.in("id", matchIds);
     }
 
-    if (scope !== "all") {
+    if (leadIdParam) {
+      query = query.eq("lead_id", leadIdParam).is("trashed_at", null);
+    } else if (scope !== "all") {
       query = applyThreadViewFilter(query, view);
     }
 

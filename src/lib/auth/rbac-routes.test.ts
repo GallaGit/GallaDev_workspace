@@ -313,6 +313,46 @@ describe("análisis IA", () => {
 });
 
 describe("correo: solo Admin", () => {
+  it.each(["Seller", "Viewer"] as const)(
+    "%s no lista hilos de un lead ni ejecuta el backfill de vinculación",
+    async (role) => {
+      asRole(role);
+      const threads = await import("@/app/api/email/threads/route");
+      const item = await import("@/app/api/email/threads/[id]/route");
+      const backfill = await import("@/app/api/email/backfill-lead-links/route");
+      const ctx = {
+        params: Promise.resolve({
+          id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+        }),
+      };
+      await expectForbidden(
+        await threads.GET(
+          new Request(
+            "http://localhost/api/email/threads?lead_id=11111111-1111-4111-8111-111111111111",
+          ),
+        ),
+      );
+      await expectForbidden(
+        await item.PATCH(
+          jsonRequest("http://localhost/api/email/threads/x", "PATCH", {
+            lead_id: null,
+          }),
+          ctx,
+        ),
+      );
+      await expectForbidden(
+        await backfill.POST(
+          jsonRequest(
+            "http://localhost/api/email/backfill-lead-links",
+            "POST",
+            {},
+          ),
+        ),
+      );
+      expect(adminClient).not.toHaveBeenCalled();
+    },
+  );
+
   it("Seller recibe 403 en hilos y en la respuesta, sin cliente admin", async () => {
     asRole("Seller");
     const threads = await import("@/app/api/email/threads/route");
