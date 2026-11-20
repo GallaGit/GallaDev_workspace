@@ -366,3 +366,54 @@ describe("InboxPage: paginación", () => {
     expect(screen.getAllByRole("option")).toHaveLength(THREAD_PAGE_SIZE + 1);
   });
 });
+
+describe("InboxPage: abrir un hilo desde la ficha del lead (/correo?thread=)", () => {
+  it("carga el hilo, cambia a su bandeja y lo deja abierto", async () => {
+    const archived = thread(B, {
+      subject: "Hilo archivado del lead",
+      archived_at: "2026-10-03T10:00:00.000Z",
+      lead_id: A,
+    });
+    listPage = (params) =>
+      params.get("view") === "archived" ? [thread(A, { subject: "Otro archivado" })] : [thread(A)];
+    const baseFetch = vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === `/api/email/threads/${B}` && (init?.method ?? "GET") === "GET") {
+          calls.push({ url, method: "GET", body: undefined });
+          return json({ ok: true, thread: archived, messages: [], attachments: [] });
+        }
+        return baseFetch(input, init);
+      }),
+    );
+
+    renderWithIntl(<InboxPage initialThreadId={B} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Hilo archivado del lead" }),
+    ).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/api/email/threads?view=archived")).toBe(true);
+    // La fila aparece en la lista aunque la página de Archivados no la traiga.
+    expect(screen.getAllByText("Hilo archivado del lead").length).toBeGreaterThan(0);
+  });
+
+  it("un hilo inexistente avisa y no abre nada", async () => {
+    const baseFetch = vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === `/api/email/threads/${B}`) {
+          return json({ ok: false, error: "Hilo no encontrado" }, 404);
+        }
+        return baseFetch(input, init);
+      }),
+    );
+    renderWithIntl(<InboxPage initialThreadId={B} />);
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Hilo no encontrado"),
+    );
+    await screen.findByText("Ana");
+  });
+});

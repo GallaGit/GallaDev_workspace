@@ -51,6 +51,7 @@ export function threadStaysInView(
 export type ThreadDbPatch = {
   is_read?: boolean;
   lead_id?: string | null;
+  lead_link_source?: "manual" | "auto" | null;
   archived_at?: string | null;
   trashed_at?: string | null;
 };
@@ -60,6 +61,7 @@ export type ThreadDbPatch = {
  * - `archived: true` archiva y, si no se indica `trashed`, saca de Papelera.
  * - `archived: false` vuelve a Recibidos y, si no se indica `trashed`,
  *   también sale de Papelera.
+ * - `lead_id` (UUID o null) marca `lead_link_source = 'manual'`.
  * - `trashed: true|false` manda sobre la Papelera; al restaurar, el hilo
  *   vuelve donde estaba (Recibidos o Archivados).
  */
@@ -72,6 +74,9 @@ export function threadDbPatch(
   if (patch.is_read !== undefined) db.is_read = patch.is_read;
   if ("lead_id" in patch && patch.lead_id !== undefined) {
     db.lead_id = patch.lead_id;
+    // Vincular o desvincular desde la UI es una decisión manual: el
+    // auto-vinculado no la sobrescribe ni re-vincula un hilo desvinculado.
+    db.lead_link_source = "manual";
   }
   if (patch.archived !== undefined) {
     db.archived_at = patch.archived ? stamp : null;
