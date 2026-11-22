@@ -211,7 +211,7 @@ On mobile, the left panel of `/correo` (fixed 320 px width: Recibidos, Enviados,
 
 #### Current state (code; this document does not change it)
 
-- The module route is **`/correo`** (singular): a single page (`src/app/correo/page.tsx` → `InboxPage`). `/correos` does not exist. The lead-draft workbench, `/email`, is not part of this module and is left alone.
+- The module route is **`/correo`**: a single page (`src/app/correo/page.tsx` → `InboxPage`), with no folder segments. The lead-draft workbench, `/email`, is not part of this module and is left alone.
 - Folders have no URL. They live in client state: `view` is `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` in `src/lib/email/thread-state.ts`). Drafts is a separate `listMode` (`drafts`): today a button next to the mailbox chips, not an entry in that view list.
 - UI labels (es): Recibidos, Enviados, Archivados, Papelera, Borradores. There is no Spam folder.
 - The account filter is also client state (`All` / `hola@` / `ociel@`; allowlist `COMPANY_MAILBOXES` in `src/lib/email/mailboxes.ts`). The API already accepts `GET /api/email/threads?view=&mailbox=`.
@@ -223,24 +223,24 @@ On mobile, the left panel of `/correo` (fixed 320 px width: Recibidos, Enviados,
 
 **Per-folder routes.** Each existing folder has its own address, with Spanish slugs (like the rest of the app’s routes) in every UI locale:
 
-| Folder | Current view | Proposed route |
+| Folder | Current view | Route |
 | --- | --- | --- |
-| Recibidos (Inbox) | `view=inbox` | `/correos/recibidos` |
-| Enviados (Sent) | `view=sent` | `/correos/enviados` |
-| Archivados (Archived) | `view=archived` | `/correos/archivados` |
-| Papelera (Trash) | `view=trash` | `/correos/papelera` |
-| Borradores (Drafts) | `listMode=drafts` | `/correos/borradores` |
+| Recibidos (Inbox) | `view=inbox` | `/correo/recibidos` |
+| Enviados (Sent) | `view=sent` | `/correo/enviados` |
+| Archivados (Archived) | `view=archived` | `/correo/archivados` |
+| Papelera (Trash) | `view=trash` | `/correo/papelera` |
+| Borradores (Drafts) | `listMode=drafts` | `/correo/borradores` |
 
-The prefix is **`/correos`** (plural), as Ociel asked. The current route is `/correo`. Permanent redirects (308 or the Next.js equivalent):
+The prefix is **`/correo`** (singular), confirmed by Ociel. Permanent redirects (308 or the Next.js equivalent):
 
-- `/correo` → `/correos/recibidos`
-- any other path under `/correo/…`, if one appears, → the matching folder, or `/correos/recibidos` if there is no match
+- `/correo` → `/correo/recibidos`
+- any other path under `/correo/…` that is not a known folder → the matching folder, or `/correo/recibidos` if there is no match
 
 No Spam folder is added. `/email` is not redirected. The new routes join the same access lists as `/correo` (safe redirect after login, hidden from the visitor, Admin only).
 
-The default folder is Recibidos. An open thread is shareable and survives a reload: `/correos/{folder}/{threadId}` (UUID), keeping the account in the query string when it applies. Drafts has no thread path; opening a draft is still the compose dialog.
+The default folder is Recibidos. An open thread is shareable and survives a reload: `/correo/{folder}/{threadId}` (UUID), keeping the account in the query string when it applies. Drafts has no thread path; opening a draft is still the compose dialog.
 
-**Side menu.** Pressing “Correo” expands sub-options: the five folders above (with the existing unread badge on each, when it applies) and the **Cuentas** sub-option. “Correo” is no longer only a link to a single page. On desktop the menu may stay expanded while the user is on `/correos/…`; on mobile the usual drawer is used. Folder navigation goes through these sub-options, not through a folder panel that overlaps the content.
+**Side menu.** Pressing “Correo” expands sub-options: the five folders above (with the existing unread badge on each, when it applies) and the **Cuentas** sub-option. “Correo” is no longer only a link to a single page. On desktop the menu may stay expanded while the user is on `/correo/…`; on mobile the usual drawer is used. Folder navigation goes through these sub-options, not through a folder panel that overlaps the content.
 
 The current left panel (the folder buttons inside `InboxPage`) is no longer how the user switches folders. On desktop the two-pane layout (list | reading) stays; the list fills that left pane, without the fixed 320 px column used for folders. “Nuevo” and search stay in the list header, not in the main app menu.
 
@@ -252,9 +252,9 @@ The current left panel (the folder buttons inside `InboxPage`) is no longer how 
 
 If the allowlist later gains more mailboxes, they appear here. The account combines with the folder: filtering by `hola@` in Recibidos does not leave Recibidos.
 
-Account selection uses a **query parameter** `cuenta`, not a path segment. Values: omit it or use `todas` for every visible mailbox; `hola` or `ociel` (the local-part) for one mailbox. Example: `/correos/recibidos?cuenta=hola`. An unknown or disallowed value is treated as Todas (or redirected to the URL without `cuenta`).
+Account selection uses a **query parameter** `cuenta`, not a path segment. Values: omit it or use `todas` for every visible mailbox; `hola` or `ociel` (the local-part) for one mailbox. Example: `/correo/recibidos?cuenta=hola`. An unknown or disallowed value is treated as Todas (or redirected to the URL without `cuenta`).
 
-Why a query and not `/correos/hola/recibidos`: folder and mailbox are already orthogonal axes (section 8 and the API’s `mailbox` filter). That avoids a combinatorial route tree, changing account does not lose the folder or the thread, and “Cuentas” in the menu is a filter, not a destination page. The client maps `cuenta` to the `mailbox` parameter that `GET /api/email/threads` already understands.
+Why a query and not `/correo/hola/recibidos`: folder and mailbox are already orthogonal axes (section 8 and the API’s `mailbox` filter). That avoids a combinatorial route tree, changing account does not lose the folder or the thread, and “Cuentas” in the menu is a filter, not a destination page. The client maps `cuenta` to the `mailbox` parameter that `GET /api/email/threads` already understands.
 
 **Permissions.** This work does not invent a new per-mailbox RBAC. Today only Admin can enter, and Admin sees both accounts. The Cuentas sub-options list only mailboxes that session may see. A URL with `cuenta` set to a mailbox that is not allowed must not return those threads (403 or a redirect to Todas / an allowed mailbox). If other roles later gain access to Correo or to a single mailbox (open question in section 7), this filter respects that.
 
@@ -266,18 +266,18 @@ Why a query and not `/correos/hola/recibidos`: folder and mailbox are already or
 - Folder or account changes go through the expanded “Correo” menu, not through a panel that covers the mail.
 - In Drafts, the list is full width and the compose dialog opens on top, as it does today.
 
-**Refresh the list when new mail arrives** (the original scope of point 7; it stays). If a new message belongs to the folder and account being viewed, the list updates without a manual page reload and without losing the selection, the scroll position, or an open thread. Menu unread badges update as well, even if the message lands in another folder. Starting point: reuse the polling the counters already have (60 s, tab visibility, `correo:unread-changed` event) so the list reloads too. The exact transport (keep polling or a more immediate signal) is an implementation detail; this delivery does not require a WebSocket. It does not replace an out-of-app notification (that remains question 3 in section 7).
+**Refresh the list when new mail arrives** (the original scope of point 7; it stays). If a new message belongs to the folder and account being viewed, the list updates without a manual page reload and without losing the selection, the scroll position, or an open thread. Menu unread badges update as well, even if the message lands in another folder. The interval is **every 60 s**, the same as the counters, and also when the tab becomes visible and on the `correo:unread-changed` event. This delivery does not require a WebSocket. It does not replace an out-of-app notification (that remains question 3 in section 7).
 
 #### Acceptance criteria
 
-- [ ] An Admin opens `/correos/recibidos`, `/correos/enviados`, `/correos/archivados`, `/correos/papelera` and `/correos/borradores`, and sees the folder the URL names. Reloading or sharing the URL keeps the folder.
-- [ ] `/correo` redirects to `/correos/recibidos`. `/email` is unchanged.
+- [ ] An Admin opens `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` and `/correo/borradores`, and sees the folder the URL names. Reloading or sharing the URL keeps the folder.
+- [ ] `/correo` redirects to `/correo/recibidos`. `/email` is unchanged.
 - [ ] In the sidebar, “Correo” expands into the five folders and “Cuentas”. Choosing a folder navigates to its route. Choosing Todas / hola@ / ociel@ applies the filter and stays on the current folder, with `?cuenta=` in the URL (Todas may omit the parameter).
 - [ ] `?cuenta=hola` on Recibidos lists only threads for `hola@galladev.com`. The filter can be combined with the existing search.
 - [ ] Seller, Viewer and the visitor demo do not see the new routes or their APIs (same rule as `/correo`). A visitor does not see “Correo” in the menu.
 - [ ] Below 768 px, the list is full screen; opening a thread shows the reading view full screen with a Back button; the folder panel does not overlap the content.
 - [ ] On desktop, list and reading still appear side by side, without the 320 px in-page folder panel.
-- [ ] With the inbox open, a new email that belongs in the current view appears in the list (and badges update) without a manual reload.
+- [ ] With the inbox open, a new email that belongs in the current view appears in the list within 60 s (the same pace as the counters; also when the tab becomes visible), and badges update, without a manual reload.
 - [ ] `/email` is untouched, Spam is not added, and the permission model is unchanged beyond applying the existing one to the new routes.
 
 #### Out of scope
@@ -286,8 +286,3 @@ Why a query and not `/correos/hola/recibidos`: folder and mailbox are already or
 - A dedicated route for “Nuevo mensaje” (the dialog stays).
 - Changing the API (`view`, `mailbox`) beyond what the new URLs need.
 - Point 6 work (PR #109) and any other compose or linking improvement.
-
-#### Open questions for this point
-
-1. If Ociel prefers to keep the singular prefix `/correo` (`/correo/recibidos`, and so on), the rest of the spec still holds; only the prefix and the redirects change (then bare `/correo` would keep going to Recibidos, without passing through `/correos`).
-2. Does the list refresh interval need to be shorter than the counters’ 60 s, or is it enough to start at that pace?

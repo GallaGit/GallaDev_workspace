@@ -255,7 +255,7 @@ En el móvil el panel izquierdo de `/correo` (ancho fijo de 320 px: carpetas Rec
 
 #### Estado actual (código; este documento no lo cambia)
 
-- La ruta del módulo es **`/correo`** (singular): una sola página (`src/app/correo/page.tsx` → `InboxPage`). No existe `/correos`. El banco de trabajo de borradores de leads, `/email`, no forma parte de este módulo y no se toca.
+- La ruta del módulo es **`/correo`**: una sola página (`src/app/correo/page.tsx` → `InboxPage`), sin segmentos de carpeta. El banco de trabajo de borradores de leads, `/email`, no forma parte de este módulo y no se toca.
 - Las carpetas no tienen URL. Viven en el estado del cliente: `view` es `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` en `src/lib/email/thread-state.ts`). Borradores es un `listMode` aparte (`drafts`): hoy un botón junto a los chips de buzón, no una entrada de esa lista de vistas.
 - Etiquetas en la UI (es): Recibidos, Enviados, Archivados, Papelera, Borradores. No hay carpeta Spam.
 - El filtro de cuenta es también estado del cliente (`Todos` / `hola@` / `ociel@`; allowlist `COMPANY_MAILBOXES` en `src/lib/email/mailboxes.ts`). La API ya acepta `GET /api/email/threads?view=&mailbox=`.
@@ -267,24 +267,24 @@ En el móvil el panel izquierdo de `/correo` (ancho fijo de 320 px: carpetas Rec
 
 **Rutas por carpeta.** Cada carpeta existente tiene su propia dirección, con slugs en español (como el resto de rutas de la app) en todos los idiomas de la UI:
 
-| Carpeta | Vista actual | Ruta propuesta |
+| Carpeta | Vista actual | Ruta |
 | --- | --- | --- |
-| Recibidos | `view=inbox` | `/correos/recibidos` |
-| Enviados | `view=sent` | `/correos/enviados` |
-| Archivados | `view=archived` | `/correos/archivados` |
-| Papelera | `view=trash` | `/correos/papelera` |
-| Borradores | `listMode=drafts` | `/correos/borradores` |
+| Recibidos | `view=inbox` | `/correo/recibidos` |
+| Enviados | `view=sent` | `/correo/enviados` |
+| Archivados | `view=archived` | `/correo/archivados` |
+| Papelera | `view=trash` | `/correo/papelera` |
+| Borradores | `listMode=drafts` | `/correo/borradores` |
 
-El prefijo es **`/correos`** (plural), el que pidió Ociel. La ruta actual es `/correo`. Redirecciones permanentes (308 o la equivalente en Next.js):
+El prefijo es **`/correo`** (singular), confirmado por Ociel. Redirecciones permanentes (308 o la equivalente en Next.js):
 
-- `/correo` → `/correos/recibidos`
-- cualquier otra ruta bajo `/correo/…`, si apareciera, → la carpeta equivalente, o `/correos/recibidos` si no hay equivalente
+- `/correo` → `/correo/recibidos`
+- cualquier otra ruta bajo `/correo/…` que no sea una carpeta conocida → la carpeta equivalente, o `/correo/recibidos` si no hay equivalente
 
 No se crea una carpeta Spam. `/email` no se redirige. Las rutas nuevas entran en las mismas listas de acceso que `/correo` (redirección segura tras el login, oculta al visitante, solo Admin).
 
-La carpeta por defecto es Recibidos. Un hilo abierto es compartible y sobrevive a un recargo: `/correos/{carpeta}/{threadId}` (UUID), conservando la cuenta en la query si aplica. En Borradores no hay esta ruta de hilo; abrir un borrador sigue siendo el diálogo de redacción.
+La carpeta por defecto es Recibidos. Un hilo abierto es compartible y sobrevive a un recargo: `/correo/{carpeta}/{threadId}` (UUID), conservando la cuenta en la query si aplica. En Borradores no hay esta ruta de hilo; abrir un borrador sigue siendo el diálogo de redacción.
 
-**Menú lateral.** Pulsar «Correo» despliega subopciones: las cinco carpetas de arriba (con la insignia de no leídos que ya existe en cada una, cuando aplique) y la subopción **Cuentas**. La entrada «Correo» deja de ser solo un enlace a una única página. En escritorio el menú puede quedar desplegado mientras se está en `/correos/…`; en móvil se usa el cajón de siempre. La navegación entre carpetas es por estas subopciones, no por un panel de carpetas superpuesto al contenido.
+**Menú lateral.** Pulsar «Correo» despliega subopciones: las cinco carpetas de arriba (con la insignia de no leídos que ya existe en cada una, cuando aplique) y la subopción **Cuentas**. La entrada «Correo» deja de ser solo un enlace a una única página. En escritorio el menú puede quedar desplegado mientras se está en `/correo/…`; en móvil se usa el cajón de siempre. La navegación entre carpetas es por estas subopciones, no por un panel de carpetas superpuesto al contenido.
 
 El panel izquierdo actual (los botones de carpeta dentro de `InboxPage`) deja de ser la forma de cambiar de carpeta. En escritorio se mantiene el diseño de dos paneles (lista / lectura); la lista ocupa ese panel izquierdo, sin la columna fija de 320 px dedicada a las carpetas. «Nuevo» y la búsqueda se quedan en la cabecera de la lista, no en el menú principal de la app.
 
@@ -296,9 +296,9 @@ El panel izquierdo actual (los botones de carpeta dentro de `InboxPage`) deja de
 
 Si en el futuro hay más buzones en la allowlist, salen aquí. La cuenta se combina con la carpeta: filtrar por `hola@` en Recibidos no saca al usuario de Recibidos.
 
-Se usa un **parámetro de query** `cuenta`, no un segmento de ruta. Valores: se omite o `todas` para todos los buzones visibles; `hola` u `ociel` (el local-part) para un buzón. Ejemplo: `/correos/recibidos?cuenta=hola`. Un valor desconocido o no permitido se trata como Todas (o se redirige a la URL sin `cuenta`).
+Se usa un **parámetro de query** `cuenta`, no un segmento de ruta. Valores: se omite o `todas` para todos los buzones visibles; `hola` u `ociel` (el local-part) para un buzón. Ejemplo: `/correo/recibidos?cuenta=hola`. Un valor desconocido o no permitido se trata como Todas (o se redirige a la URL sin `cuenta`).
 
-Por qué un query y no `/correos/hola/recibidos`: la carpeta y el buzón ya son ejes ortogonales (sección 8 y el filtro `mailbox` de la API). Así no se multiplica el árbol de rutas, cambiar de cuenta no pierde la carpeta ni el hilo, y «Cuentas» en el menú es un filtro, no una página de destino. El cliente traduce `cuenta` al parámetro `mailbox` que ya entiende `GET /api/email/threads`.
+Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son ejes ortogonales (sección 8 y el filtro `mailbox` de la API). Así no se multiplica el árbol de rutas, cambiar de cuenta no pierde la carpeta ni el hilo, y «Cuentas» en el menú es un filtro, no una página de destino. El cliente traduce `cuenta` al parámetro `mailbox` que ya entiende `GET /api/email/threads`.
 
 **Permisos.** No se inventa un RBAC nuevo por buzón. Hoy solo Admin entra, y ve las dos cuentas. Las subopciones de Cuentas solo listan buzones que esa sesión puede ver. Una URL con `cuenta` de un buzón no permitido no devuelve esos hilos (403 o redirección a Todas / a un buzón permitido). Si más adelante otros roles pueden abrir Correo o un buzón concreto (pregunta abierta de la sección 7), este filtro lo respeta.
 
@@ -310,18 +310,18 @@ Por qué un query y no `/correos/hola/recibidos`: la carpeta y el buzón ya son 
 - El cambio de carpeta o de cuenta se hace desde el menú desplegado de «Correo», no desde un panel que tape el correo.
 - En Borradores, la lista va a ancho completo y el diálogo de redacción se abre encima, como ahora.
 
-**Actualizar la lista al llegar correo nuevo** (el alcance original del punto 7; se mantiene). Si llega un mensaje nuevo que pertenece a la carpeta y cuenta que se están viendo, la lista se actualiza sin recargar la página a mano ni perder la selección, el scroll o un hilo abierto. Las insignias de no leídos del menú se actualizan también, incluso si el mensaje cae en otra carpeta. Punto de partida: reutilizar el sondeo que ya tienen los contadores (60 s, visibilidad de la pestaña, evento `correo:unread-changed`) para recargar también la lista. El transporte concreto (seguir con sondeo o un aviso más inmediato) es detalle de implementación; esta entrega no exige WebSocket. No sustituye un aviso push fuera de la app (eso sigue siendo la pregunta 3 de la sección 7).
+**Actualizar la lista al llegar correo nuevo** (el alcance original del punto 7; se mantiene). Si llega un mensaje nuevo que pertenece a la carpeta y cuenta que se están viendo, la lista se actualiza sin recargar la página a mano ni perder la selección, el scroll o un hilo abierto. Las insignias de no leídos del menú se actualizan también, incluso si el mensaje cae en otra carpeta. El intervalo es **cada 60 s**, el mismo que los contadores, y también al volver a la pestaña y con el evento `correo:unread-changed`. Esta entrega no exige WebSocket. No sustituye un aviso push fuera de la app (eso sigue siendo la pregunta 3 de la sección 7).
 
 #### Criterios de aceptación
 
-- [ ] Un Admin abre `/correos/recibidos`, `/correos/enviados`, `/correos/archivados`, `/correos/papelera` y `/correos/borradores`, y ve la carpeta que indica la URL. Recargar o compartir la URL conserva la carpeta.
-- [ ] `/correo` redirige a `/correos/recibidos`. `/email` no cambia.
+- [ ] Un Admin abre `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` y `/correo/borradores`, y ve la carpeta que indica la URL. Recargar o compartir la URL conserva la carpeta.
+- [ ] `/correo` redirige a `/correo/recibidos`. `/email` no cambia.
 - [ ] En la barra lateral, «Correo» despliega las cinco carpetas y «Cuentas». Elegir una carpeta navega a su ruta. Elegir Todas / hola@ / ociel@ aplica el filtro y se queda en la carpeta actual, con `?cuenta=` en la URL (Todas puede omitir el parámetro).
 - [ ] `?cuenta=hola` en Recibidos solo lista hilos de `hola@galladev.com`. El filtro se puede combinar con la búsqueda que ya existe.
 - [ ] Seller, Viewer y la demo de visitante no ven las nuevas rutas ni sus APIs (el mismo criterio que `/correo`). Un visitante no ve «Correo» en el menú.
 - [ ] En un ancho menor de 768 px, la lista ocupa toda la pantalla; al abrir un hilo, la lectura ocupa toda la pantalla con un botón Atrás; el panel de carpetas no se superpone al contenido.
 - [ ] En escritorio se sigue viendo lista y lectura a la vez, sin el panel de carpetas de 320 px dentro de la página.
-- [ ] Con la bandeja abierta, un correo nuevo que encaja en la vista aparece en la lista (y las insignias se actualizan) sin recargar a mano.
+- [ ] Con la bandeja abierta, un correo nuevo que encaja en la vista aparece en la lista en no más de 60 s (el mismo ritmo que los contadores; también al volver a la pestaña), y las insignias se actualizan, sin recargar a mano.
 - [ ] No se toca `/email`, no se añade Spam, y no se cambia el modelo de permisos más allá de aplicar el que ya existe a las rutas nuevas.
 
 #### Fuera de alcance
@@ -330,8 +330,3 @@ Por qué un query y no `/correos/hola/recibidos`: la carpeta y el buzón ya son 
 - Una ruta propia para «Nuevo mensaje» (sigue el diálogo).
 - Cambiar la API (`view`, `mailbox`) más de lo necesario para las URLs nuevas.
 - El trabajo del punto 6 (PR #109) y cualquier otra mejora de redacción o vinculación.
-
-#### Preguntas abiertas de este punto
-
-1. Si Ociel prefiere conservar el prefijo singular `/correo` (`/correo/recibidos`, etc.), el resto de la spec vale igual; solo cambian el prefijo y las redirecciones (entonces `/correo` a secas seguiría yendo a Recibidos, sin pasar por `/correos`).
-2. ¿Hace falta que el intervalo de refresco de la lista sea más corto que los 60 s de los contadores, o basta empezar por ese ritmo?
