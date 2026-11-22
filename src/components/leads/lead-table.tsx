@@ -128,8 +128,8 @@ export function LeadTable() {
         </span>
       </div>
 
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto [-webkit-overflow-scrolling:touch]">
-        <table className="min-w-full border-collapse text-left text-[12.5px]">
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto [-webkit-overflow-scrolling:touch]">
+        <table className="w-max min-w-full border-collapse text-left text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-(--panel)">
             <tr className="border-b border-(--border)">
               <th className="px-3 py-2">
