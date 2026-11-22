@@ -100,7 +100,7 @@ export function LeadTable() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex flex-wrap gap-2 border-b border-(--border) px-4 py-2">
         <span className="self-center text-[11px] text-(--muted-fg)">
           {t("table.columns")}
@@ -128,8 +128,8 @@ export function LeadTable() {
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse text-left text-[12.5px]">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto [-webkit-overflow-scrolling:touch]">
+        <table className="min-w-full border-collapse text-left text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-(--panel)">
             <tr className="border-b border-(--border)">
               <th className="px-3 py-2">
@@ -149,7 +149,7 @@ export function LeadTable() {
               {visibleCols.map((key) => (
                 <th
                   key={key}
-                  className="cursor-pointer px-3 py-2 font-medium text-(--muted-fg)"
+                  className="cursor-pointer whitespace-nowrap px-3 py-2 font-medium text-(--muted-fg)"
                   onClick={() => toggleSort(key)}
                 >
                   {t(`table.${COL_MESSAGE_KEYS[key]}`)}
@@ -186,7 +186,7 @@ export function LeadTable() {
                     />
                   </td>
                   {visibleCols.map((key) => (
-                    <td key={key} className="px-3 py-2 align-middle">
+                    <td key={key} className="whitespace-nowrap px-3 py-2 align-middle">
                       <Cell
                         col={key}
                         lead={lead}
