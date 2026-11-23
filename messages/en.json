@@ -392,6 +392,21 @@
       "updateError": "Error updating",
       "statusUpdated": "Status updated",
       "error": "Error"
+    },
+    "emails": {
+      "title": "Emails",
+      "loading": "Loading emails…",
+      "loadError": "Could not load emails",
+      "empty": "No email threads linked to this lead.",
+      "noSubject": "(no subject)",
+      "unread": "Unread",
+      "messageCount": "{count, plural, one {# message} other {# messages}}",
+      "open": "Open in Mail",
+      "unlink": "Unlink",
+      "unlinkAria": "Unlink thread “{subject}”",
+      "unlinked": "Thread unlinked from the lead",
+      "unlinkError": "Could not unlink the thread",
+      "yesterday": "Yesterday"
     }
   },
   "kanban": {
@@ -691,7 +706,10 @@
     "replyExtras": {
       "toggle": "CC / BCC",
       "attach": "Attach"
-    }
+    },
+    "linkSourceAuto": "automatic",
+    "linkSourceManual": "manual",
+    "linkSourceHint": "Automatic link: the email matches a single lead. Use “Change lead” to fix it."
   },
   "email": {
     "title": "Email",

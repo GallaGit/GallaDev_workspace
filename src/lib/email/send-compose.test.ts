@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMock = vi.fn();
 const getMock = vi.hoisted(() => vi.fn());
+const autoLinkThread = vi.hoisted(() =>
+  vi.fn(async () => ({ status: "skipped", reason: "no-match" })),
+);
+
+vi.mock("./lead-link", () => ({ autoLinkThread }));
+
 const listAttachmentsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./resend-client", () => ({
@@ -33,19 +39,19 @@ function mockAdmin(overrides: {
       eq: vi.fn().mockResolvedValue({ error: null }),
     });
 
+  const threadInsert = vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({
+        data: overrides.threadError ? null : { id: threadId },
+        error: overrides.threadError ?? null,
+      }),
+    }),
+  });
+
   return {
     from: vi.fn().mockImplementation((table: string) => {
       if (table === "email_threads") {
-        return {
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: overrides.threadError ? null : { id: threadId },
-                error: overrides.threadError ?? null,
-              }),
-            }),
-          }),
-        };
+        return { insert: threadInsert };
       }
       if (table === "email_attachments") {
         return {
@@ -72,8 +78,10 @@ function mockAdmin(overrides: {
       return {};
     }),
     _deleteDraft: deleteDraft,
+    _threadInsert: threadInsert,
   } as unknown as Parameters<typeof sendCompose>[0] & {
     _deleteDraft: ReturnType<typeof vi.fn>;
+    _threadInsert: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -92,6 +100,7 @@ describe("isValidExternalEmail", () => {
 describe("sendCompose", () => {
   beforeEach(() => {
     sendMock.mockReset();
+    autoLinkThread.mockClear();
     getMock.mockReset();
     getMock.mockResolvedValue({
       data: { message_id: "<0102-real@eu-west-1.amazonses.com>" },
@@ -131,6 +140,49 @@ describe("sendCompose", () => {
         text: "Body here",
       }),
     );
+  });
+
+  it("intenta vincular el hilo nuevo con el lead del destinatario", async () => {
+    const admin = mockAdmin();
+    await sendCompose(admin, {
+      mailbox: "hola@galladev.com",
+      to: "Ana <ANA@Gestoria.es>",
+      subject: "Hola",
+      bodyText: "Body",
+    });
+    expect(autoLinkThread).toHaveBeenCalledWith(admin, "thread-new-1", [
+      "ana@gestoria.es",
+    ]);
+    expect(admin._threadInsert.mock.calls[0][0]).not.toHaveProperty(
+      "lead_link_source",
+    );
+  });
+
+  it("un lead elegido a mano se guarda como manual y no se auto-vincula", async () => {
+    const admin = mockAdmin();
+    await sendCompose(admin, {
+      mailbox: "hola@galladev.com",
+      to: "ana@gestoria.es",
+      subject: "Hola",
+      bodyText: "Body",
+      leadId: "lead-elegido",
+    });
+    expect(admin._threadInsert.mock.calls[0][0]).toMatchObject({
+      lead_id: "lead-elegido",
+      lead_link_source: "manual",
+    });
+    expect(autoLinkThread).not.toHaveBeenCalled();
+  });
+
+  it("no auto-vincula si el envío falla", async () => {
+    sendMock.mockResolvedValue({ data: null, error: { message: "quota" } });
+    await sendCompose(mockAdmin(), {
+      mailbox: "hola@galladev.com",
+      to: "x@y.com",
+      subject: "S",
+      bodyText: "B",
+    });
+    expect(autoLinkThread).not.toHaveBeenCalled();
   });
 
   it("deletes draft only after successful send", async () => {

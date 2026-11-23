@@ -145,6 +145,44 @@ Route: `src/app/api/email/inbound/route.ts` (the App Router lives under `src/app
 - [x] The reply is visible in that thread in `/correo` after send, including a failed send marked as failed rather than dropped. (`send_status` column: `delivered` / `failed`)
 - [x] A follow-up from the outside to that thread is stored on the same thread, not as a new one, when the incoming `message_id` / `References` match. (`findOrCreateThread` in `inbound-store.ts`)
 
+### Automatic thread ↔ lead linking (improvement 6, 20 Nov 2026)
+
+**Migration** `20261120150000_email_thread_lead_link_source.sql` (apply by hand in the SQL editor **before** deploying): adds `email_threads.lead_link_source` (`'manual' | 'auto' | NULL`, with a CHECK) and marks existing links as `manual`. RLS and grants unchanged (thread SELECT/UPDATE Admin only, FORCE RLS). No new environment variables.
+
+**When it links.** When an **inbound** message is stored (webhook), when a new message is **sent** (compose) and when a thread is **replied** to (`autoLinkThread` in `src/lib/email/lead-link.ts`). Forwarding does not link (the recipient is a third party). If the thread already has a lead, nothing happens.
+
+**Rule.**
+
+1. Candidate addresses = sender + To + Cc (inbound) or To + Cc (outbound), normalized (lower-case, no spaces, `Name <a@b>` → `a@b`), excluding our mailboxes (`hola@`, `ociel@`) and de-duplicated (`lead-match.ts`).
+2. Looks up **non-archived** leads whose `email`, `email_commercial` or `email_manager` matches exactly (normalized on both sides; the DB only pre-selects with `ilike`).
+3. **Exactly one lead** → linked with `lead_link_source = 'auto'`. **Several distinct leads** (e.g. two duplicate records with the same email, or a message with two customers in Cc) → not linked, left for manual linking. One lead matching through several emails counts once.
+4. **A human decision is never overwritten.** The UPDATE is conditional (`lead_id IS NULL` and source null or `auto`), so even a race with a manual link cannot be overwritten. Linking or **unlinking** from the UI (`PATCH /api/email/threads/[id]` with `lead_id`) stores `lead_link_source = 'manual'`: a thread unlinked by hand is not auto-linked again. Links created before the migration count as manual.
+5. Best effort: any error is logged (`warn`, no addresses) and never breaks the webhook or the send.
+
+**Backfill (Admin, idempotent).** `POST /api/email/backfill-lead-links` with `requireAdmin`, 3/min limit and optional body `{ dryRun?, limit? (1–500, default 200), offset? }`. Only walks threads with null `lead_id` and null `lead_link_source`, applying the same rule. Returns `{ ok, dryRun, threadsScanned, linked: [{ threadId, leadId }], ambiguous, noMatch, skipped, nextOffset }`; if `nextOffset` is not `null`, repeat with that `offset`. Try `dryRun: true` first:
+
+```js
+await (await fetch("/api/email/backfill-lead-links", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ dryRun: true }),
+})).json();
+```
+
+**UI.**
+
+- Lead record (`LeadDrawer`): an **Emails** section (`LeadEmailsSection`) lists linked threads (subject, snippet, date, message count, “Unread” tag), each linking to `/correo?thread=<id>`, with an **Unlink** button (`PATCH` with `lead_id: null`). Mounted for Admin only (Mail is Admin-only in API and RLS); Seller, Viewer and the visitor demo neither see it nor can call the API (`GET /api/email/threads?lead_id=<uuid>`, `requireAdmin`; Trash excluded).
+- `/correo?thread=<uuid>` opens that thread in its folder (Inbox, Archived or Trash); if missing, it shows an error.
+- Thread view: the lead tag reads “Linked lead · automatic” (with a tooltip) or “· manual”. The source comes from `GET /api/email/threads/[id]` (`lead_link_source`). After replying, the view resyncs in case the reply linked the thread.
+
+**Acceptance.**
+
+- [x] An inbound message or a send with a single matching lead links the thread as `auto`. (tests: `lead-match.test.ts`, `lead-link.test.ts`, `inbound-store.test.ts`, `send-compose.test.ts`, `send-reply.test.ts`)
+- [x] Several candidates do not link; a manual link (or a thread unlinked by hand) is not overwritten; case and spaces do not prevent a match. (`lead-link.test.ts`, `lead-match.test.ts`)
+- [x] Backfill with `dryRun`, idempotent, Admin only. (`lead-link-backfill.test.ts`, `backfill-lead-links-route.test.ts`)
+- [x] The lead record lists linked threads and can unlink them; Seller/Viewer cannot reach mail. (`lead-emails-section.test.tsx`, `thread-state-routes.test.ts`)
+- [x] The thread shows whether the link is automatic or manual; the manual link dialog still works. (`thread-view.test.tsx`, `link-lead-dialog.test.tsx`)
+
 ## 6. Risks
 
 - **Spam and abuse.** The MX will attract mail that is not a customer. Enforce a body size limit on the webhook, rate-limit the route, and drop recipients outside the allowlist (`hola@`, `ociel@`). Sanitize HTML before rendering. Do not load remote images by default (tracking pixels and mixed-content surprises).
