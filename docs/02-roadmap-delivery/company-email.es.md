@@ -182,6 +182,44 @@ Migración `20261119160000_email_compose_cc_signatures.sql` (**aplicar a mano an
 - **Firma por buzón.** El Admin la edita en Ajustes → «Firmas de correo» (`GET`/`PUT /api/email/signatures`, solo Admin, RLS). Al redactar se añade al cuerpo como bloque `-- ` al final, y es editable antes de enviar. Si se cambia el buzón de origen y el texto no se tocó, se cambia la firma. Un borrador restaurado no recibe firma. Helpers: `src/lib/email/signature.ts`.
 - **Adjuntos salientes.** Selector en el diálogo y en responder/reenviar. Límites (caben en los 4,5 MB de cuerpo de Vercel): 10 ficheros, 3 MiB por fichero y 3,5 MiB en total; se bloquean extensiones ejecutables (`.exe`, `.bat`, `.js`, `.sh`, …). Si no hay adjuntos, el cliente sigue enviando JSON; con adjuntos envía `multipart/form-data` (`payload` + `files`) a las mismas rutas (`outbound-client.ts`, `outbound-request.ts`). Resend los recibe como `attachments`. Persistencia: con `EMAIL_ATTACHMENTS_BUCKET` los bytes van al bucket con la misma ruta opaca que los entrantes (`email/{message_id}/{attachment_id}`) y se sirven por `/api/email/attachments/[id]/file`; sin bucket funciona igual, se guardan solo los metadatos y, si Resend lo permite, el id del adjunto para descargarlo ~30 días. La persistencia es de mejor esfuerzo y nunca hace fallar el envío. Los borradores no guardan adjuntos.
 
+### Vinculación automática hilo ↔ lead (mejora 6, 20 Nov 2026)
+
+**Migración** `20261120150000_email_thread_lead_link_source.sql` (aplicar a mano en el SQL editor **antes** de desplegar): añade `email_threads.lead_link_source` (`'manual' | 'auto' | NULL`, con CHECK) y marca como `manual` las vinculaciones que ya existían. RLS y grants sin cambios (SELECT/UPDATE de hilos solo Admin, FORCE RLS). Sin variables de entorno nuevas.
+
+**Cuándo se vincula.** Al guardar un correo **entrante** (webhook), al **enviar** un correo nuevo (compose) y al **responder** en un hilo (`autoLinkThread` en `src/lib/email/lead-link.ts`). El reenvío no vincula (el destinatario es un tercero). Si el hilo ya tiene lead, no se hace nada.
+
+**Regla.**
+
+1. Direcciones candidatas = remitente + To + Cc (entrante) o To + Cc (saliente), normalizadas (minúsculas, sin espacios, `Nombre <a@b>` → `a@b`), sin nuestros buzones (`hola@`, `ociel@`) y deduplicadas (`lead-match.ts`).
+2. Se buscan leads **no archivados** cuyo `email`, `email_commercial` o `email_manager` coincida exactamente (comparación normalizada en ambos lados; la BD solo preselecciona con `ilike`).
+3. **Un único lead** → se vincula con `lead_link_source = 'auto'`. **Varios leads distintos** (p. ej. dos fichas duplicadas con el mismo email, o un correo con dos clientes en Cc) → no se vincula y queda para hacerlo a mano. Un mismo lead con varios emails coincidentes cuenta una vez.
+4. **Nunca se sobrescribe una decisión humana.** El UPDATE es condicional (`lead_id IS NULL` y origen nulo o `auto`), así que ni siquiera una carrera con una vinculación manual la pisa. Vincular o **desvincular** desde la UI (`PATCH /api/email/threads/[id]` con `lead_id`) guarda `lead_link_source = 'manual'`: un hilo desvinculado a mano no se vuelve a vincular solo. Las vinculaciones anteriores a la migración cuentan como manuales.
+5. Es de mejor esfuerzo: cualquier error se registra (`warn`, sin direcciones) y no tumba el webhook ni el envío.
+
+**Backfill (Admin, idempotente).** `POST /api/email/backfill-lead-links` con `requireAdmin`, límite 3/min y body opcional `{ dryRun?, limit? (1–500, defecto 200), offset? }`. Solo recorre hilos con `lead_id` nulo y `lead_link_source` nulo y aplica la misma regla. Responde `{ ok, dryRun, threadsScanned, linked: [{ threadId, leadId }], ambiguous, noMatch, skipped, nextOffset }`; si `nextOffset` no es `null`, repetir con ese `offset`. Probar primero con `dryRun: true`:
+
+```js
+await (await fetch("/api/email/backfill-lead-links", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ dryRun: true }),
+})).json();
+```
+
+**UI.**
+
+- Ficha del lead (`LeadDrawer`): sección **Correos** (`LeadEmailsSection`) con los hilos vinculados (asunto, fragmento, fecha, nº de mensajes, etiqueta «No leído»), cada uno enlazado a `/correo?thread=<id>`, y botón **Desvincular** (`PATCH` con `lead_id: null`). Solo se monta para Admin (el Correo es solo Admin por API y RLS); Seller, Viewer y la demo de visitante no la ven ni pueden llamar a la API (`GET /api/email/threads?lead_id=<uuid>`, `requireAdmin`; excluye la Papelera).
+- `/correo?thread=<uuid>` abre ese hilo en su bandeja (Recibidos, Archivados o Papelera); si no existe, avisa.
+- Vista del hilo: la etiqueta de lead muestra «Lead vinculado · automático» (con ayuda) o «· manual». El origen viene de `GET /api/email/threads/[id]` (`lead_link_source`). Tras responder, la vista se resincroniza por si la respuesta vinculó el hilo.
+
+**Aceptación.**
+
+- [x] Un entrante o un envío con un único lead coincidente vincula el hilo como `auto`. (tests: `lead-match.test.ts`, `lead-link.test.ts`, `inbound-store.test.ts`, `send-compose.test.ts`, `send-reply.test.ts`)
+- [x] Varios candidatos no vinculan; una vinculación manual (o un hilo desvinculado a mano) no se sobrescribe; mayúsculas y espacios no impiden el match. (`lead-link.test.ts`, `lead-match.test.ts`)
+- [x] Backfill con `dryRun`, idempotente y solo Admin. (`lead-link-backfill.test.ts`, `backfill-lead-links-route.test.ts`)
+- [x] La ficha del lead lista los hilos vinculados y permite desvincular; Seller/Viewer no acceden al correo. (`lead-emails-section.test.tsx`, `thread-state-routes.test.ts`)
+- [x] El hilo indica si la vinculación es automática o manual; el diálogo de vinculación manual sigue funcionando. (`thread-view.test.tsx`, `link-lead-dialog.test.tsx`)
+
 ## 6. Riesgos
 
 - **Spam y abuso.** El MX va a atraer correo que no es de un cliente. Hay que imponer un tope de tamaño al cuerpo del webhook, limitar la tasa de la ruta y descartar destinatarios fuera de la allowlist (`hola@`, `ociel@`). Sanear el HTML antes de pintarlo. No cargar imágenes remotas por defecto (píxeles de seguimiento y sorpresas de contenido mixto).

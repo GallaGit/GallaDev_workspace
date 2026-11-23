@@ -8,6 +8,7 @@ import {
   isValidExternalEmail,
   type CompanyMailbox,
 } from "./mailboxes";
+import { autoLinkThread } from "./lead-link";
 import {
   attachmentsAreValid,
   storeOutboundAttachments,
@@ -157,6 +158,7 @@ export async function sendCompose(
       from_name: null,
       mailbox_address: input.mailbox,
       lead_id: input.leadId ?? null,
+      ...(input.leadId ? { lead_link_source: "manual" } : {}),
       last_message_at: now,
       message_count: 1,
       is_read: true,
@@ -200,6 +202,10 @@ export async function sendCompose(
     resendEmailId,
     files: attachments,
   });
+
+  if (!input.leadId) {
+    await autoLinkThread(admin, thread.id, [to, ...cc]);
+  }
 
   if (input.draftId) {
     const { error: delErr } = await admin

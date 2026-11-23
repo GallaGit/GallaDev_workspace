@@ -17,6 +17,7 @@ import {
   type ReceivingEmailContent,
 } from "./receiving-fetch";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
+import { autoLinkThread } from "./lead-link";
 import { findThreadForMessage } from "./thread-match";
 import { messageIdLookupVariants, normalizeMessageId } from "./threading";
 
@@ -28,6 +29,9 @@ import { messageIdLookupVariants, normalizeMessageId } from "./threading";
  *
  * Escribe con el cliente service_role (bypass RLS). Las lecturas pasan por
  * sesión y RLS (solo Admin).
+ *
+ * Si el hilo no tiene lead, intenta vincularlo con el único lead cuyo email
+ * coincida con remitente/destinatarios externos (ver lead-link.ts).
  *
  * Tras guardar metadatos, intenta cargar el cuerpo completo del mensaje
  * vía la Receiving API de Resend (una sola llamada; error del SDK se registra).
@@ -138,6 +142,13 @@ export async function storeInboundEmail(
       }
     }
   }
+
+  // Vinculación automática con un lead (nunca pisa una manual ni rompe el webhook).
+  await autoLinkThread(admin, threadId, [
+    fromAddress,
+    ...(data.to ?? []),
+    ...(data.cc ?? []),
+  ]);
 
   await admin
     .from("email_threads")

@@ -52,12 +52,26 @@ describe("threadStaysInView", () => {
 });
 
 describe("threadDbPatch", () => {
-  it("leído/no leído y lead_id pasan tal cual", () => {
+  it("leído/no leído pasa tal cual", () => {
     expect(threadDbPatch({ is_read: true }, NOW)).toEqual({ is_read: true });
+  });
+
+  it("vincular o desvincular un lead lo marca como decisión manual", () => {
     expect(threadDbPatch({ is_read: false, lead_id: null }, NOW)).toEqual({
       is_read: false,
       lead_id: null,
+      lead_link_source: "manual",
     });
+    expect(threadDbPatch({ lead_id: "lead-1" }, NOW)).toEqual({
+      lead_id: "lead-1",
+      lead_link_source: "manual",
+    });
+  });
+
+  it("sin lead_id en el PATCH no toca el origen de la vinculación", () => {
+    expect(threadDbPatch({ archived: true }, NOW)).not.toHaveProperty(
+      "lead_link_source",
+    );
   });
 
   it("archivar pone fecha y saca de la papelera", () => {
@@ -92,7 +106,7 @@ describe("threadDbPatch", () => {
       NOW,
     );
     expect(Object.keys(db).sort()).toEqual(
-      ["archived_at", "is_read", "lead_id", "trashed_at"].sort(),
+      ["archived_at", "is_read", "lead_id", "lead_link_source", "trashed_at"].sort(),
     );
   });
 });

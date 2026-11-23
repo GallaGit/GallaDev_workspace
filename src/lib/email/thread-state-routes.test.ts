@@ -140,6 +140,88 @@ describe("PATCH /api/email/threads/[id]", () => {
   });
 });
 
+describe("PATCH /api/email/threads/[id] (vinculación a lead)", () => {
+  async function patchLead(body: unknown) {
+    const fake = fakeClient({ data: { id: A }, error: null });
+    createSupabaseServerClient.mockResolvedValue(fake.client);
+    const { PATCH } = await import("@/app/api/email/threads/[id]/route");
+    const res = await PATCH(
+      new Request(`http://localhost/api/email/threads/${A}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id: A }) },
+    );
+    const update = fake.calls.find((c) => c.method === "update")?.args[0];
+    return { res, update };
+  }
+
+  it("vincular a mano marca lead_link_source = manual", async () => {
+    const { res, update } = await patchLead({ lead_id: B });
+    expect(res.status).toBe(200);
+    expect(update).toEqual({ lead_id: B, lead_link_source: "manual" });
+  });
+
+  it("desvincular también es manual (el auto-vinculado no lo revierte)", async () => {
+    const { res, update } = await patchLead({ lead_id: null });
+    expect(res.status).toBe(200);
+    expect(update).toEqual({ lead_id: null, lead_link_source: "manual" });
+  });
+
+  it("sin Admin no toca la BD", async () => {
+    requireAdmin.mockResolvedValue(new Response(null, { status: 403 }));
+    const { res, update } = await patchLead({ lead_id: null });
+    expect(res.status).toBe(403);
+    expect(update).toBeUndefined();
+    expect(createSupabaseServerClient).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/email/threads?lead_id= (ficha del lead)", () => {
+  it("filtra por lead, excluye Papelera y no aplica filtros de bandeja", async () => {
+    const fake = fakeClient({ data: [{ id: A }], error: null });
+    createSupabaseServerClient.mockResolvedValue(fake.client);
+    const { GET } = await import("@/app/api/email/threads/route");
+    const res = await GET(
+      new Request(`http://localhost/api/email/threads?lead_id=${B}&view=trash`),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, threads: [{ id: A }] });
+    const filters = fake.calls
+      .filter((c) => c.method === "is" || c.method === "not" || c.method === "eq")
+      .map((c) => [c.method, ...c.args]);
+    expect(filters).toEqual([
+      ["eq", "lead_id", B],
+      ["is", "trashed_at", null],
+    ]);
+    expect(fake.calls.find((c) => c.method === "select")?.args[0]).not.toContain(
+      "email_messages!inner",
+    );
+  });
+
+  it("lead_id no válido → 400 sin consultar", async () => {
+    const fake = fakeClient({ data: [], error: null });
+    createSupabaseServerClient.mockResolvedValue(fake.client);
+    const { GET } = await import("@/app/api/email/threads/route");
+    const res = await GET(
+      new Request("http://localhost/api/email/threads?lead_id=no-es-uuid"),
+    );
+    expect(res.status).toBe(400);
+    expect(fake.tables).toEqual([]);
+  });
+
+  it("sin Admin (Seller/Viewer) no devuelve correo", async () => {
+    requireAdmin.mockResolvedValue(new Response(null, { status: 403 }));
+    const { GET } = await import("@/app/api/email/threads/route");
+    const res = await GET(
+      new Request(`http://localhost/api/email/threads?lead_id=${B}`),
+    );
+    expect(res.status).toBe(403);
+    expect(createSupabaseServerClient).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/email/threads?view=", () => {
   async function filtersFor(query: string) {
     const fake = fakeClient({ data: [], error: null });

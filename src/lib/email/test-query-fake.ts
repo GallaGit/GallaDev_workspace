@@ -20,7 +20,7 @@ export function fakeSupabase(resolve: Resolver) {
       call.filters.push([name, ...args]);
       return b;
     };
-    for (const n of ["eq", "in", "or", "gte", "lte", "like", "is", "order", "limit"]) {
+    for (const n of ["eq", "in", "or", "gte", "lte", "like", "is", "order", "limit", "range"]) {
       b[n] = chain(n);
     }
     const done = () => Promise.resolve(resolve(call));

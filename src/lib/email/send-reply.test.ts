@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMock = vi.fn();
 const getMock = vi.hoisted(() => vi.fn());
+const autoLinkThread = vi.hoisted(() =>
+  vi.fn(async () => ({ status: "skipped", reason: "no-match" })),
+);
+
+vi.mock("./lead-link", () => ({ autoLinkThread }));
+
 const listAttachmentsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./resend-client", () => ({
@@ -89,6 +95,7 @@ function mockAdmin(overrides: {
 describe("sendReply", () => {
   beforeEach(() => {
     sendMock.mockReset();
+    autoLinkThread.mockClear();
     getMock.mockReset();
     getMock.mockResolvedValue({
       data: { message_id: "<0102-real@eu-west-1.amazonses.com>" },
@@ -192,6 +199,32 @@ describe("sendReply", () => {
     const call = sendMock.mock.calls[0][0];
     expect(call.to).toEqual(["sender@example.com", "bob@example.com"]);
     expect(call.cc).toEqual(["carol@example.com"]);
+  });
+
+  it("intenta vincular el hilo con el lead de los destinatarios tras enviar", async () => {
+    const admin = mockAdmin({
+      messages: [
+        {
+          message_id: "<m1@x>",
+          direction: "inbound",
+          from_address: "Sender@Example.com",
+          to_addresses: ["hola@galladev.com", "bob@example.com"],
+          cc_addresses: ["carol@example.com"],
+        },
+      ],
+    });
+    await sendReply(admin, { threadId: "t-1", bodyText: "Hi all", mode: "replyAll" });
+    expect(autoLinkThread).toHaveBeenCalledWith(admin, "t-1", [
+      "sender@example.com",
+      "bob@example.com",
+      "carol@example.com",
+    ]);
+  });
+
+  it("no intenta vincular si el envío falla", async () => {
+    sendMock.mockResolvedValue({ data: null, error: { message: "quota" } });
+    await sendReply(mockAdmin(), { threadId: "t-1", bodyText: "Hi" });
+    expect(autoLinkThread).not.toHaveBeenCalled();
   });
 
   it("sends from ociel@ when thread mailbox is ociel@", async () => {
