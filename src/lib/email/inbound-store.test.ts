@@ -3,9 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fetchReceivingEmail = vi.hoisted(() => vi.fn());
 const findThreadForMessage = vi.hoisted(() => vi.fn());
 const persistInboundAttachments = vi.hoisted(() => vi.fn());
+const autoLinkThread = vi.hoisted(() =>
+  vi.fn(async () => ({ status: "skipped", reason: "no-match" })),
+);
 
 vi.mock("./thread-match", () => ({ findThreadForMessage }));
 vi.mock("./attachment-persist", () => ({ persistInboundAttachments }));
+vi.mock("./lead-link", () => ({ autoLinkThread }));
 
 vi.mock("./receiving-fetch", () => ({
   fetchReceivingEmail,
@@ -156,6 +160,39 @@ describe("storeInboundEmail", () => {
     findThreadForMessage.mockReset();
     persistInboundAttachments.mockReset();
     persistInboundAttachments.mockResolvedValue(undefined);
+    autoLinkThread.mockClear();
+  });
+
+  it("intenta vincular el hilo con remitente y destinatarios (to/cc)", async () => {
+    fetchReceivingEmail.mockResolvedValue({ ok: false, errorName: "x" });
+    const admin = mockAdmin({ existingThreadByRef: { thread_id: "t-1" } });
+    await storeInboundEmail(admin, {
+      ...baseEvent,
+      data: {
+        ...baseEvent.data,
+        to: ["hola@galladev.com", "Otro <otro@x.com>"],
+        cc: ["cc@x.com"],
+      },
+    });
+    expect(autoLinkThread).toHaveBeenCalledWith(admin, "t-1", [
+      "client@example.com",
+      "hola@galladev.com",
+      "Otro <otro@x.com>",
+      "cc@x.com",
+    ]);
+  });
+
+  it("un fallo del auto-vinculado no impide guardar el mensaje", async () => {
+    fetchReceivingEmail.mockResolvedValue({ ok: false, errorName: "x" });
+    autoLinkThread.mockResolvedValueOnce({ status: "skipped", reason: "error" });
+    const result = await storeInboundEmail(mockAdmin(), baseEvent);
+    expect(result.stored).toBe(true);
+  });
+
+  it("no vincula un correo duplicado", async () => {
+    const admin = mockAdmin({ existingMessage: { id: "already" } });
+    await storeInboundEmail(admin, baseEvent);
+    expect(autoLinkThread).not.toHaveBeenCalled();
   });
 
   it("passes In-Reply-To, References, subject and sender to the matcher", async () => {

@@ -392,6 +392,21 @@
       "updateError": "Error al actualizar",
       "statusUpdated": "Estado actualizado",
       "error": "Error"
+    },
+    "emails": {
+      "title": "Correos",
+      "loading": "Cargando correos…",
+      "loadError": "No se pudieron cargar los correos",
+      "empty": "Ningún hilo de correo vinculado a este lead.",
+      "noSubject": "(sin asunto)",
+      "unread": "No leído",
+      "messageCount": "{count, plural, one {# mensaje} other {# mensajes}}",
+      "open": "Abrir en Correo",
+      "unlink": "Desvincular",
+      "unlinkAria": "Desvincular el hilo «{subject}»",
+      "unlinked": "Hilo desvinculado del lead",
+      "unlinkError": "No se pudo desvincular el hilo",
+      "yesterday": "Ayer"
     }
   },
   "kanban": {
@@ -691,7 +706,10 @@
     "replyExtras": {
       "toggle": "CC / CCO",
       "attach": "Adjuntar"
-    }
+    },
+    "linkSourceAuto": "automático",
+    "linkSourceManual": "manual",
+    "linkSourceHint": "Vinculación automática: el email coincide con un único lead. Usa «Cambiar lead» para corregirla."
   },
   "email": {
     "title": "Email",

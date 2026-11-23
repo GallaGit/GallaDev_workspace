@@ -1,4 +1,4 @@
-import { waitFor } from "@testing-library/react";
+import { cleanup, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { renderWithIntl } from "@/test/i18n-wrapper";
@@ -179,5 +179,75 @@ describe("ThreadView Cc y Cco", () => {
     expect(await findByText("CCO: jefe@example.com")).toBeInTheDocument();
     expect(queryAllByText(/^CCO:/)).toHaveLength(1);
     expect(queryAllByText("CC: copia@example.com")).toHaveLength(2);
+  });
+});
+
+describe("ThreadView: origen de la vinculación con el lead", () => {
+  const linked: EmailThread = { ...thread, lead_id: "lead-1" };
+
+  function stubThread(serverThread: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              thread: serverThread,
+              messages: [],
+              attachments: [],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("indica que la vinculación fue automática", async () => {
+    stubThread({ lead_id: "lead-1", lead_link_source: "auto" });
+    const { findByTestId } = renderWithIntl(
+      <ThreadView thread={linked} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    await waitFor(async () => {
+      expect(await findByTestId("linked-lead-badge")).toHaveTextContent(
+        "Lead vinculado · automático",
+      );
+    });
+    expect(await findByTestId("linked-lead-badge")).toHaveAttribute("title");
+  });
+
+  it("indica que la vinculación fue manual", async () => {
+    stubThread({ lead_id: "lead-1", lead_link_source: "manual" });
+    const { findByTestId } = renderWithIntl(
+      <ThreadView thread={linked} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    await waitFor(async () => {
+      expect(await findByTestId("linked-lead-badge")).toHaveTextContent(
+        "Lead vinculado · manual",
+      );
+    });
+    expect(await findByTestId("linked-lead-badge")).not.toHaveAttribute("title");
+  });
+
+  it("un hilo anterior sin origen registrado se muestra como manual", async () => {
+    stubThread({ lead_id: "lead-1", lead_link_source: null });
+    const { findByTestId } = renderWithIntl(
+      <ThreadView thread={linked} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    expect(await findByTestId("linked-lead-badge")).toHaveTextContent("manual");
+  });
+
+  it("sin lead no muestra la etiqueta de vinculación", async () => {
+    stubThread({ lead_id: null, lead_link_source: null });
+    const { queryByTestId, findByText } = renderWithIntl(
+      <ThreadView thread={thread} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    await findByText("Vincular lead");
+    expect(queryByTestId("linked-lead-badge")).toBeNull();
   });
 });
