@@ -557,4 +557,78 @@ describe("ComposeDialog", () => {
       expect(screen.getByText(/No se guardan en el borrador/)).toBeInTheDocument();
     });
   });
+  describe("variante en línea (área de contenido de /correo)", () => {
+    it("se pinta sin modal y con cabecera, campos y acciones", async () => {
+      renderDialog({ variant: "inline" });
+      await waitForSignature();
+      const inline = screen.getByTestId("compose-inline");
+      expect(inline.tagName).toBe("SECTION");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByRole("heading", { name: "Nuevo mensaje" })).toBeInTheDocument();
+      expect(screen.getByLabelText("CC")).toBeInTheDocument();
+      expect(screen.getByLabelText("CCO")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Guardar borrador/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Enviar$/ })).toBeInTheDocument();
+    });
+
+    it("no pinta nada si no está abierta", () => {
+      renderDialog({ variant: "inline", open: false });
+      expect(screen.queryByTestId("compose-inline")).toBeNull();
+    });
+
+    it("envía igual que el modal y avisa al padre", async () => {
+      const { onSent } = renderDialog({ variant: "inline" });
+      await waitForSignature();
+      type("Para", "cliente@example.com");
+      type("Asunto", "Hola");
+      fireEvent.change(screen.getByLabelText("Mensaje"), {
+        target: { value: "Hola equipo\n\n-- \nEquipo GallaDev" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /^Enviar$/ }));
+      await waitFor(() => expect(onSent).toHaveBeenCalledWith("thread-1", undefined));
+    });
+
+    it("cerrar con la X guarda el borrador si hay contenido", async () => {
+      const { onOpenChange } = renderDialog({ variant: "inline" });
+      await waitForSignature();
+      type("Asunto", "Pendiente");
+      fireEvent.click(screen.getByRole("button", { name: "Cerrar redacción" }));
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+      await waitFor(() => expect(draftBodies()).toHaveLength(1));
+      expect(draftBodies()[0]).toMatchObject({ subject: "Pendiente" });
+    });
+
+    it("al desmontarse (se abre un hilo) autoguarda lo escrito", async () => {
+      const view = renderWithIntl(
+        <ComposeDialog
+          variant="inline"
+          open
+          onOpenChange={vi.fn()}
+          onSent={vi.fn()}
+          onDraftSaved={vi.fn()}
+        />,
+      );
+      await waitForSignature("");
+      type("Asunto", "Se queda en borradores");
+      view.unmount();
+      await waitFor(() => expect(draftBodies()).toHaveLength(1));
+      expect(draftBodies()[0]).toMatchObject({ subject: "Se queda en borradores" });
+    });
+
+    it("al desmontarse sin cambios no crea borradores vacíos", async () => {
+      const view = renderWithIntl(
+        <ComposeDialog
+          variant="inline"
+          open
+          onOpenChange={vi.fn()}
+          onSent={vi.fn()}
+          onDraftSaved={vi.fn()}
+        />,
+      );
+      await waitForSignature("");
+      view.unmount();
+      await Promise.resolve();
+      expect(draftBodies()).toHaveLength(0);
+    });
+  });
 });

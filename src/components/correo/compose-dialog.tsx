@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Send, Save } from "lucide-react";
+import { Send, Save, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +77,7 @@ export function ComposeDialog({
   initialDraft,
   onSent,
   onDraftSaved,
+  variant = "dialog",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -84,6 +85,11 @@ export function ComposeDialog({
   initialDraft?: EmailDraft | null;
   onSent: (threadId: string, draftId?: string) => void;
   onDraftSaved: (draft: EmailDraft, meta?: { auto: boolean }) => void;
+  /**
+   * `inline` pinta la redacción en el área de contenido del módulo (sin
+   * modal) y se remonta por sesión; `dialog` es el modal de siempre.
+   */
+  variant?: "dialog" | "inline";
 }) {
   const t = useTranslations("correo");
   // Parent remounts with key per compose session — no sync effect.
@@ -220,6 +226,22 @@ export function ComposeDialog({
     [busy, hasMeaningfulContent, onOpenChange, persistDraft],
   );
 
+  // En línea no hay cierre explícito al abrir un hilo: guarda al desmontar.
+  const persistDraftRef = useRef(persistDraft);
+  const busyRef = useRef(busy);
+  useEffect(() => {
+    persistDraftRef.current = persistDraft;
+    busyRef.current = busy;
+  });
+  useEffect(() => {
+    if (variant !== "inline") return;
+    return () => {
+      if (dirtyRef.current && !busyRef.current && !sentRef.current && hasMeaningfulContent()) {
+        void persistDraftRef.current(true);
+      }
+    };
+  }, [variant, hasMeaningfulContent]);
+
   const handleMailboxChange = useCallback(
     (next: CompanyMailbox) => {
       touch();
@@ -303,6 +325,180 @@ export function ComposeDialog({
 
   const signature = (signatures[mailbox] ?? "").trim();
 
+  const fields = (
+    <div className="space-y-3">
+      <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
+        {t("compose.from")}
+        <select
+          className="mt-1 w-full rounded border border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-2 py-1.5 text-[13px]"
+          value={mailbox}
+          onChange={(e) =>
+            handleMailboxChange(e.target.value as CompanyMailbox)
+          }
+          disabled={busy}
+        >
+          {COMPANY_MAILBOXES.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
+        {t("compose.to")}
+        <Input
+          className="mt-1"
+          type="email"
+          value={to}
+          onChange={(e) => {
+            touch();
+            setTo(e.target.value);
+          }}
+          placeholder={t("compose.recipientPlaceholder")}
+          disabled={busy}
+          autoComplete="off"
+        />
+      </label>
+
+      <RecipientsInput
+        id="compose-cc"
+        label={t("compose.cc")}
+        value={cc}
+        onChange={(v) => {
+          touch();
+          setCc(v);
+        }}
+        placeholder={t("compose.ccPlaceholder")}
+        disabled={busy}
+        forceValidate={validateCopies}
+      />
+
+      <RecipientsInput
+        id="compose-bcc"
+        label={t("compose.bcc")}
+        value={bcc}
+        onChange={(v) => {
+          touch();
+          setBcc(v);
+        }}
+        placeholder={t("compose.bccPlaceholder")}
+        disabled={busy}
+        forceValidate={validateCopies}
+      />
+
+      <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
+        {t("compose.subject")}
+        <Input
+          className="mt-1"
+          value={subject}
+          onChange={(e) => {
+            touch();
+            setSubject(e.target.value);
+          }}
+          placeholder={t("compose.subject")}
+          disabled={busy}
+        />
+      </label>
+
+      <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
+        {t("compose.message")}
+        <textarea
+          className="mt-1 min-h-36 w-full resize-y rounded border border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-2 py-1.5 text-[13px]"
+          value={body}
+          onChange={(e) => {
+            touch();
+            setBody(e.target.value);
+          }}
+          disabled={busy}
+        />
+      </label>
+      {signature && body.includes(signature) ? (
+        <p className="-mt-2 text-[11px] text-gris-500">
+          {t("compose.signatureHint", { mailbox })}
+        </p>
+      ) : null}
+
+      <AttachmentPicker
+        files={files}
+        onChange={setFiles}
+        onError={(message) => toast.error(message)}
+        disabled={busy}
+      />
+    </div>
+  );
+
+  const actions = (
+    <>
+      <span
+        className="mr-auto text-[11px] text-gris-500"
+        aria-live="polite"
+        data-testid="compose-autosave-status"
+      >
+        {autosave === "saving" ? t("compose.autosaving") : null}
+        {autosave === "saved" ? t("compose.autosaved") : null}
+        {autosave === "error" ? t("compose.autosaveError") : null}
+      </span>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        disabled={busy}
+        onClick={() => void handleSaveDraft()}
+      >
+        <Save className="mr-1 h-3.5 w-3.5" />
+        {t("compose.saveDraft")}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        disabled={busy}
+        onClick={() => void handleSend()}
+      >
+        <Send className="mr-1 h-3.5 w-3.5" />
+        {busy ? t("compose.sending") : t("compose.send")}
+      </Button>
+
+      </>
+  );
+
+  if (variant === "inline") {
+    if (!open) return null;
+    return (
+      <section
+        className="flex h-full min-h-0 min-w-0 flex-col"
+        aria-label={t("compose.title")}
+        data-testid="compose-inline"
+      >
+        <header className="flex shrink-0 items-start gap-2 border-b border-gris-200 px-4 py-3 dark:border-gris-700">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[15px] font-semibold text-grafito dark:text-gris-100">
+              {t("compose.title")}
+            </h2>
+            <p className="text-[12px] text-gris-500 dark:text-gris-400">
+              {t("compose.description")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenChange(false)}
+            aria-label={t("compose.close")}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </header>
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-3">
+          {fields}
+        </div>
+        <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t border-gris-200 px-4 py-3 dark:border-gris-700">
+          {actions}
+        </footer>
+      </section>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="lg" className="max-h-[90vh] gap-3 overflow-y-auto">
@@ -311,136 +507,10 @@ export function ComposeDialog({
           <DialogDescription>{t("compose.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            {t("compose.from")}
-            <select
-              className="mt-1 w-full rounded border border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-2 py-1.5 text-[13px]"
-              value={mailbox}
-              onChange={(e) =>
-                handleMailboxChange(e.target.value as CompanyMailbox)
-              }
-              disabled={busy}
-            >
-              {COMPANY_MAILBOXES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            {t("compose.to")}
-            <Input
-              className="mt-1"
-              type="email"
-              value={to}
-              onChange={(e) => {
-                touch();
-                setTo(e.target.value);
-              }}
-              placeholder={t("compose.recipientPlaceholder")}
-              disabled={busy}
-              autoComplete="off"
-            />
-          </label>
-
-          <RecipientsInput
-            id="compose-cc"
-            label={t("compose.cc")}
-            value={cc}
-            onChange={(v) => {
-              touch();
-              setCc(v);
-            }}
-            placeholder={t("compose.ccPlaceholder")}
-            disabled={busy}
-            forceValidate={validateCopies}
-          />
-
-          <RecipientsInput
-            id="compose-bcc"
-            label={t("compose.bcc")}
-            value={bcc}
-            onChange={(v) => {
-              touch();
-              setBcc(v);
-            }}
-            placeholder={t("compose.bccPlaceholder")}
-            disabled={busy}
-            forceValidate={validateCopies}
-          />
-
-          <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            {t("compose.subject")}
-            <Input
-              className="mt-1"
-              value={subject}
-              onChange={(e) => {
-                touch();
-                setSubject(e.target.value);
-              }}
-              placeholder={t("compose.subject")}
-              disabled={busy}
-            />
-          </label>
-
-          <label className="block text-[12px] font-medium text-gris-600 dark:text-gris-300">
-            {t("compose.message")}
-            <textarea
-              className="mt-1 min-h-36 w-full resize-y rounded border border-gris-200 dark:border-gris-700 bg-blanco dark:bg-grafito px-2 py-1.5 text-[13px]"
-              value={body}
-              onChange={(e) => {
-                touch();
-                setBody(e.target.value);
-              }}
-              disabled={busy}
-            />
-          </label>
-          {signature && body.includes(signature) ? (
-            <p className="-mt-2 text-[11px] text-gris-500">
-              {t("compose.signatureHint", { mailbox })}
-            </p>
-          ) : null}
-
-          <AttachmentPicker
-            files={files}
-            onChange={setFiles}
-            onError={(message) => toast.error(message)}
-            disabled={busy}
-          />
-        </div>
+        {fields}
 
         <DialogFooter className="items-center gap-2 sm:gap-2">
-          <span
-            className="mr-auto text-[11px] text-gris-500"
-            aria-live="polite"
-            data-testid="compose-autosave-status"
-          >
-            {autosave === "saving" ? t("compose.autosaving") : null}
-            {autosave === "saved" ? t("compose.autosaved") : null}
-            {autosave === "error" ? t("compose.autosaveError") : null}
-          </span>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={busy}
-            onClick={() => void handleSaveDraft()}
-          >
-            <Save className="mr-1 h-3.5 w-3.5" />
-            {t("compose.saveDraft")}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            onClick={() => void handleSend()}
-          >
-            <Send className="mr-1 h-3.5 w-3.5" />
-            {busy ? t("compose.sending") : t("compose.send")}
-          </Button>
+          {actions}
         </DialogFooter>
       </DialogContent>
     </Dialog>

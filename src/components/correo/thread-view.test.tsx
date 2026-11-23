@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { renderWithIntl } from "@/test/i18n-wrapper";
 import { ThreadView } from "./thread-view";
-import type { EmailThread } from "./inbox-page";
+import type { EmailThread } from "./types";
 
 vi.mock("sonner", () => {
   const toastFn = Object.assign(vi.fn(), {
@@ -249,5 +249,86 @@ describe("ThreadView: origen de la vinculación con el lead", () => {
     );
     await findByText("Vincular lead");
     expect(queryByTestId("linked-lead-badge")).toBeNull();
+  });
+});
+
+describe("ThreadView en pantallas estrechas (sin desplazamiento horizontal)", () => {
+  const long = "https://ejemplo.com/" + "a".repeat(300);
+  const msg = {
+    id: "m1",
+    resend_email_id: "r1",
+    message_id: null,
+    direction: "inbound",
+    from_address: "una.direccion.muy.larga.de.remitente@dominio-extremadamente-largo.example.com",
+    from_name: null,
+    to_addresses: ["hola@galladev.com"],
+    cc_addresses: [],
+    subject: "Presupuesto",
+    body_html: null,
+    body_text: long,
+    send_status: "received",
+    received_at: "2026-10-02T12:00:00.000Z",
+    created_at: "2026-10-02T12:00:00.000Z",
+  };
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, messages: [msg], attachments: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+  });
+
+  it("la conversación se ajusta al ancho: contenedores con min-w-0 y texto que parte URLs largas", async () => {
+    const { container, findByText } = renderWithIntl(
+      <ThreadView thread={thread} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    const body = await findByText(long);
+    expect(body.tagName).toBe("PRE");
+    expect(body.className).toContain("whitespace-pre-wrap");
+    expect(body.className).toContain("[overflow-wrap:anywhere]");
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain("min-w-0");
+    expect(root.className).toContain("overflow-hidden");
+
+    const scroller = container.querySelector(".overflow-y-auto") as HTMLElement;
+    expect(scroller.className).toContain("min-h-0");
+    expect(scroller.className).toContain("min-w-0");
+    expect(scroller.className).toContain("flex-1");
+    expect(scroller.className).toContain("overflow-x-hidden");
+
+    const card = body.closest("div.rounded-lg") as HTMLElement;
+    expect(card.className).toContain("max-w-full");
+    expect(card.className).toContain("overflow-hidden");
+  });
+
+  it("el iframe del HTML ocupa como mucho el ancho de la tarjeta", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              messages: [{ ...msg, body_html: "<table><tr><td>x</td></tr></table>", body_text: null }],
+              attachments: [],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
+    const { findByTitle } = renderWithIntl(
+      <ThreadView thread={thread} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    const frame = await findByTitle("Contenido del correo");
+    expect(frame.className).toContain("w-full");
+    expect(frame.className).toContain("max-w-full");
+    expect(frame.getAttribute("srcdoc")).toContain("max-width:100%");
   });
 });

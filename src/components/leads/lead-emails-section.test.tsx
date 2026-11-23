@@ -85,7 +85,7 @@ describe("LeadEmailsSection", () => {
   it("cada hilo enlaza al hilo en el Correo", async () => {
     renderWithIntl(<LeadEmailsSection leadId={LEAD_ID} canUnlink />);
     const link = await screen.findByRole("link", { name: "Presupuesto asesoría" });
-    expect(link).toHaveAttribute("href", `/correo?thread=${T1}`);
+    expect(link).toHaveAttribute("href", `/correo/recibidos/${T1}`);
   });
 
   it("muestra el estado vacío", async () => {

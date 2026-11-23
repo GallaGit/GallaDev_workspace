@@ -5,7 +5,7 @@ import { Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mailboxChipLabel } from "@/lib/email/mailboxes";
 import { formatThreadDate } from "@/lib/email/thread-state";
-import type { EmailThread } from "./inbox-page";
+import type { EmailThread } from "./types";
 
 /**
  * Lista densa tipo Gmail: una fila por hilo con casilla, remitente, fecha,

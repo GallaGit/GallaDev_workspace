@@ -7,7 +7,8 @@ import {
   type UnreadCounts,
 } from "@/lib/email/thread-state";
 
-const POLL_MS = 60_000;
+/** Ritmo común de contadores y lista de hilos (punto 7). */
+export const CORREO_POLL_MS = 60_000;
 
 /** Avisa a los contadores (barra lateral, pestañas) de que algo cambió. */
 export function notifyUnreadChanged(): void {
@@ -23,7 +24,7 @@ export function notifyUnreadChanged(): void {
 export function useUnreadCounts(
   enabled: boolean,
   mailbox?: string | null,
-): { counts: UnreadCounts; refresh: () => void } {
+): { counts: UnreadCounts; refresh: () => void; version: number } {
   const [counts, setCounts] = useState<UnreadCounts>(EMPTY_UNREAD_COUNTS);
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((n) => n + 1), []);
@@ -67,7 +68,7 @@ export function useUnreadCounts(
     document.addEventListener("visibilitychange", onVisible);
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") refresh();
-    }, POLL_MS);
+    }, CORREO_POLL_MS);
     return () => {
       window.removeEventListener(UNREAD_CHANGED_EVENT, onChange);
       document.removeEventListener("visibilitychange", onVisible);
@@ -75,5 +76,11 @@ export function useUnreadCounts(
     };
   }, [enabled, refresh]);
 
-  return { counts: enabled ? counts : EMPTY_UNREAD_COUNTS, refresh };
+  // `version` sube con cada aviso (evento, pestaña visible, minuto): la lista
+  // de hilos lo usa para refrescarse al mismo ritmo que los contadores.
+  return {
+    counts: enabled ? counts : EMPTY_UNREAD_COUNTS,
+    refresh,
+    version: tick,
+  };
 }
