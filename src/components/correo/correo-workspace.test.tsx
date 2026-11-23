@@ -795,9 +795,10 @@ describe("Correo: paginación", () => {
         : fullPage();
     };
     renderAt("/correo/enviados");
-    await screen.findByText("Asunto 0");
-    fireEvent.click(screen.getByRole("button", { name: "Cargar más" }));
-    await screen.findByText(`Asunto ${THREAD_PAGE_SIZE}`);
+    // Timeouts amplios: en CI el render de 50 hilos puede superar el 1 s por defecto.
+    await screen.findByText("Asunto 0", {}, { timeout: 5000 });
+    fireEvent.click(await screen.findByRole("button", { name: "Cargar más" }, { timeout: 5000 }));
+    await screen.findByText(`Asunto ${THREAD_PAGE_SIZE}`, {}, { timeout: 5000 });
     expect(listUrls()).toContain(`/api/email/threads?view=sent&offset=${THREAD_PAGE_SIZE}`);
     expect(screen.getAllByRole("option")).toHaveLength(THREAD_PAGE_SIZE + 1);
   });

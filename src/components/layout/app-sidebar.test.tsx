@@ -63,6 +63,8 @@ describe("AppSidebar: contador de Correo", () => {
     access.isAdmin = false;
     renderWithIntl(<AppSidebar />);
     await screen.findByText("Correo");
+    expect(screen.getByText("WORKSPACE")).toBeInTheDocument();
+    expect(screen.getByAltText("GallaDev")).toHaveAttribute("src", "/brand/logo.png");
     expect(fetch).not.toHaveBeenCalled();
     expect(screen.queryByTestId("correo-unread-badge")).toBeNull();
   });

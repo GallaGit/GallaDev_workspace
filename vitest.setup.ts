@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import { createElement } from "react";
 import { vi } from "vitest";
 
 // @testing-library/jest-dom/vitest registra cleanup automáticamente.
@@ -45,3 +46,34 @@ vi.stubGlobal(
     disconnect: vi.fn(),
   })),
 );
+
+vi.mock("next/image", () => ({
+  default: function NextImage({
+    alt = "",
+    src,
+    width,
+    height,
+    className,
+    ...rest
+  }: {
+    alt?: string;
+    src?: string | { src: string };
+    width?: number;
+    height?: number;
+    className?: string;
+    [key: string]: unknown;
+  }) {
+    const imgRest = { ...rest };
+    delete imgRest.priority;
+    delete imgRest.fill;
+    delete imgRest.unoptimized;
+    return createElement("img", {
+      alt,
+      src: typeof src === "string" ? src : src?.src,
+      width,
+      height,
+      className,
+      ...imgRest,
+    });
+  },
+}));

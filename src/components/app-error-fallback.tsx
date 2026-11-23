@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 const DIGEST_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -18,6 +19,7 @@ export function AppErrorFallback({
   onRetry: () => void;
 }) {
   const t = useTranslations("errors");
+  const tNav = useTranslations("nav");
   const ref = digest && DIGEST_RE.test(digest) ? digest : undefined;
   return (
     <div className="flex min-h-full flex-1 items-center justify-center p-6">
@@ -25,9 +27,12 @@ export function AppErrorFallback({
         role="alert"
         className="w-full max-w-sm rounded-lg bg-white p-8 shadow-md dark:bg-gris-800"
       >
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-          GallaDev Workspace
-        </p>
+        <div className="flex items-center gap-2">
+          <BrandMark size={20} />
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            {tNav("brand")}
+          </p>
+        </div>
         <h1 className="mt-1 text-xl font-bold">{t("somethingWrong")}</h1>
         <p className="mt-1 text-sm text-gray-500">{t("body")}</p>
         {ref ? (

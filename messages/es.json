@@ -15,7 +15,7 @@
     "correo": "Correo",
     "duplicates": "Duplicados",
     "settings": "Settings",
-    "brand": "Leads_CRM",
+    "brand": "WORKSPACE",
     "menuAria": "Menú de navegación",
     "principalAria": "Principal",
     "logout": "Cerrar sesión",
@@ -36,7 +36,7 @@
   "auth": {
     "login": {
       "title": "Entrar",
-      "brand": "GallaDev Workspace",
+      "brand": "WORKSPACE",
       "subtitle": "Herramienta interna. Si has llegado aquí por error, vuelve a {link}.",
       "email": "Email",
       "password": "Contraseña",
