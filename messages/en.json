@@ -15,7 +15,7 @@
     "correo": "Inbox",
     "duplicates": "Duplicates",
     "settings": "Settings",
-    "brand": "Leads_CRM",
+    "brand": "WORKSPACE",
     "menuAria": "Navigation menu",
     "principalAria": "Main",
     "logout": "Log out",
@@ -36,7 +36,7 @@
   "auth": {
     "login": {
       "title": "Sign in",
-      "brand": "GallaDev Workspace",
+      "brand": "WORKSPACE",
       "subtitle": "Internal tool. If you arrived here by mistake, go back to {link}.",
       "email": "Email",
       "password": "Password",
