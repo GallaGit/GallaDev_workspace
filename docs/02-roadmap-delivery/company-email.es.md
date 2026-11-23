@@ -243,9 +243,9 @@ Estas mejoras se acordaron con Ociel después de las Fases 1–3. El orden de tr
 | 4 | Persistir adjuntos entrantes en Storage cuando existe `EMAIL_ATTACHMENTS_BUCKET` | Hecho (PR #106) |
 | 5 | Cc/Cco, autoguardado, firma por buzón y adjuntos salientes | Hecho (PR #108; ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
 | 6 | Vinculación automática hilo↔lead, origen auto/manual y sección «Correos» en la ficha del lead | En el [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), pendiente de fusionar |
-| 7 | Actualizar la lista al llegar correo nuevo; rutas por carpeta; menú desplegable; subopción Cuentas; vista móvil | **Documentado, pendiente de implementar** (detalle abajo) |
+| 7 | Actualizar la lista al llegar correo nuevo; rutas por carpeta; barra lateral dedicada al correo; Cuentas; vista móvil | **Documentado, pendiente de implementar** (detalle abajo) |
 
-### Punto 7 — Rutas por carpeta, menú, Cuentas y vista móvil
+### Punto 7 — Rutas por carpeta, barra lateral de correo, Cuentas y vista móvil
 
 **Estado:** Documentado, pendiente de implementar.
 
@@ -282,13 +282,26 @@ El prefijo es **`/correo`** (singular), confirmado por Ociel. Redirecciones perm
 
 No se crea una carpeta Spam. `/email` no se redirige. Las rutas nuevas entran en las mismas listas de acceso que `/correo` (redirección segura tras el login, oculta al visitante, solo Admin).
 
-La carpeta por defecto es Recibidos. Un hilo abierto es compartible y sobrevive a un recargo: `/correo/{carpeta}/{threadId}` (UUID), conservando la cuenta en la query si aplica. En Borradores no hay esta ruta de hilo; abrir un borrador sigue siendo el diálogo de redacción.
+La carpeta por defecto es Recibidos. Un hilo abierto es compartible y sobrevive a un recargo: `/correo/{carpeta}/{threadId}` (UUID), conservando la cuenta en la query si aplica. En Borradores no hay esta ruta de hilo; abrir un borrador abre la vista de redacción en el área de contenido.
 
-**Menú lateral.** Pulsar «Correo» despliega subopciones: las cinco carpetas de arriba (con la insignia de no leídos que ya existe en cada una, cuando aplique) y la subopción **Cuentas**. La entrada «Correo» deja de ser solo un enlace a una única página. En escritorio el menú puede quedar desplegado mientras se está en `/correo/…`; en móvil se usa el cajón de siempre. La navegación entre carpetas es por estas subopciones, no por un panel de carpetas superpuesto al contenido.
+**Barra lateral de correo (sustitución completa).** Al entrar en `/correo/…`, la barra lateral general de la app se sustituye por completo por una barra dedicada al correo. No es un desplegable de subopciones bajo la entrada «Correo» del menú general. Esa entrada del menú general sigue siendo el modo de entrar al módulo; una vez dentro, la barra general ya no está a la vista.
 
-El panel izquierdo actual (los botones de carpeta dentro de `InboxPage`) deja de ser la forma de cambiar de carpeta. En escritorio se mantiene el diseño de dos paneles (lista / lectura); la lista ocupa ese panel izquierdo, sin la columna fija de 320 px dedicada a las carpetas. «Nuevo» y la búsqueda se quedan en la cabecera de la lista, no en el menú principal de la app.
+Arriba de la barra de correo hay un botón **Atrás** que restaura la barra general (vuelve a la página anterior o, si no hay una clara, al dashboard).
 
-**Cuentas.** Bajo «Correo» hay una subopción **Cuentas** que se despliega en:
+La barra de correo contiene todo excepto el cuerpo del mensaje:
+
+- el botón Atrás
+- el botón **Nuevo**
+- las cinco carpetas (Recibidos, Enviados, Archivados, Papelera, Borradores), con la insignia de no leídos que ya existe en cada una, cuando aplique
+- **Cuentas** (Todas, `hola@`, `ociel@`)
+- la lista de hilos (o de borradores) de la carpeta y cuenta seleccionadas
+- la búsqueda, junto a la lista
+
+El área ancha principal muestra **solo** el contenido del hilo abierto, la vista de redacción o un estado vacío (por ejemplo «Selecciona un correo»). No hay en esa área una segunda columna de lista ni de carpetas.
+
+**Escritorio** (`md` y superior, 768 px): la barra de correo y el área de contenido se ven a la vez. Cambiar de carpeta o de cuenta actualiza la lista en la barra y la URL; el área ancha solo cambia si se abre un hilo, se empieza a redactar o no hay selección.
+
+**Cuentas.** En la barra de correo, **Cuentas** se despliega en:
 
 - Todas
 - `hola@` (local-part de `hola@galladev.com`)
@@ -298,35 +311,36 @@ Si en el futuro hay más buzones en la allowlist, salen aquí. La cuenta se comb
 
 Se usa un **parámetro de query** `cuenta`, no un segmento de ruta. Valores: se omite o `todas` para todos los buzones visibles; `hola` u `ociel` (el local-part) para un buzón. Ejemplo: `/correo/recibidos?cuenta=hola`. Un valor desconocido o no permitido se trata como Todas (o se redirige a la URL sin `cuenta`).
 
-Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son ejes ortogonales (sección 8 y el filtro `mailbox` de la API). Así no se multiplica el árbol de rutas, cambiar de cuenta no pierde la carpeta ni el hilo, y «Cuentas» en el menú es un filtro, no una página de destino. El cliente traduce `cuenta` al parámetro `mailbox` que ya entiende `GET /api/email/threads`.
+Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son ejes ortogonales (sección 8 y el filtro `mailbox` de la API). Así no se multiplica el árbol de rutas, cambiar de cuenta no pierde la carpeta ni el hilo, y «Cuentas» en la barra de correo es un filtro, no una página de destino. El cliente traduce `cuenta` al parámetro `mailbox` que ya entiende `GET /api/email/threads`.
 
-**Permisos.** No se inventa un RBAC nuevo por buzón. Hoy solo Admin entra, y ve las dos cuentas. Las subopciones de Cuentas solo listan buzones que esa sesión puede ver. Una URL con `cuenta` de un buzón no permitido no devuelve esos hilos (403 o redirección a Todas / a un buzón permitido). Si más adelante otros roles pueden abrir Correo o un buzón concreto (pregunta abierta de la sección 7), este filtro lo respeta.
+**Permisos.** No se inventa un RBAC nuevo por buzón. Hoy solo Admin entra, y ve las dos cuentas. Cuentas solo lista los buzones que esa sesión puede ver. Una URL con `cuenta` de un buzón no permitido no devuelve esos hilos (403 o redirección a Todas / a un buzón permitido). Si más adelante otros roles pueden abrir Correo o un buzón concreto (pregunta abierta de la sección 7), este filtro lo respeta.
 
-**Móvil** (por debajo de `md`, 768 px, el mismo corte que el cajón del menú):
+**Móvil** (por debajo de `md`, 768 px, el mismo corte que el cajón del menú general): la división es la misma que en escritorio (barra de correo / contenido), pero no se ven a la vez.
 
-- La lista y la lectura son pantallas distintas, cada una a ancho completo.
-- En la lista no queda un panel de carpetas al lado ni encima del contenido.
-- Al abrir un hilo se ve a pantalla completa, con un botón Atrás que vuelve a la lista de la misma carpeta y cuenta (y a la misma posición de scroll, si es razonable).
-- El cambio de carpeta o de cuenta se hace desde el menú desplegado de «Correo», no desde un panel que tape el correo.
-- En Borradores, la lista va a ancho completo y el diálogo de redacción se abre encima, como ahora.
+- La barra de correo es la pantalla a ancho completo: Atrás, Nuevo, carpetas, Cuentas y lista. No se ve el cuerpo del mensaje al mismo tiempo.
+- Al abrir un hilo, el contenido ocupa toda la pantalla, con un botón **Atrás** que vuelve a la barra de correo (misma carpeta, misma cuenta y, si es razonable, la misma posición de scroll).
+- El **Atrás** de la parte superior de la barra de correo restaura el menú general de la app (página anterior o dashboard).
+- **Nuevo** abre la vista de redacción a pantalla completa, también con Atrás a la barra de correo.
 
-**Actualizar la lista al llegar correo nuevo** (el alcance original del punto 7; se mantiene). Si llega un mensaje nuevo que pertenece a la carpeta y cuenta que se están viendo, la lista se actualiza sin recargar la página a mano ni perder la selección, el scroll o un hilo abierto. Las insignias de no leídos del menú se actualizan también, incluso si el mensaje cae en otra carpeta. El intervalo es **cada 60 s**, el mismo que los contadores, y también al volver a la pestaña y con el evento `correo:unread-changed`. Esta entrega no exige WebSocket. No sustituye un aviso push fuera de la app (eso sigue siendo la pregunta 3 de la sección 7).
+**Actualizar la lista al llegar correo nuevo** (el alcance original del punto 7; se mantiene). Si llega un mensaje nuevo que pertenece a la carpeta y cuenta que se están viendo, la lista se actualiza sin recargar la página a mano ni perder la selección, el scroll o un hilo abierto. Las insignias de no leídos de la barra de correo se actualizan también, incluso si el mensaje cae en otra carpeta. El intervalo es **cada 60 s**, el mismo que los contadores, y también al volver a la pestaña y con el evento `correo:unread-changed`. Esta entrega no exige WebSocket. No sustituye un aviso push fuera de la app (eso sigue siendo la pregunta 3 de la sección 7).
 
 #### Criterios de aceptación
 
 - [ ] Un Admin abre `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` y `/correo/borradores`, y ve la carpeta que indica la URL. Recargar o compartir la URL conserva la carpeta.
 - [ ] `/correo` redirige a `/correo/recibidos`. `/email` no cambia.
-- [ ] En la barra lateral, «Correo» despliega las cinco carpetas y «Cuentas». Elegir una carpeta navega a su ruta. Elegir Todas / hola@ / ociel@ aplica el filtro y se queda en la carpeta actual, con `?cuenta=` en la URL (Todas puede omitir el parámetro).
+- [ ] Al entrar en Correo, la barra lateral general se sustituye por la barra de correo (Atrás, Nuevo, las cinco carpetas, Cuentas y la lista). El área ancha solo muestra el hilo abierto, la vista de redacción o un estado vacío.
+- [ ] El Atrás de la parte superior de la barra de correo restaura la barra general de la app (página anterior o dashboard).
+- [ ] Elegir una carpeta navega a su ruta. Elegir Todas / hola@ / ociel@ aplica el filtro y se queda en la carpeta actual, con `?cuenta=` en la URL (Todas puede omitir el parámetro).
 - [ ] `?cuenta=hola` en Recibidos solo lista hilos de `hola@galladev.com`. El filtro se puede combinar con la búsqueda que ya existe.
-- [ ] Seller, Viewer y la demo de visitante no ven las nuevas rutas ni sus APIs (el mismo criterio que `/correo`). Un visitante no ve «Correo» en el menú.
-- [ ] En un ancho menor de 768 px, la lista ocupa toda la pantalla; al abrir un hilo, la lectura ocupa toda la pantalla con un botón Atrás; el panel de carpetas no se superpone al contenido.
-- [ ] En escritorio se sigue viendo lista y lectura a la vez, sin el panel de carpetas de 320 px dentro de la página.
+- [ ] Seller, Viewer y la demo de visitante no ven las nuevas rutas ni sus APIs (el mismo criterio que `/correo`). Un visitante no ve «Correo» en el menú general.
+- [ ] En escritorio (`md` y superior) se ven a la vez la barra de correo y el área de contenido; la lista no está en el área ancha.
+- [ ] En un ancho menor de 768 px, la barra de correo (carpetas y lista) ocupa toda la pantalla. Al abrir un hilo, el contenido ocupa toda la pantalla, con Atrás a la barra de correo. El Atrás de esa barra vuelve al menú general de la app.
 - [ ] Con la bandeja abierta, un correo nuevo que encaja en la vista aparece en la lista en no más de 60 s (el mismo ritmo que los contadores; también al volver a la pestaña), y las insignias se actualizan, sin recargar a mano.
 - [ ] No se toca `/email`, no se añade Spam, y no se cambia el modelo de permisos más allá de aplicar el que ya existe a las rutas nuevas.
 
 #### Fuera de alcance
 
 - Carpeta Spam, avisos fuera de la app cuando llega correo, y qué otros roles además de Admin ven el buzón (siguen en la sección 7).
-- Una ruta propia para «Nuevo mensaje» (sigue el diálogo).
+- Una ruta propia para «Nuevo mensaje» (la redacción se abre en el área de contenido, sin URL dedicada).
 - Cambiar la API (`view`, `mailbox`) más de lo necesario para las URLs nuevas.
 - El trabajo del punto 6 (PR #109) y cualquier otra mejora de redacción o vinculación.

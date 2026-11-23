@@ -199,9 +199,9 @@ These improvements were agreed with Ociel after Phases 1–3. The work order was
 | 4 | Persist inbound attachments in Storage when `EMAIL_ATTACHMENTS_BUCKET` is set | Done (PR #106) |
 | 5 | Cc/Bcc, autosave, per-mailbox signature and outbound attachments | Done (PR #108; see the Spanish spec, «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
 | 6 | Automatic thread↔lead linking, auto/manual source, and a “Correos” section on the lead record | In [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), not merged yet |
-| 7 | Refresh the list when new mail arrives; per-folder routes; expandable menu; Cuentas sub-option; mobile layout | **Documented, pending implementation** (detail below) |
+| 7 | Refresh the list when new mail arrives; per-folder routes; dedicated email sidebar; Cuentas; mobile layout | **Documented, pending implementation** (detail below) |
 
-### Point 7 — Per-folder routes, menu, Cuentas, and mobile layout
+### Point 7 — Per-folder routes, email sidebar, Cuentas, and mobile layout
 
 **Status:** Documented, pending implementation.
 
@@ -238,13 +238,26 @@ The prefix is **`/correo`** (singular), confirmed by Ociel. Permanent redirects 
 
 No Spam folder is added. `/email` is not redirected. The new routes join the same access lists as `/correo` (safe redirect after login, hidden from the visitor, Admin only).
 
-The default folder is Recibidos. An open thread is shareable and survives a reload: `/correo/{folder}/{threadId}` (UUID), keeping the account in the query string when it applies. Drafts has no thread path; opening a draft is still the compose dialog.
+The default folder is Recibidos. An open thread is shareable and survives a reload: `/correo/{folder}/{threadId}` (UUID), keeping the account in the query string when it applies. Drafts has no thread path; opening a draft opens the compose view in the content area.
 
-**Side menu.** Pressing “Correo” expands sub-options: the five folders above (with the existing unread badge on each, when it applies) and the **Cuentas** sub-option. “Correo” is no longer only a link to a single page. On desktop the menu may stay expanded while the user is on `/correo/…`; on mobile the usual drawer is used. Folder navigation goes through these sub-options, not through a folder panel that overlaps the content.
+**Email sidebar (full swap).** Entering `/correo/…` replaces the app’s general sidebar completely with a sidebar dedicated to mail. It is not an expandable list of sub-items under the general “Correo” entry. That general-menu entry remains the way into the module; once inside, the general sidebar is no longer on screen.
 
-The current left panel (the folder buttons inside `InboxPage`) is no longer how the user switches folders. On desktop the two-pane layout (list | reading) stays; the list fills that left pane, without the fixed 320 px column used for folders. “Nuevo” and search stay in the list header, not in the main app menu.
+At the top of the email sidebar is a **Back** button that restores the general sidebar (it returns to the previous page, or to the dashboard if there is no clear previous page).
 
-**Cuentas.** Under “Correo”, a **Cuentas** sub-option expands to:
+The email sidebar contains everything except the message body:
+
+- the Back button
+- the **Nuevo** button
+- the five folders (Recibidos, Enviados, Archivados, Papelera, Borradores), with the existing unread badge on each, when it applies
+- **Cuentas** (Todas / All, `hola@`, `ociel@`)
+- the thread list (or draft list) for the selected folder and account
+- search, next to the list
+
+The main wide area shows **only** the open thread’s content, the compose view, or an empty state (for example “Select a message”). That area has no second column for the list or the folders.
+
+**Desktop** (`md` and up, 768 px): the email sidebar and the content area are visible at the same time. Changing folder or account updates the list in the sidebar and the URL; the wide area changes only when a thread is opened, compose starts, or there is no selection.
+
+**Cuentas.** In the email sidebar, **Cuentas** expands to:
 
 - Todas (All)
 - `hola@` (local-part of `hola@galladev.com`)
@@ -254,35 +267,36 @@ If the allowlist later gains more mailboxes, they appear here. The account combi
 
 Account selection uses a **query parameter** `cuenta`, not a path segment. Values: omit it or use `todas` for every visible mailbox; `hola` or `ociel` (the local-part) for one mailbox. Example: `/correo/recibidos?cuenta=hola`. An unknown or disallowed value is treated as Todas (or redirected to the URL without `cuenta`).
 
-Why a query and not `/correo/hola/recibidos`: folder and mailbox are already orthogonal axes (section 8 and the API’s `mailbox` filter). That avoids a combinatorial route tree, changing account does not lose the folder or the thread, and “Cuentas” in the menu is a filter, not a destination page. The client maps `cuenta` to the `mailbox` parameter that `GET /api/email/threads` already understands.
+Why a query and not `/correo/hola/recibidos`: folder and mailbox are already orthogonal axes (section 8 and the API’s `mailbox` filter). That avoids a combinatorial route tree, changing account does not lose the folder or the thread, and “Cuentas” in the email sidebar is a filter, not a destination page. The client maps `cuenta` to the `mailbox` parameter that `GET /api/email/threads` already understands.
 
-**Permissions.** This work does not invent a new per-mailbox RBAC. Today only Admin can enter, and Admin sees both accounts. The Cuentas sub-options list only mailboxes that session may see. A URL with `cuenta` set to a mailbox that is not allowed must not return those threads (403 or a redirect to Todas / an allowed mailbox). If other roles later gain access to Correo or to a single mailbox (open question in section 7), this filter respects that.
+**Permissions.** This work does not invent a new per-mailbox RBAC. Today only Admin can enter, and Admin sees both accounts. Cuentas lists only the mailboxes that session may see. A URL with `cuenta` set to a mailbox that is not allowed must not return those threads (403 or a redirect to Todas / an allowed mailbox). If other roles later gain access to Correo or to a single mailbox (open question in section 7), this filter respects that.
 
-**Mobile** (below `md`, 768 px, the same cut-off as the menu drawer):
+**Mobile** (below `md`, 768 px, the same cut-off as the general menu drawer): the split is the same as on desktop (email sidebar / content), but the two are not shown at the same time.
 
-- List and reading are separate screens, each full width.
-- The list has no folder panel beside or on top of the content.
-- Opening a thread shows it full screen, with a Back button that returns to the list of the same folder and account (and to the same scroll position, when that is reasonable).
-- Folder or account changes go through the expanded “Correo” menu, not through a panel that covers the mail.
-- In Drafts, the list is full width and the compose dialog opens on top, as it does today.
+- The email sidebar is the full-width screen: Back, Nuevo, folders, Cuentas and the list. The message body is not visible at the same time.
+- Opening a thread shows the content full screen, with a **Back** button that returns to the email sidebar (same folder, same account, and, when reasonable, the same scroll position).
+- **Back** at the top of the email sidebar restores the app’s general menu (previous page or dashboard).
+- **Nuevo** opens the compose view full screen, also with Back to the email sidebar.
 
-**Refresh the list when new mail arrives** (the original scope of point 7; it stays). If a new message belongs to the folder and account being viewed, the list updates without a manual page reload and without losing the selection, the scroll position, or an open thread. Menu unread badges update as well, even if the message lands in another folder. The interval is **every 60 s**, the same as the counters, and also when the tab becomes visible and on the `correo:unread-changed` event. This delivery does not require a WebSocket. It does not replace an out-of-app notification (that remains question 3 in section 7).
+**Refresh the list when new mail arrives** (the original scope of point 7; it stays). If a new message belongs to the folder and account being viewed, the list updates without a manual page reload and without losing the selection, the scroll position, or an open thread. Unread badges in the email sidebar update as well, even if the message lands in another folder. The interval is **every 60 s**, the same as the counters, and also when the tab becomes visible and on the `correo:unread-changed` event. This delivery does not require a WebSocket. It does not replace an out-of-app notification (that remains question 3 in section 7).
 
 #### Acceptance criteria
 
 - [ ] An Admin opens `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` and `/correo/borradores`, and sees the folder the URL names. Reloading or sharing the URL keeps the folder.
 - [ ] `/correo` redirects to `/correo/recibidos`. `/email` is unchanged.
-- [ ] In the sidebar, “Correo” expands into the five folders and “Cuentas”. Choosing a folder navigates to its route. Choosing Todas / hola@ / ociel@ applies the filter and stays on the current folder, with `?cuenta=` in the URL (Todas may omit the parameter).
+- [ ] Entering Correo replaces the general sidebar with the email sidebar (Back, Nuevo, the five folders, Cuentas and the list). The wide area shows only the open thread, the compose view, or an empty state.
+- [ ] Back at the top of the email sidebar restores the app’s general sidebar (previous page or dashboard).
+- [ ] Choosing a folder navigates to its route. Choosing Todas / hola@ / ociel@ applies the filter and stays on the current folder, with `?cuenta=` in the URL (Todas may omit the parameter).
 - [ ] `?cuenta=hola` on Recibidos lists only threads for `hola@galladev.com`. The filter can be combined with the existing search.
-- [ ] Seller, Viewer and the visitor demo do not see the new routes or their APIs (same rule as `/correo`). A visitor does not see “Correo” in the menu.
-- [ ] Below 768 px, the list is full screen; opening a thread shows the reading view full screen with a Back button; the folder panel does not overlap the content.
-- [ ] On desktop, list and reading still appear side by side, without the 320 px in-page folder panel.
+- [ ] Seller, Viewer and the visitor demo do not see the new routes or their APIs (same rule as `/correo`). A visitor does not see “Correo” in the general menu.
+- [ ] On desktop (`md` and up), the email sidebar and the content area are visible at the same time; the list is not in the wide area.
+- [ ] Below 768 px, the email sidebar (folders and list) is full screen. Opening a thread shows the content full screen, with Back to the email sidebar. Back on that sidebar returns to the app’s general menu.
 - [ ] With the inbox open, a new email that belongs in the current view appears in the list within 60 s (the same pace as the counters; also when the tab becomes visible), and badges update, without a manual reload.
 - [ ] `/email` is untouched, Spam is not added, and the permission model is unchanged beyond applying the existing one to the new routes.
 
 #### Out of scope
 
 - A Spam folder, out-of-app notifications when mail arrives, and which roles besides Admin can see the inbox (they remain in section 7).
-- A dedicated route for “Nuevo mensaje” (the dialog stays).
+- A dedicated route for “Nuevo mensaje” (compose opens in the content area, without its own URL).
 - Changing the API (`view`, `mailbox`) beyond what the new URLs need.
 - Point 6 work (PR #109) and any other compose or linking improvement.
