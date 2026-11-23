@@ -32,14 +32,14 @@ test("sin sesión /leads redirige a /login", async ({ page }) => {
 
 const smokeDescribe = hasLoginCreds ? test.describe : test.describe.skip;
 
-smokeDescribe("Leads_CRM smoke (login Supabase)", () => {
+smokeDescribe("WORKSPACE smoke (login Supabase)", () => {
   test.beforeEach(async ({ page }) => {
     await login(page, testEmail, testPassword);
   });
 
   test("home shell loads", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Leads_CRM").first()).toBeVisible({
+    await expect(page.getByText("WORKSPACE").first()).toBeVisible({
       timeout: 15000,
     });
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

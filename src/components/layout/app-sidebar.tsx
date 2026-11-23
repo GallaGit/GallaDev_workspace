@@ -24,6 +24,7 @@ import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { useSessionAccess } from "@/components/session-access";
 import { useUnreadCounts } from "@/components/correo/use-unread-counts";
 import { formatUnreadBadge } from "@/lib/email/thread-state";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 const NAV = [
   { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
@@ -153,7 +154,7 @@ export function AppSidebar() {
       )}
     >
       <div className="flex h-12 items-center gap-2 px-4">
-        <div className="h-5 w-5 rounded bg-accent" />
+        <BrandMark className="h-5 w-5" size={20} />
         <span className="text-sm font-semibold tracking-tight text-fg">
           {t("nav.brand")}
         </span>
