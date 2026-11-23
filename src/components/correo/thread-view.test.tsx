@@ -1,4 +1,4 @@
-import { waitFor } from "@testing-library/react";
+import { cleanup, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { renderWithIntl } from "@/test/i18n-wrapper";
@@ -125,5 +125,129 @@ describe("ThreadView adjuntos (proxy en una sola pestaña)", () => {
     // Solo la carga del hilo: el clic no pide URLs firmadas.
     expect(vi.mocked(fetch).mock.calls.every(([u]) => !String(u).includes("/attachments/"))).toBe(true);
     open.mockRestore();
+  });
+});
+
+describe("ThreadView Cc y Cco", () => {
+  const base = {
+    resend_email_id: "r1",
+    message_id: null,
+    from_name: "GallaDev",
+    to_addresses: ["ana@example.com"],
+    cc_addresses: ["copia@example.com"],
+    subject: "Presupuesto",
+    body_html: null,
+    body_text: "Hola",
+    send_status: "delivered",
+    received_at: "2026-10-02T12:00:00.000Z",
+    created_at: "2026-10-02T12:00:00.000Z",
+  };
+
+  function stubMessages(messages: unknown[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, messages, attachments: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+  }
+
+  it("muestra CCO solo en mensajes enviados por nosotros", async () => {
+    stubMessages([
+      {
+        ...base,
+        id: "out",
+        direction: "outbound",
+        from_address: "hola@galladev.com",
+        bcc_addresses: ["jefe@example.com"],
+      },
+      {
+        ...base,
+        id: "in",
+        direction: "inbound",
+        from_address: "ana@example.com",
+        bcc_addresses: ["hola@galladev.com"],
+      },
+    ]);
+    const { findByText, queryAllByText } = renderWithIntl(
+      <ThreadView thread={thread} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    expect(await findByText("CCO: jefe@example.com")).toBeInTheDocument();
+    expect(queryAllByText(/^CCO:/)).toHaveLength(1);
+    expect(queryAllByText("CC: copia@example.com")).toHaveLength(2);
+  });
+});
+
+describe("ThreadView: origen de la vinculación con el lead", () => {
+  const linked: EmailThread = { ...thread, lead_id: "lead-1" };
+
+  function stubThread(serverThread: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              thread: serverThread,
+              messages: [],
+              attachments: [],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("indica que la vinculación fue automática", async () => {
+    stubThread({ lead_id: "lead-1", lead_link_source: "auto" });
+    const { findByTestId } = renderWithIntl(
+      <ThreadView thread={linked} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    await waitFor(async () => {
+      expect(await findByTestId("linked-lead-badge")).toHaveTextContent(
+        "Lead vinculado · automático",
+      );
+    });
+    expect(await findByTestId("linked-lead-badge")).toHaveAttribute("title");
+  });
+
+  it("indica que la vinculación fue manual", async () => {
+    stubThread({ lead_id: "lead-1", lead_link_source: "manual" });
+    const { findByTestId } = renderWithIntl(
+      <ThreadView thread={linked} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    await waitFor(async () => {
+      expect(await findByTestId("linked-lead-badge")).toHaveTextContent(
+        "Lead vinculado · manual",
+      );
+    });
+    expect(await findByTestId("linked-lead-badge")).not.toHaveAttribute("title");
+  });
+
+  it("un hilo anterior sin origen registrado se muestra como manual", async () => {
+    stubThread({ lead_id: "lead-1", lead_link_source: null });
+    const { findByTestId } = renderWithIntl(
+      <ThreadView thread={linked} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    expect(await findByTestId("linked-lead-badge")).toHaveTextContent("manual");
+  });
+
+  it("sin lead no muestra la etiqueta de vinculación", async () => {
+    stubThread({ lead_id: null, lead_link_source: null });
+    const { queryByTestId, findByText } = renderWithIntl(
+      <ThreadView thread={thread} onMarkRead={() => {}} onLinkLead={() => {}} />,
+    );
+    await findByText("Vincular lead");
+    expect(queryByTestId("linked-lead-badge")).toBeNull();
   });
 });

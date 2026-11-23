@@ -8,7 +8,19 @@ import {
   isValidExternalEmail,
   type CompanyMailbox,
 } from "./mailboxes";
+import { autoLinkThread } from "./lead-link";
+import {
+  attachmentsAreValid,
+  storeOutboundAttachments,
+  toResendAttachments,
+  type OutboundAttachment,
+} from "./outbound-attachments-store";
 import { createOutboundMessageId } from "./receiving-fetch";
+import {
+  dedupeRecipients,
+  exceedsRecipientTotal,
+  parseAddressList,
+} from "./recipients";
 import { fetchSentMessageId } from "./thread-match";
 import { getResendClient } from "./resend-client";
 import { prepareStoredEmailBodies } from "./sanitize-email-html";
@@ -28,6 +40,10 @@ export interface ComposeInput {
   bodyHtml?: string;
   draftId?: string;
   leadId?: string | null;
+  /** Copia y copia oculta (se validan y se quitan duplicados con «Para»). */
+  cc?: string[];
+  bcc?: string[];
+  attachments?: OutboundAttachment[];
 }
 
 export type ComposeResult =
@@ -38,6 +54,9 @@ export type ComposeResult =
         | "no-client"
         | "invalid-mailbox"
         | "invalid-to"
+        | "invalid-cc"
+        | "invalid-bcc"
+        | "invalid-attachments"
         | "empty-subject"
         | "empty-body"
         | "send-failed"
@@ -56,6 +75,24 @@ export async function sendCompose(
   const to = extractEmailAddress(input.to);
   if (!isValidExternalEmail(to)) {
     return { sent: false, reason: "invalid-to" };
+  }
+
+  const ccParsed = parseAddressList(input.cc ?? []);
+  if (ccParsed.invalid.length > 0) return { sent: false, reason: "invalid-cc" };
+  const bccParsed = parseAddressList(input.bcc ?? []);
+  if (bccParsed.invalid.length > 0) return { sent: false, reason: "invalid-bcc" };
+  const { cc, bcc } = dedupeRecipients({
+    to: [to],
+    cc: ccParsed.valid,
+    bcc: bccParsed.valid,
+  });
+  if (exceedsRecipientTotal({ to: [to], cc, bcc })) {
+    return { sent: false, reason: "invalid-cc", detail: "Demasiados destinatarios" };
+  }
+
+  const attachments = input.attachments ?? [];
+  if (!attachmentsAreValid(attachments)) {
+    return { sent: false, reason: "invalid-attachments" };
   }
 
   const subject = input.subject.trim() || "(sin asunto)";
@@ -78,9 +115,14 @@ export async function sendCompose(
     const result = await client.emails.send({
       from: fromMeta.from,
       to,
+      ...(cc.length > 0 ? { cc } : {}),
+      ...(bcc.length > 0 ? { bcc } : {}),
       subject,
       text: stored.text ?? bodyText,
       ...(stored.html ? { html: stored.html } : {}),
+      ...(attachments.length > 0
+        ? { attachments: toResendAttachments(attachments) }
+        : {}),
       headers: {
         "Message-ID": outboundMessageId,
       },
@@ -116,6 +158,7 @@ export async function sendCompose(
       from_name: null,
       mailbox_address: input.mailbox,
       lead_id: input.leadId ?? null,
+      ...(input.leadId ? { lead_link_source: "manual" } : {}),
       last_message_at: now,
       message_count: 1,
       is_read: true,
@@ -139,8 +182,8 @@ export async function sendCompose(
       from_address: fromMeta.address,
       from_name: fromMeta.name,
       to_addresses: [to],
-      cc_addresses: [],
-      bcc_addresses: [],
+      cc_addresses: cc,
+      bcc_addresses: bcc,
       subject,
       body_html: stored.html,
       body_text: stored.text ?? bodyText,
@@ -152,6 +195,16 @@ export async function sendCompose(
 
   if (msgErr || !msg) {
     return { sent: false, reason: "db-error", detail: msgErr?.message };
+  }
+
+  await storeOutboundAttachments(admin, client, {
+    messageId: msg.id,
+    resendEmailId,
+    files: attachments,
+  });
+
+  if (!input.leadId) {
+    await autoLinkThread(admin, thread.id, [to, ...cc]);
   }
 
   if (input.draftId) {

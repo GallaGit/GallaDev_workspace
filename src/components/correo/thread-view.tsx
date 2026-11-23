@@ -18,7 +18,21 @@ import { readJsonResponse } from "@/lib/http/read-json";
 import type { ThreadStatePatch } from "@/lib/email/email-payload";
 import { threadViewOf } from "@/lib/email/thread-state";
 import { StateActionButtons } from "./thread-actions";
-import type { EmailThread, EmailMessage, EmailAttachment } from "./inbox-page";
+import type {
+  EmailThread,
+  EmailMessage,
+  EmailAttachment,
+  LeadLinkSource,
+} from "./inbox-page";
+
+type ThreadResponse = {
+  thread?: {
+    lead_id?: string | null;
+    lead_link_source?: LeadLinkSource | null;
+  };
+  messages?: EmailMessage[];
+  attachments?: EmailAttachment[];
+};
 
 /**
  * HTML ya saneado en servidor, dentro de un iframe sin scripts.
@@ -61,16 +75,25 @@ export function ThreadView({
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [linkSource, setLinkSource] = useState<LeadLinkSource | null>(
+    thread.lead_link_source ?? null,
+  );
   const markedRef = useRef(false);
 
   const fetchThread = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/email/threads/${thread.id}`);
-      const data = await readJsonResponse<{
-        messages?: EmailMessage[];
-        attachments?: EmailAttachment[];
-      }>(res, t("loadThreadError"));
+      const data = await readJsonResponse<ThreadResponse>(
+        res,
+        t("loadThreadError"),
+      );
+      setLinkSource(data.thread?.lead_link_source ?? null);
+      // Responder puede vincular el hilo solo (lead único por email).
+      const serverLead = data.thread?.lead_id;
+      if (serverLead !== undefined && serverLead !== thread.lead_id) {
+        onLinkLead(thread.id, serverLead);
+      }
       setMessages(data.messages ?? []);
       setAttachments(data.attachments ?? []);
     } catch (e) {
@@ -78,7 +101,7 @@ export function ThreadView({
     } finally {
       setLoading(false);
     }
-  }, [thread.id, t]);
+  }, [thread.id, thread.lead_id, onLinkLead, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,11 +109,12 @@ export function ThreadView({
     async function load() {
       try {
         const res = await fetch(`/api/email/threads/${thread.id}`);
-        const data = await readJsonResponse<{
-          messages?: EmailMessage[];
-          attachments?: EmailAttachment[];
-        }>(res, t("loadThreadError"));
+        const data = await readJsonResponse<ThreadResponse>(
+          res,
+          t("loadThreadError"),
+        );
         if (cancelled) return;
+        setLinkSource(data.thread?.lead_link_source ?? null);
         setMessages(data.messages ?? []);
         setAttachments(data.attachments ?? []);
       } catch (e) {
@@ -124,8 +148,18 @@ export function ThreadView({
             {" · "}
             {t("to", { recipient: thread.mailbox_address || "hola@galladev.com" })}
             {thread.lead_id && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded bg-rojo/10 px-1.5 text-[11px] text-rojo">
+              <span
+                data-testid="linked-lead-badge"
+                title={
+                  linkSource === "auto" ? t("linkSourceHint") : undefined
+                }
+                className="ml-2 inline-flex items-center gap-1 rounded bg-rojo/10 px-1.5 text-[11px] text-rojo"
+              >
                 <Link2 className="h-3 w-3" /> {t("linkedLead")}
+                {" · "}
+                {linkSource === "auto"
+                  ? t("linkSourceAuto")
+                  : t("linkSourceManual")}
               </span>
             )}
           </p>
@@ -183,7 +217,10 @@ export function ThreadView({
         onOpenChange={setLinkOpen}
         threadId={thread.id}
         currentLeadId={thread.lead_id}
-        onLinked={(leadId) => onLinkLead(thread.id, leadId)}
+        onLinked={(leadId) => {
+          setLinkSource("manual");
+          onLinkLead(thread.id, leadId);
+        }}
       />
     </div>
   );
@@ -235,6 +272,11 @@ function MessageCard({
         {message.cc_addresses.length > 0 && (
           <span className="ml-2">
             {t("cc", { recipients: message.cc_addresses.join(", ") })}
+          </span>
+        )}
+        {isOutbound && (message.bcc_addresses?.length ?? 0) > 0 && (
+          <span className="ml-2">
+            {t("bcc", { recipients: (message.bcc_addresses ?? []).join(", ") })}
           </span>
         )}
       </div>

@@ -28,6 +28,7 @@ import {
   formatUnreadBadge,
   stateToastKey,
   threadStaysInView,
+  threadViewOf,
   type ThreadView as MailView,
 } from "@/lib/email/thread-state";
 import { BulkToolbar } from "@/components/correo/thread-actions";
@@ -41,6 +42,8 @@ import {
   useUnreadCounts,
 } from "@/components/correo/use-unread-counts";
 
+export type LeadLinkSource = "manual" | "auto";
+
 export interface EmailThread {
   id: string;
   subject: string;
@@ -51,6 +54,8 @@ export interface EmailThread {
   is_read: boolean;
   message_count: number;
   lead_id: string | null;
+  /** Origen de la vinculación; solo viene en el detalle del hilo. */
+  lead_link_source?: LeadLinkSource | null;
   created_at: string;
   archived_at?: string | null;
   trashed_at?: string | null;
@@ -67,6 +72,7 @@ export interface EmailMessage {
   from_name: string | null;
   to_addresses: string[];
   cc_addresses: string[];
+  bcc_addresses?: string[];
   subject: string | null;
   body_html: string | null;
   body_text: string | null;
@@ -116,7 +122,12 @@ function formatDraftDate(iso: string, locale: string): string {
   });
 }
 
-export function InboxPage() {
+export function InboxPage({
+  initialThreadId = null,
+}: {
+  /** Abre este hilo al entrar (enlace desde la ficha del lead: /correo?thread=). */
+  initialThreadId?: string | null;
+} = {}) {
   const t = useTranslations("correo");
   const locale = useLocale();
   const [threads, setThreads] = useState<EmailThread[]>([]);
@@ -129,6 +140,7 @@ export function InboxPage() {
   const [listMode, setListMode] = useState<ListMode>("threads");
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<EmailDraft | null>(null);
+  const [composeSession, setComposeSession] = useState(0);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
   const [view, setView] = useState<MailView>("inbox");
   const [searchInput, setSearchInput] = useState("");
@@ -137,6 +149,9 @@ export function InboxPage() {
   const searching = searchQuery.length > 0;
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const threadsRef = useRef<EmailThread[]>([]);
+  const pendingThreadRef = useRef<EmailThread | null>(null);
+  // Con enlace a un hilo, la primera carga espera a saber en qué bandeja está.
+  const [deepLinkReady, setDeepLinkReady] = useState(!initialThreadId);
   const loadingMoreRef = useRef(false);
   const listGenRef = useRef(0);
   useEffect(() => {
@@ -156,7 +171,7 @@ export function InboxPage() {
   ];
 
   useEffect(() => {
-    if (listMode !== "threads") return;
+    if (listMode !== "threads" || !deepLinkReady) return;
     let cancelled = false;
     async function load() {
       const gen = ++listGenRef.current;
@@ -171,9 +186,15 @@ export function InboxPage() {
         );
         if (cancelled || gen !== listGenRef.current) return;
         const page = data.threads ?? [];
-        setThreads(page);
+        const pending = pendingThreadRef.current;
+        pendingThreadRef.current = null;
+        setThreads(
+          pending && !page.some((thread) => thread.id === pending.id)
+            ? [pending, ...page]
+            : page,
+        );
         setHasMore(page.length === THREAD_PAGE_SIZE);
-        setSelectedId(null);
+        setSelectedId(pending ? pending.id : null);
         setCheckedIds(new Set());
       } catch (e) {
         if (!cancelled) {
@@ -189,7 +210,45 @@ export function InboxPage() {
     return () => {
       cancelled = true;
     };
-  }, [mailboxFilter, listMode, threadsReloadKey, view, searchQuery, searchAll, t]);
+  }, [
+    mailboxFilter,
+    listMode,
+    threadsReloadKey,
+    view,
+    searchQuery,
+    searchAll,
+    deepLinkReady,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (!initialThreadId) return;
+    let cancelled = false;
+    async function openLinkedThread() {
+      try {
+        const res = await fetch(`/api/email/threads/${initialThreadId}`);
+        const data = await readJsonResponse<{ thread?: EmailThread }>(
+          res,
+          t("loadThreadError"),
+        );
+        if (cancelled) return;
+        if (data.thread) {
+          pendingThreadRef.current = data.thread;
+          setView(threadViewOf(data.thread));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e instanceof Error ? e.message : t("loadThreadError"));
+        }
+      } finally {
+        if (!cancelled) setDeepLinkReady(true);
+      }
+    }
+    void openLinkedThread();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialThreadId, t]);
 
   const loadMore = useCallback(async () => {
     if (listMode !== "threads" || loadingMoreRef.current || !hasMore) return;
@@ -344,24 +403,31 @@ export function InboxPage() {
 
   const openNewCompose = useCallback(() => {
     setEditingDraft(null);
+    setComposeSession((n) => n + 1);
     setComposeOpen(true);
   }, []);
 
   const openDraft = useCallback((draft: EmailDraft) => {
     setEditingDraft(draft);
+    setComposeSession((n) => n + 1);
     setComposeOpen(true);
   }, []);
 
-  const handleDraftSaved = useCallback((draft: EmailDraft) => {
-    setEditingDraft(draft);
-    setDrafts((prev) => {
-      const without = prev.filter((d) => d.id !== draft.id);
-      return [draft, ...without];
-    });
-    setListMode("drafts");
-  }, []);
+  // El diálogo se remonta solo al abrir (composeSession); guardar no lo reinicia.
+  const handleDraftSaved = useCallback(
+    (draft: EmailDraft, meta?: { auto: boolean }) => {
+      setEditingDraft(draft);
+      setDrafts((prev) => {
+        const without = prev.filter((d) => d.id !== draft.id);
+        return [draft, ...without];
+      });
+      if (!meta?.auto) setListMode("drafts");
+    },
+    [],
+  );
 
-  const handleSent = useCallback((threadId: string) => {
+  const handleSent = useCallback((threadId: string, draftId?: string) => {
+    if (draftId) setDrafts((prev) => prev.filter((d) => d.id !== draftId));
     setEditingDraft(null);
     setListMode("threads");
     setThreadsReloadKey((k) => k + 1);
@@ -644,7 +710,7 @@ export function InboxPage() {
       </div>
 
       <ComposeDialog
-        key={editingDraft?.id ?? (composeOpen ? "new" : "closed")}
+        key={`compose-${composeSession}`}
         open={composeOpen}
         onOpenChange={setComposeOpen}
         defaultMailboxAddress={mailboxFilter}

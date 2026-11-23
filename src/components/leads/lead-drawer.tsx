@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmailEditor } from "@/components/leads/email-editor";
 import { AiAnalysisPanel } from "@/components/leads/ai-analysis-panel";
+import { LeadEmailsSection } from "@/components/leads/lead-emails-section";
 import { resolvePainAnalysis } from "@/lib/ai/pain-analysis";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/domain/lead";
 import {
@@ -582,6 +583,10 @@ function LeadDrawerBody({
                 }
               />
             </Section>
+
+            {isAdmin && !isVisitor ? (
+              <LeadEmailsSection leadId={lead.id} canUnlink={isAdmin} />
+            ) : null}
 
             <Section title={t("activity")}>
               {activity.length === 0 ? (

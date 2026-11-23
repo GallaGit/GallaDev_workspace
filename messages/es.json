@@ -392,6 +392,21 @@
       "updateError": "Error al actualizar",
       "statusUpdated": "Estado actualizado",
       "error": "Error"
+    },
+    "emails": {
+      "title": "Correos",
+      "loading": "Cargando correos…",
+      "loadError": "No se pudieron cargar los correos",
+      "empty": "Ningún hilo de correo vinculado a este lead.",
+      "noSubject": "(sin asunto)",
+      "unread": "No leído",
+      "messageCount": "{count, plural, one {# mensaje} other {# mensajes}}",
+      "open": "Abrir en Correo",
+      "unlink": "Desvincular",
+      "unlinkAria": "Desvincular el hilo «{subject}»",
+      "unlinked": "Hilo desvinculado del lead",
+      "unlinkError": "No se pudo desvincular el hilo",
+      "yesterday": "Ayer"
     }
   },
   "kanban": {
@@ -513,6 +528,19 @@
       "confirm": "¿Seguro? Expulsará todos los dispositivos, incluido este.",
       "confirmGlobal": "Confirmar cierre global",
       "cancel": "Cancelar"
+    },
+    "signaturesPanel": {
+      "title": "Firmas de correo",
+      "description": "Texto que se añade al final de los mensajes nuevos de cada buzón. Se puede editar antes de enviar. Déjalo vacío para no usar firma.",
+      "mailbox": "Buzón",
+      "signatureOf": "Firma de {mailbox}",
+      "placeholder": "Nombre\nGallaDev · galladev.com",
+      "charCount": "{count} / {max}",
+      "loadError": "No se pudieron cargar las firmas",
+      "saveError": "No se pudo guardar la firma",
+      "networkError": "Error de red al guardar la firma",
+      "saved": "Firma guardada",
+      "save": "Guardar firma"
     }
   },
   "correo": {
@@ -586,7 +614,29 @@
       "bodyRequired": "Escribe el cuerpo del mensaje",
       "sent": "Correo enviado",
       "sending": "Enviando…",
-      "send": "Enviar"
+      "send": "Enviar",
+      "cc": "CC",
+      "bcc": "CCO",
+      "ccPlaceholder": "copia@ejemplo.com",
+      "bccPlaceholder": "copia.oculta@ejemplo.com",
+      "recipientsHint": "Varias direcciones separadas por comas.",
+      "invalidAddresses": "Direcciones no válidas en {field}: {addresses}",
+      "tooManyRecipients": "Máximo {max} direcciones por campo",
+      "autosaving": "Guardando…",
+      "autosaved": "Guardado",
+      "autosaveError": "No se pudo autoguardar",
+      "signatureHint": "La firma de {mailbox} se añade al final del mensaje. Puedes editarla antes de enviar.",
+      "attach": "Adjuntar archivos",
+      "attachments": "Adjuntos",
+      "attachmentsHint": "Hasta {count} archivos, {file} cada uno y {total} en total. No se guardan en el borrador.",
+      "removeAttachment": "Quitar {name}",
+      "attachmentError": {
+        "tooMany": "Máximo {count} adjuntos por correo",
+        "tooLarge": "{name} supera {max}",
+        "totalTooLarge": "Los adjuntos superan {max} en total",
+        "blocked": "Tipo de archivo no permitido: {name}",
+        "empty": "El archivo está vacío: {name}"
+      }
     },
     "link": {
       "title": "Vincular hilo con lead",
@@ -651,7 +701,15 @@
     "forwardMissingAttachments": "No se pudieron adjuntar: {files}",
     "draftSaving": "Guardando borrador…",
     "draftAutoSaved": "Borrador guardado",
-    "draftSaveError": "No se pudo guardar el borrador"
+    "draftSaveError": "No se pudo guardar el borrador",
+    "bcc": "CCO: {recipients}",
+    "replyExtras": {
+      "toggle": "CC / CCO",
+      "attach": "Adjuntar"
+    },
+    "linkSourceAuto": "automático",
+    "linkSourceManual": "manual",
+    "linkSourceHint": "Vinculación automática: el email coincide con un único lead. Usa «Cambiar lead» para corregirla."
   },
   "email": {
     "title": "Email",
