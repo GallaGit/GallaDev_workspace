@@ -239,7 +239,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 ## 8. Futuro: bandejas (parcial)
 
-**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Archivados / Papelera** con contador de no leídos por vista y en la entrada Correo de la barra lateral. Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Enviados ni Spam. Los borradores de **respuesta** ya existen (`email_drafts.thread_id`, autoguardado por hilo; ver Fase 3). Compose, responder y reenviar admiten Cc/Cco, firma por buzón y adjuntos salientes (ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos»).
+**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Enviados / Archivados / Papelera** (Enviados: PR #106) con contador de no leídos por vista y en la entrada Correo de la barra lateral, y paginación «Cargar más» (50). Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Spam. Los borradores de **respuesta** ya existen (`email_drafts.thread_id`, autoguardado por hilo; ver Fase 3). Compose, responder y reenviar admiten Cc/Cco, firma por buzón y adjuntos salientes (ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos»). La carpeta, el buzón y el hilo abierto viven en el estado del cliente, no en la URL: hay una sola ruta, `/correo`. El punto 7 de la sección 9 lo cambia.
 
 **Bandejas (9 Oct 2026).** Migración `20261009180000_email_thread_inbox_state.sql` (aplicar a mano en el SQL editor **antes** de desplegar):
 
@@ -248,7 +248,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 - Leído/no leído sigue en `email_threads.is_read`.
 - RLS sin cambios (SELECT/UPDATE de hilos solo Admin, FORCE RLS).
 - API: `GET /api/email/threads?view=inbox|archived|trash`, `PATCH /api/email/threads` (en bloque: `{ ids, is_read?, archived?, trashed? }`, máx. 100), `PATCH /api/email/threads/[id]` (acepta también `archived` y `trashed`), `GET /api/email/threads/unread-count`. Todo con `requireAdmin` y zod.
-- **Pendiente:** purga de la Papelera a los 30 días (`DELETE FROM email_threads WHERE trashed_at < now() - interval '30 days'`, tarea programada por decidir). Hoy no se borra nada.
+- **Purga de la Papelera (PR #106):** el cron `GET /api/cron/retention` cuenta (y, si `RETENTION_ENABLED=true`, borra) los hilos con `trashed_at` anterior a 30 días. Hace falta haber aplicado a mano la migración `20261118220000_purge_trashed_email_threads.sql`. Sin esa variable el cron sigue en dry-run y solo informa recuentos.
 
 **Búsqueda (10 Oct 2026).** Migración `20261010090000_email_search.sql` (aplicar a mano **antes** de desplegar): columnas generadas `search_tsv` (tsvector) con índice GIN en `email_messages` (asunto + remitente + `body_text`) y `email_threads` (asunto + remitente). Config `spanish` para asunto y cuerpo y `simple` para el remitente; el email se parte en palabras. `GET /api/email/threads?q=…&scope=view|all` (máx. 200 caracteres): la entrada se convierte en `palabra:* & palabra:*` (prefijo, sin operadores del usuario) y va por `textSearch` de PostgREST, parametrizado. La UI tiene caja de búsqueda con debounce de 300 ms, botón de borrar y casilla «Buscar en todas las bandejas». Límites: sin `unaccent` (buscar «informacion» no encuentra «información»), máx. 200 hilos por búsqueda.
 
@@ -268,3 +268,117 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 - El filtro por `mailbox_address` (allowlist) es ortogonal a las bandejas: un hilo de `ociel@` puede estar en Entrada o Enviados.
 - Spam y retención de adjuntos siguen abiertos (sección 7).
 - Criterio de arranque: solo tras validar dual mailbox V1 en uso real.
+
+## 9. Mejoras de la bandeja (puntos 1–7)
+
+Estas mejoras se acordaron con Ociel después de las Fases 1–3. El orden de trabajo fue 1, 2, 3, 5, 6, 7, 4.
+
+| Punto | Alcance | Estado |
+| --- | --- | --- |
+| 1 | Paginación / «Cargar más» (páginas de 50) | Hecho (PR #106) |
+| 2 | Purga real de la Papelera a los 30 días (cron de retención) | Hecho (PR #106; migración `20261118220000_purge_trashed_email_threads.sql`) |
+| 3 | Bandeja Enviados (hilos con al menos un mensaje `outbound` y que no están en Papelera) | Hecho (PR #106) |
+| 4 | Persistir adjuntos entrantes en Storage cuando existe `EMAIL_ATTACHMENTS_BUCKET` | Hecho (PR #106) |
+| 5 | Cc/Cco, autoguardado, firma por buzón y adjuntos salientes | Hecho (PR #108; ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
+| 6 | Vinculación automática hilo↔lead, origen auto/manual y sección «Correos» en la ficha del lead | En el [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), pendiente de fusionar |
+| 7 | Actualizar la lista al llegar correo nuevo; rutas por carpeta; barra lateral dedicada al correo; Cuentas; vista móvil | **Documentado, pendiente de implementar** (detalle abajo) |
+
+### Punto 7 — Rutas por carpeta, barra lateral de correo, Cuentas y vista móvil
+
+**Estado:** Documentado, pendiente de implementar.
+
+#### Problema
+
+En el móvil el panel izquierdo de `/correo` (ancho fijo de 320 px: carpetas Recibidos, Enviados, Archivados y Papelera, el filtro de buzón, Borradores y la lista de hilos) comparte fila con la vista de lectura y no se oculta. En una pantalla estrecha tapa o deja casi sin espacio el correo abierto. No hay una pantalla de lista a ancho completo ni un botón para volver.
+
+#### Estado actual (código; este documento no lo cambia)
+
+- La ruta del módulo es **`/correo`**: una sola página (`src/app/correo/page.tsx` → `InboxPage`), sin segmentos de carpeta. El banco de trabajo de borradores de leads, `/email`, no forma parte de este módulo y no se toca.
+- Las carpetas no tienen URL. Viven en el estado del cliente: `view` es `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` en `src/lib/email/thread-state.ts`). Borradores es un `listMode` aparte (`drafts`): hoy un botón junto a los chips de buzón, no una entrada de esa lista de vistas.
+- Etiquetas en la UI (es): Recibidos, Enviados, Archivados, Papelera, Borradores. No hay carpeta Spam.
+- El filtro de cuenta es también estado del cliente (`Todos` / `hola@` / `ociel@`; allowlist `COMPANY_MAILBOXES` en `src/lib/email/mailboxes.ts`). La API ya acepta `GET /api/email/threads?view=&mailbox=`.
+- La barra lateral (`src/components/layout/app-sidebar.tsx`) tiene una sola entrada «Correo» que apunta a `/correo`, con la insignia de no leídos de Recibidos. No se despliega. En el móvil el menú de la app es un cajón (breakpoint `md`, 768 px).
+- El acceso sigue siendo solo Admin (APIs con `requireAdmin`, RLS). No hay permisos distintos por buzón: un Admin ve `hola@` y `ociel@`. Seller, Viewer y la demo de visitante no usan el buzón (la entrada se oculta al visitante; las APIs responden 403).
+- Los contadores de no leídos se refrescan cada 60 s, al volver a la pestaña y con el evento `correo:unread-changed`. **La lista de hilos no se recarga sola** cuando llega correo nuevo.
+
+#### Requisitos
+
+**Rutas por carpeta.** Cada carpeta existente tiene su propia dirección, con slugs en español (como el resto de rutas de la app) en todos los idiomas de la UI:
+
+| Carpeta | Vista actual | Ruta |
+| --- | --- | --- |
+| Recibidos | `view=inbox` | `/correo/recibidos` |
+| Enviados | `view=sent` | `/correo/enviados` |
+| Archivados | `view=archived` | `/correo/archivados` |
+| Papelera | `view=trash` | `/correo/papelera` |
+| Borradores | `listMode=drafts` | `/correo/borradores` |
+
+El prefijo es **`/correo`** (singular), confirmado por Ociel. Redirecciones permanentes (308 o la equivalente en Next.js):
+
+- `/correo` → `/correo/recibidos`
+- cualquier otra ruta bajo `/correo/…` que no sea una carpeta conocida → la carpeta equivalente, o `/correo/recibidos` si no hay equivalente
+
+No se crea una carpeta Spam. `/email` no se redirige. Las rutas nuevas entran en las mismas listas de acceso que `/correo` (redirección segura tras el login, oculta al visitante, solo Admin).
+
+La carpeta por defecto es Recibidos. Un hilo abierto es compartible y sobrevive a un recargo: `/correo/{carpeta}/{threadId}` (UUID), conservando la cuenta en la query si aplica. En Borradores no hay esta ruta de hilo; abrir un borrador abre la vista de redacción en el área de contenido.
+
+**Barra lateral de correo (sustitución completa).** Al entrar en `/correo/…`, la barra lateral general de la app se sustituye por completo por una barra dedicada al correo. No es un desplegable de subopciones bajo la entrada «Correo» del menú general. Esa entrada del menú general sigue siendo el modo de entrar al módulo; una vez dentro, la barra general ya no está a la vista.
+
+Arriba de la barra de correo hay un botón **Atrás** que restaura la barra general (vuelve a la página anterior o, si no hay una clara, al dashboard).
+
+La barra de correo contiene todo excepto el cuerpo del mensaje:
+
+- el botón Atrás
+- el botón **Nuevo**
+- las cinco carpetas (Recibidos, Enviados, Archivados, Papelera, Borradores), con la insignia de no leídos que ya existe en cada una, cuando aplique
+- **Cuentas** (Todas, `hola@`, `ociel@`)
+- la lista de hilos (o de borradores) de la carpeta y cuenta seleccionadas
+- la búsqueda, junto a la lista
+
+El área ancha principal muestra **solo** el contenido del hilo abierto, la vista de redacción o un estado vacío (por ejemplo «Selecciona un correo»). No hay en esa área una segunda columna de lista ni de carpetas.
+
+**Escritorio** (`md` y superior, 768 px): la barra de correo y el área de contenido se ven a la vez. Cambiar de carpeta o de cuenta actualiza la lista en la barra y la URL; el área ancha solo cambia si se abre un hilo, se empieza a redactar o no hay selección.
+
+**Cuentas.** En la barra de correo, **Cuentas** se despliega en:
+
+- Todas
+- `hola@` (local-part de `hola@galladev.com`)
+- `ociel@` (local-part de `ociel@galladev.com`)
+
+Si en el futuro hay más buzones en la allowlist, salen aquí. La cuenta se combina con la carpeta: filtrar por `hola@` en Recibidos no saca al usuario de Recibidos.
+
+Se usa un **parámetro de query** `cuenta`, no un segmento de ruta. Valores: se omite o `todas` para todos los buzones visibles; `hola` u `ociel` (el local-part) para un buzón. Ejemplo: `/correo/recibidos?cuenta=hola`. Un valor desconocido o no permitido se trata como Todas (o se redirige a la URL sin `cuenta`).
+
+Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son ejes ortogonales (sección 8 y el filtro `mailbox` de la API). Así no se multiplica el árbol de rutas, cambiar de cuenta no pierde la carpeta ni el hilo, y «Cuentas» en la barra de correo es un filtro, no una página de destino. El cliente traduce `cuenta` al parámetro `mailbox` que ya entiende `GET /api/email/threads`.
+
+**Permisos.** No se inventa un RBAC nuevo por buzón. Hoy solo Admin entra, y ve las dos cuentas. Cuentas solo lista los buzones que esa sesión puede ver. Una URL con `cuenta` de un buzón no permitido no devuelve esos hilos (403 o redirección a Todas / a un buzón permitido). Si más adelante otros roles pueden abrir Correo o un buzón concreto (pregunta abierta de la sección 7), este filtro lo respeta.
+
+**Móvil** (por debajo de `md`, 768 px, el mismo corte que el cajón del menú general): la división es la misma que en escritorio (barra de correo / contenido), pero no se ven a la vez.
+
+- La barra de correo es la pantalla a ancho completo: Atrás, Nuevo, carpetas, Cuentas y lista. No se ve el cuerpo del mensaje al mismo tiempo.
+- Al abrir un hilo, el contenido ocupa toda la pantalla, con un botón **Atrás** que vuelve a la barra de correo (misma carpeta, misma cuenta y, si es razonable, la misma posición de scroll).
+- El **Atrás** de la parte superior de la barra de correo restaura el menú general de la app (página anterior o dashboard).
+- **Nuevo** abre la vista de redacción a pantalla completa, también con Atrás a la barra de correo.
+
+**Actualizar la lista al llegar correo nuevo** (el alcance original del punto 7; se mantiene). Si llega un mensaje nuevo que pertenece a la carpeta y cuenta que se están viendo, la lista se actualiza sin recargar la página a mano ni perder la selección, el scroll o un hilo abierto. Las insignias de no leídos de la barra de correo se actualizan también, incluso si el mensaje cae en otra carpeta. El intervalo es **cada 60 s**, el mismo que los contadores, y también al volver a la pestaña y con el evento `correo:unread-changed`. Esta entrega no exige WebSocket. No sustituye un aviso push fuera de la app (eso sigue siendo la pregunta 3 de la sección 7).
+
+#### Criterios de aceptación
+
+- [ ] Un Admin abre `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` y `/correo/borradores`, y ve la carpeta que indica la URL. Recargar o compartir la URL conserva la carpeta.
+- [ ] `/correo` redirige a `/correo/recibidos`. `/email` no cambia.
+- [ ] Al entrar en Correo, la barra lateral general se sustituye por la barra de correo (Atrás, Nuevo, las cinco carpetas, Cuentas y la lista). El área ancha solo muestra el hilo abierto, la vista de redacción o un estado vacío.
+- [ ] El Atrás de la parte superior de la barra de correo restaura la barra general de la app (página anterior o dashboard).
+- [ ] Elegir una carpeta navega a su ruta. Elegir Todas / hola@ / ociel@ aplica el filtro y se queda en la carpeta actual, con `?cuenta=` en la URL (Todas puede omitir el parámetro).
+- [ ] `?cuenta=hola` en Recibidos solo lista hilos de `hola@galladev.com`. El filtro se puede combinar con la búsqueda que ya existe.
+- [ ] Seller, Viewer y la demo de visitante no ven las nuevas rutas ni sus APIs (el mismo criterio que `/correo`). Un visitante no ve «Correo» en el menú general.
+- [ ] En escritorio (`md` y superior) se ven a la vez la barra de correo y el área de contenido; la lista no está en el área ancha.
+- [ ] En un ancho menor de 768 px, la barra de correo (carpetas y lista) ocupa toda la pantalla. Al abrir un hilo, el contenido ocupa toda la pantalla, con Atrás a la barra de correo. El Atrás de esa barra vuelve al menú general de la app.
+- [ ] Con la bandeja abierta, un correo nuevo que encaja en la vista aparece en la lista en no más de 60 s (el mismo ritmo que los contadores; también al volver a la pestaña), y las insignias se actualizan, sin recargar a mano.
+- [ ] No se toca `/email`, no se añade Spam, y no se cambia el modelo de permisos más allá de aplicar el que ya existe a las rutas nuevas.
+
+#### Fuera de alcance
+
+- Carpeta Spam, avisos fuera de la app cuando llega correo, y qué otros roles además de Admin ven el buzón (siguen en la sección 7).
+- Una ruta propia para «Nuevo mensaje» (la redacción se abre en el área de contenido, sin URL dedicada).
+- Cambiar la API (`view`, `mailbox`) más de lo necesario para las URLs nuevas.
+- El trabajo del punto 6 (PR #109) y cualquier otra mejora de redacción o vinculación.
