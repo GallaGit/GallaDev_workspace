@@ -86,6 +86,11 @@ export function requireLeadWriter(): Promise<NextResponse | null> {
   return requireApiRole(["Admin", "Seller"]);
 }
 
+/** Uso del buzón Correo (leer, redactar, borradores, adjuntos): Admin o Seller. */
+export function requireCorreoAccess(): Promise<NextResponse | null> {
+  return requireApiRole(["Admin", "Seller"]);
+}
+
 function sessionDenied(status: Exclude<SessionResolution["status"], "ok">) {
   if (status === "no_profile") {
     return NextResponse.json(NO_PROFILE, { status: 401 });

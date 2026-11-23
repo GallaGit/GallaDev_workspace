@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseReplyBody } from "@/lib/email/email-payload";
 import { readOutboundRequest } from "@/lib/email/outbound-request";
@@ -19,14 +19,14 @@ const RATE_MAX = 10;
 /**
  * POST /api/email/threads/[id]/reply — enviar respuesta desde el mailbox_address del hilo.
  *
- * Auth: requireAdmin antes del cliente admin. La lectura del hilo usa la
+ * Auth: requireCorreoAccess antes del cliente admin. La lectura del hilo usa la
  * sesión (RLS). El insert del mensaje saliente no tiene GRANT para
  * authenticated, así que la escritura sigue en service role después del gate.
  * Body JSON: { text, html?, mode?: "reply" | "replyAll", cc?, bcc? }
  * o multipart/form-data con `payload` (ese JSON) y `files` (adjuntos).
  */
 async function postReply(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/email/threads — lista de hilos del buzón.
  *
- * Auth: requireAdmin y RLS (solo Admin ve los hilos).
+ * Auth: requireCorreoAccess y RLS (solo Admin ve los hilos).
  * Query params:
  *   - limit (default 50, max 100)
  *   - offset (default 0)
@@ -39,7 +39,7 @@ export const dynamic = "force-dynamic";
  *     salvo Papelera (ficha del lead); ignora `view`
  */
 async function listThreads(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 
@@ -167,14 +167,14 @@ async function listThreads(request: Request) {
 /**
  * PATCH /api/email/threads — acción masiva sobre hilos seleccionados.
  *
- * Auth: requireAdmin y RLS (policy UPDATE solo Admin).
+ * Auth: requireCorreoAccess y RLS (policy UPDATE solo Admin).
  * Body: { ids: uuid[] (1–100), is_read?: boolean, archived?: boolean,
  *         trashed?: boolean }
  * Solo toca las columnas de estado; nunca lead_id ni contenido.
  * Responde con los ids realmente actualizados (los que RLS deja ver).
  */
 async function bulkPatchThreads(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 

@@ -8,6 +8,8 @@ export type SessionAccess = {
   role: AppRole | null;
   ready: boolean;
   canWriteLeads: boolean;
+  /** Admin o Seller: pueden abrir y usar /correo. */
+  canUseCorreo: boolean;
   isAdmin: boolean;
   userId: string | null;
   /** Sesión de demo: no es Admin, Seller ni Viewer. */
@@ -20,6 +22,7 @@ const LOCKED: SessionAccess = {
   role: null,
   ready: false,
   canWriteLeads: false,
+  canUseCorreo: false,
   isAdmin: false,
   userId: null,
   isVisitor: false,
@@ -65,6 +68,7 @@ export function SessionAccessProvider({
                 role: null,
                 ready: true,
                 canWriteLeads: false,
+                canUseCorreo: false,
                 isAdmin: false,
                 userId: null,
                 isVisitor: false,
@@ -75,6 +79,7 @@ export function SessionAccessProvider({
                 role: null,
                 ready: true,
                 canWriteLeads: false,
+                canUseCorreo: false,
                 isAdmin: false,
                 userId: null,
                 isVisitor: true,
@@ -85,6 +90,7 @@ export function SessionAccessProvider({
                   role,
                   ready: true,
                   canWriteLeads: isLeadWriter(role),
+                  canUseCorreo: isLeadWriter(role),
                   isAdmin: isAdminRole(role),
                   userId:
                     data && "id" in data && typeof data.id === "string"

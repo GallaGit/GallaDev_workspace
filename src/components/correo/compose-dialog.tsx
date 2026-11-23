@@ -110,6 +110,7 @@ export function ComposeDialog({
   const [signatures, setSignatures] = useState<Record<string, string>>({});
 
   const draftIdRef = useRef<string | null>(initialDraft?.id ?? null);
+  const leadIdRef = useRef<string | null>(initialDraft?.lead_id ?? null);
   const signaturesRef = useRef<Record<string, string>>({});
   const activeSignatureRef = useRef("");
   const dirtyRef = useRef(false);
@@ -176,6 +177,7 @@ export function ComposeDialog({
               bcc: f.bcc,
               subject: f.subject,
               bodyText: f.body,
+              ...(leadIdRef.current ? { leadId: leadIdRef.current } : {}),
             }),
           });
           const data = await readJsonResponse<{ draft: EmailDraft }>(
@@ -183,6 +185,9 @@ export function ComposeDialog({
             t("compose.saveError"),
           );
           draftIdRef.current = data.draft.id;
+          if (data.draft.lead_id !== undefined) {
+            leadIdRef.current = data.draft.lead_id;
+          }
           savedSnapshotRef.current = snapshot;
           setAutosave("saved");
           onDraftSavedRef.current(data.draft, { auto });

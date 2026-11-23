@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getApiSession, requireAdmin } from "@/lib/api-auth";
+import { getApiSession, requireAdmin, requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { COMPANY_MAILBOXES, isCompanyMailbox } from "@/lib/email/mailboxes";
 import { parseSignatureText } from "@/lib/email/signature";
@@ -17,10 +17,11 @@ const BODY_MAX_BYTES = 16 * 1024;
 /**
  * GET /api/email/signatures — firma de cada buzón: { signatures: { [mailbox]: string } }.
  * PUT /api/email/signatures — { mailbox, signature } guarda (o vacía) la firma de un buzón.
- * Auth: Admin (requireAdmin) y RLS Admin en `email_mailbox_signatures`.
+ * Auth: GET Admin o Seller (requireCorreoAccess); PUT solo Admin.
+ * RLS: lectura Admin/Seller; escritura de firmas solo Admin.
  */
 async function listSignatures(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 

@@ -1,11 +1,8 @@
 "use client";
 
-import { Mail } from "lucide-react";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { openGmailCompose } from "@/lib/utils/gmail-compose";
 
 type EmailEditorProps = {
   subject: string;
@@ -20,8 +17,6 @@ type EmailEditorProps = {
   onApplyTemplate?: () => void;
   showApplyTemplate?: boolean;
   readOnly?: boolean;
-  /** En la demo no se abre Gmail ni mailto desde el editor. */
-  allowCompose?: boolean;
 };
 
 export function EmailEditor({
@@ -37,20 +32,8 @@ export function EmailEditor({
   onApplyTemplate,
   showApplyTemplate,
   readOnly = false,
-  allowCompose = true,
 }: EmailEditorProps) {
   const t = useTranslations("leads.emailEditor");
-
-  function redactarEnGmail() {
-    if (!subject.trim() && !body.trim()) {
-      toast.error(t("missingContent"));
-      return;
-    }
-    if (!to?.trim()) {
-      toast.message(t("missingRecipient"));
-    }
-    openGmailCompose({ to, subject, body });
-  }
 
   return (
     <div>
@@ -69,12 +52,6 @@ export function EmailEditor({
         readOnly={readOnly}
       />
       <div className="mt-2 flex flex-wrap gap-2">
-        {allowCompose ? (
-          <Button size="sm" onClick={redactarEnGmail}>
-            <Mail className="h-3.5 w-3.5" />
-            {t("compose")}
-          </Button>
-        ) : null}
         <Button size="sm" disabled={saving || readOnly} onClick={onSave}>
           {t("save")}
         </Button>

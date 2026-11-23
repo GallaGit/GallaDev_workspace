@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getApiSession,
   requireAdmin,
+  requireCorreoAccess,
   requireApiSession,
   requireLeadWriter,
 } from "./api-auth";
@@ -105,21 +106,23 @@ describe("requireApiSession", () => {
 });
 
 describe("requireApiRole", () => {
-  it("Admin pasa requireAdmin y requireLeadWriter", async () => {
+  it("Admin pasa requireAdmin, requireLeadWriter y requireCorreoAccess", async () => {
     vi.stubEnv("AUTH_DISABLED", "false");
     serverClient.mockResolvedValue(
       mockClient({ id: "admin", email: "admin@b.c" }, "Admin"),
     );
     expect(await requireAdmin()).toBeNull();
     expect(await requireLeadWriter()).toBeNull();
+    expect(await requireCorreoAccess()).toBeNull();
   });
 
-  it("Seller puede escribir leads y no puede administrar", async () => {
+  it("Seller puede escribir leads y usar Correo, no puede administrar", async () => {
     vi.stubEnv("AUTH_DISABLED", "false");
     serverClient.mockResolvedValue(
       mockClient({ id: "seller", email: "s@b.c" }, "Seller"),
     );
     expect(await requireLeadWriter()).toBeNull();
+    expect(await requireCorreoAccess()).toBeNull();
     const denied = await requireAdmin();
     expect(denied!.status).toBe(403);
     expect(await denied!.json()).toMatchObject({
@@ -129,12 +132,12 @@ describe("requireApiRole", () => {
     });
   });
 
-  it("Viewer no escribe leads ni administra", async () => {
+  it("Viewer no escribe leads, no usa Correo ni administra", async () => {
     vi.stubEnv("AUTH_DISABLED", "false");
     serverClient.mockResolvedValue(
       mockClient({ id: "viewer", email: "v@b.c" }, "Viewer"),
     );
-    for (const denied of [await requireAdmin(), await requireLeadWriter()]) {
+    for (const denied of [await requireAdmin(), await requireLeadWriter(), await requireCorreoAccess()]) {
       expect(denied!.status).toBe(403);
       expect(await denied!.json()).toMatchObject({ code: "forbidden" });
     }

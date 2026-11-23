@@ -20,6 +20,21 @@ const nextConfig: NextConfig = {
   // La CSP vive en src/proxy.ts (nonce por petición). Aquí no se repite:
   // dos políticas CSP se aplican a la vez y una estática con
   // 'unsafe-inline' no aporta el nonce que Next necesita.
+  async redirects() {
+    return [
+      {
+        source: "/email",
+        destination: "/correo/borradores",
+        permanent: true,
+      },
+      {
+        source: "/email/:path*",
+        destination: "/correo/borradores",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

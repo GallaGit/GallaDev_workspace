@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const requireAdmin = vi.hoisted(() =>
+const requireCorreoAccess = vi.hoisted(() =>
   vi.fn(async (): Promise<Response | null> => null),
 );
 const consumeRateLimit = vi.hoisted(() => vi.fn(async () => false));
@@ -9,7 +9,7 @@ const sendReply = vi.hoisted(() => vi.fn());
 const sendForward = vi.hoisted(() => vi.fn());
 const createSupabaseServerClient = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/api-auth", () => ({ requireAdmin }));
+vi.mock("@/lib/api-auth", () => ({ requireCorreoAccess }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => ({
@@ -59,7 +59,7 @@ const composePayload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireAdmin.mockResolvedValue(null);
+  requireCorreoAccess.mockResolvedValue(null);
   consumeRateLimit.mockResolvedValue(false);
   sendCompose.mockResolvedValue({ sent: true, threadId: "t1", messageId: "m1" });
   sendReply.mockResolvedValue({ sent: true, messageId: "m1" });
@@ -74,7 +74,7 @@ beforeEach(() => {
 
 describe("POST /api/email/compose", () => {
   it("sin Admin no procesa nada", async () => {
-    requireAdmin.mockResolvedValue(new Response("{}", { status: 403 }));
+    requireCorreoAccess.mockResolvedValue(new Response("{}", { status: 403 }));
     const res = await compose(jsonRequest("http://localhost/api/email/compose", composePayload));
     expect(res.status).toBe(403);
     expect(sendCompose).not.toHaveBeenCalled();

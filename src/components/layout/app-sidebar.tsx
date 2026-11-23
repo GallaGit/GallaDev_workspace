@@ -10,7 +10,6 @@ import {
   Users,
   Columns3,
   BarChart3,
-  Mail,
   MailCheck,
   Settings,
   Copy,
@@ -32,21 +31,20 @@ const NAV = [
   { href: "/leads", labelKey: "nav.leads", icon: Users },
   { href: "/kanban", labelKey: "nav.kanban", icon: Columns3 },
   { href: "/stats", labelKey: "nav.statistics", icon: BarChart3 },
-  { href: "/email", labelKey: "nav.email", icon: Mail },
   { href: "/correo", labelKey: "nav.correo", icon: MailCheck },
   { href: "/duplicates", labelKey: "nav.duplicates", icon: Copy },
   { href: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
-const HIDDEN_FOR_VISITOR = new Set(["/email", "/correo", "/settings"]);
+const HIDDEN_FOR_VISITOR = new Set(["/correo", "/settings"]);
 
 export function AppSidebar() {
   const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
   const { open, close, navId } = useNavChrome();
-  const { isVisitor, isAdmin } = useSessionAccess();
-  const { counts: correoUnread } = useUnreadCounts(isAdmin && !isVisitor);
+  const { isVisitor, canUseCorreo } = useSessionAccess();
+  const { counts: correoUnread } = useUnreadCounts(canUseCorreo && !isVisitor);
   const correoBadge = formatUnreadBadge(correoUnread.inbox);
   const asideRef = useRef<HTMLElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -163,9 +161,11 @@ export function AppSidebar() {
         className="flex flex-1 flex-col gap-0.5 p-2"
         aria-label={t("nav.principalAria")}
       >
-        {NAV.filter(
-          (item) => !isVisitor || !HIDDEN_FOR_VISITOR.has(item.href),
-        ).map(({ href, labelKey, icon: Icon }) => {
+        {NAV.filter((item) => {
+          if (isVisitor && HIDDEN_FOR_VISITOR.has(item.href)) return false;
+          if (item.href === "/correo" && !canUseCorreo) return false;
+          return true;
+        }).map(({ href, labelKey, icon: Icon }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (

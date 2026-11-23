@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseDraftBody } from "@/lib/email/email-payload";
 import { isUuid } from "@/lib/supabase/lead-lookup";
@@ -17,19 +17,58 @@ const RATE_WINDOW_MS = 60 * 1000;
 const RATE_MAX = 30;
 
 /**
- * GET /api/email/drafts — lista de borradores de mensaje nuevo (Admin).
+ * GET /api/email/drafts — lista de borradores de mensaje nuevo (Admin o Seller).
  * GET /api/email/drafts?threadId=<uuid> — borrador de respuesta de ese hilo (o null).
+ * GET /api/email/drafts?leadId=<uuid> — borrador de mensaje nuevo de ese lead (o null).
  * POST /api/email/drafts — crear o actualizar borrador. Con `threadId`, upsert
- * del único borrador de respuesta de ese hilo.
+ * del único borrador de respuesta de ese hilo. Con `upsertByLead` y `leadId`,
+ * upsert del único borrador de mensaje nuevo de ese lead. Si `leadId` no
+ * viene en un update, no se toca lead_id.
  */
 async function listDrafts(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 
   try {
     const supabase = await createSupabaseServerClient();
-    const threadId = new URL(request.url).searchParams.get("threadId");
+    const params = new URL(request.url).searchParams;
+    const threadId = params.get("threadId");
+    const leadId = params.get("leadId");
+    if (threadId !== null && leadId !== null) {
+      return NextResponse.json(
+        { ok: false, error: "Campo no permitido" },
+        { status: 400 },
+      );
+    }
+    if (leadId !== null) {
+      if (!isUuid(leadId)) {
+        return NextResponse.json(
+          { ok: false, error: "Identificador no válido" },
+          { status: 400 },
+        );
+      }
+      const { data: rows, error: leadErr } = await supabase
+        .from("email_drafts")
+        .select(DRAFT_COLUMNS)
+        .eq("lead_id", leadId)
+        .is("thread_id", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (leadErr) {
+        logRouteError({
+          route: "GET /api/email/drafts",
+          status: 500,
+          errorClass: `Supabase:${leadErr.code}`,
+          requestId,
+        });
+        return NextResponse.json(
+          { ok: false, error: "No se pudo cargar el borrador" },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({ ok: true, draft: rows?.[0] ?? null });
+    }
     if (threadId !== null) {
       if (!isUuid(threadId)) {
         return NextResponse.json(
@@ -89,7 +128,7 @@ async function listDrafts(request: Request) {
 }
 
 async function saveDraft(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 
@@ -128,18 +167,22 @@ async function saveDraft(request: Request) {
     }
 
     const supabase = await createSupabaseServerClient();
-    const row = {
-      mailbox_address: parsed.value.mailbox,
+    const upsertByLead = Boolean(parsed.value.upsertByLead && parsed.value.leadId);
+    const row: Record<string, unknown> = {
       to_address: parsed.value.to,
-      cc_address: parsed.value.cc ?? "",
-      bcc_address: parsed.value.bcc ?? "",
       subject: parsed.value.subject,
       body_text: parsed.value.bodyText,
-      lead_id: parsed.value.leadId,
-      ...(parsed.value.threadId
-        ? { thread_id: parsed.value.threadId, reply_mode: parsed.value.replyMode ?? "reply" }
-        : {}),
     };
+    if (!upsertByLead) {
+      row.mailbox_address = parsed.value.mailbox;
+      row.cc_address = parsed.value.cc ?? "";
+      row.bcc_address = parsed.value.bcc ?? "";
+    }
+    if (parsed.value.leadId !== undefined) row.lead_id = parsed.value.leadId;
+    if (parsed.value.threadId) {
+      row.thread_id = parsed.value.threadId;
+      row.reply_mode = parsed.value.replyMode ?? "reply";
+    }
 
     let draftId = parsed.value.id;
     if (!draftId && parsed.value.threadId) {
@@ -149,6 +192,23 @@ async function saveDraft(request: Request) {
         .eq("thread_id", parsed.value.threadId)
         .maybeSingle();
       if (existing?.id) draftId = existing.id as string;
+    }
+    if (!draftId && upsertByLead && parsed.value.leadId) {
+      const { data: existingRows } = await supabase
+        .from("email_drafts")
+        .select("id")
+        .eq("lead_id", parsed.value.leadId)
+        .is("thread_id", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (existingRows?.[0]?.id) draftId = existingRows[0].id as string;
+    }
+    if (!draftId) {
+      // Alta: rellenar campos que el upsert-por-lead no toca al actualizar.
+      row.mailbox_address = parsed.value.mailbox;
+      if (row.cc_address === undefined) row.cc_address = parsed.value.cc ?? "";
+      if (row.bcc_address === undefined) row.bcc_address = parsed.value.bcc ?? "";
+      if (row.lead_id === undefined) row.lead_id = null;
     }
 
     if (draftId) {

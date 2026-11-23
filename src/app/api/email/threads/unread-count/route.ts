@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
@@ -15,12 +15,12 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/email/threads/unread-count — hilos no leídos por vista.
  *
- * Auth: requireAdmin y RLS. Solo cuenta (HEAD), no devuelve filas.
+ * Auth: requireCorreoAccess y RLS. Solo cuenta (HEAD), no devuelve filas.
  * Query: mailbox (opcional, allowlist).
  * Respuesta: { ok, counts: { inbox, sent, archived, trash } }
  */
 async function unreadCount(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 

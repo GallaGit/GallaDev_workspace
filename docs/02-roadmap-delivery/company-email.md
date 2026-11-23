@@ -12,7 +12,7 @@ Product allowlist: `hola@galladev.com` (company) and `ociel@galladev.com` (perso
 
 Inbound and outbound both go through Resend. Inbound is [Resend Inbound](https://resend.com/docs/dashboard/receiving/introduction) (receiving): an MX record on `galladev.com` pointing at Resend, and Resend sends one webhook per received email.
 
-The inbox is the **Correo** module inside GDW (`/correo`). It reuses auth, RBAC, and Supabase. It is not a separate app. That route is not the `/email` workbench (lead drafts). `/email` stays as it is.
+The inbox is the **Correo** module inside GDW (`/correo`). It reuses auth, RBAC, and Supabase. It is not a separate app. Lead drafts from the record are stored in `email_drafts` and opened at `/correo/borradores`. `/email` permanently redirects there.
 
 V1 UI: one unified inbox, filter `All | hola@ | ociel@`, per-thread chip, reply From = thread `mailbox_address`, **Nuevo** (compose via Resend) and **Borradores** pill (`email_drafts`). No Inbox/Sent/Spam folders. No Gmail.
 
@@ -41,7 +41,7 @@ Facts as of 27 Sep 2026, still true on 29 Sep 2026. No secret values.
 | Mailbox | `/correo` receives at `hola@` and `ociel@` (allowlist). Column `email_threads.mailbox_address`. UI filter + chip. Reply From = thread mailbox. Dual mailbox V1, 30 Sep 2026. Compose + new-message drafts (`email_drafts`, Nuevo button), 30 Sep 2026. |
 | Apex MX | MX published in Cloudflare (apex, DNS-only) pointing to Resend inbound. |
 | Storage | The repo does not use Supabase Storage. No bucket exists. The client-portal spec proposes a private bucket `project-files`; it is not created. |
-| `/email` | Lead-draft workbench. Not an inbox. |
+| `/email` | Permanent redirect to `/correo/borradores`. |
 
 Mail DNS to leave alone (DNS-only, not Proxied):
 
@@ -125,7 +125,7 @@ Route: `src/app/api/email/inbound/route.ts` (the App Router lives under `src/app
 
 ### Phase 2 — Inbox UI
 
-**Scope.** `/correo` inside GDW: a thread list, a thread view, read and unread, and a way to link a thread to a lead. It uses the existing session and RBAC. Access is Admin by default. Which other roles can open it is an open question (section 7); until that is answered, Seller, Viewer, and the visitor demo do not see the inbox (same idea as other Admin-only areas: the demo already redirects `/email`).
+**Scope.** `/correo` inside GDW: a thread list, a thread view, read and unread, and a way to link a thread to a lead. It uses the existing session and RBAC. Access is Admin and Seller. Viewer and the visitor demo do not see the inbox (the demo already redirects `/email` and `/correo` to `/leads`).
 
 **Acceptance.**
 
@@ -171,7 +171,7 @@ await (await fetch("/api/email/backfill-lead-links", {
 
 **UI.**
 
-- Lead record (`LeadDrawer`): an **Emails** section (`LeadEmailsSection`) lists linked threads (subject, snippet, date, message count, “Unread” tag), each linking to `/correo?thread=<id>`, with an **Unlink** button (`PATCH` with `lead_id: null`). Mounted for Admin only (Mail is Admin-only in API and RLS); Seller, Viewer and the visitor demo neither see it nor can call the API (`GET /api/email/threads?lead_id=<uuid>`, `requireAdmin`; Trash excluded).
+- Lead record (`LeadDrawer`): an **Emails** section (`LeadEmailsSection`) lists linked threads (subject, snippet, date, message count, “Unread” tag), each linking to `/correo?thread=<id>`, with an **Unlink** button (`PATCH` with `lead_id: null`). Mounted for Admin and Seller (the mailbox APIs use `requireCorreoAccess` and RLS). Viewer and the visitor demo neither see it nor can call the API. Trash excluded.
 - `/correo?thread=<uuid>` opens that thread in its folder (Inbox, Archived or Trash); if missing, it shows an error.
 - Thread view: the lead tag reads “Linked lead · automatic” (with a tooltip) or “· manual”. The source comes from `GET /api/email/threads/[id]` (`lead_link_source`). After replying, the view resyncs in case the reply linked the thread.
 
@@ -194,7 +194,7 @@ await (await fetch("/api/email/backfill-lead-links", {
 
 ## 7. Open questions
 
-1. Which roles besides Admin can see the inbox? (Seller, Viewer, neither.)
+1. Which roles besides Admin can see the inbox? **Answered: Seller yes, Viewer no.**
 2. How long are attachment bytes kept, if they are stored at all?
 3. Who is notified when new mail arrives, and by what channel?
 
@@ -220,7 +220,7 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 **Constraints.**
 
-- Do not reuse `/email` or its lead-draft model for mailbox reply drafts.
+- Reply drafts stay in `email_drafts` with `thread_id`; new-message drafts from a lead use `lead_id` and `thread_id IS NULL`.
 - The `mailbox_address` filter (allowlist) is orthogonal to folders: an `ociel@` thread can sit in Inbox or Sent.
 - Spam and attachment retention remain open (section 7).
 - Start criterion: only after dual mailbox V1 is validated in real use.
@@ -243,7 +243,7 @@ These improvements were agreed with Ociel after Phases 1–3. The work order was
 
 **Status:** Done.
 
-**Implementation.** Routes `/correo/recibidos|enviados|archivados|papelera|borradores[/<thread-id>]` with `?cuenta=`; `/correo` redirects (308) to `/correo/recibidos`, and legacy `/correo?thread=<id>` links keep working. State lives in the URL and changing folder, account or thread does not hit the server (`history.pushState`). `AppShell` swaps `AppSidebar` for `CorreoSidebar` on `/correo/*` (Admin only). The list refreshes every 60 s, on tab visibility and on `correo:unread-changed`, without losing scroll or the open thread. Compose and reply reuse `ComposeDialog` (inline variant in the wide area). No database migrations.
+**Implementation.** Routes `/correo/recibidos|enviados|archivados|papelera|borradores[/<thread-id>]` with `?cuenta=`; `/correo` redirects (308) to `/correo/recibidos`, and legacy `/correo?thread=<id>` links keep working. State lives in the URL and changing folder, account or thread does not hit the server (`history.pushState`). `AppShell` swaps `AppSidebar` for `CorreoSidebar` on `/correo/*` (Admin and Seller). The list refreshes every 60 s, on tab visibility and on `correo:unread-changed`, without losing scroll or the open thread. Compose and reply reuse `ComposeDialog` (inline variant in the wide area). No database migrations.
 
 #### Problem
 
@@ -251,12 +251,12 @@ On mobile, the left panel of `/correo` (fixed 320 px width: Recibidos, Enviados,
 
 #### Current state (code; this document does not change it)
 
-- The module route is **`/correo`**: a single page (`src/app/correo/page.tsx` → `InboxPage`), with no folder segments. The lead-draft workbench, `/email`, is not part of this module and is left alone.
+- The module route is **`/correo`**: a single page (`src/app/correo/page.tsx` → `InboxPage`), with no folder segments. The old `/email` workbench was removed; `/email` redirects to `/correo/borradores`.
 - Folders have no URL. They live in client state: `view` is `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` in `src/lib/email/thread-state.ts`). Drafts is a separate `listMode` (`drafts`): today a button next to the mailbox chips, not an entry in that view list.
 - UI labels (es): Recibidos, Enviados, Archivados, Papelera, Borradores. There is no Spam folder.
 - The account filter is also client state (`All` / `hola@` / `ociel@`; allowlist `COMPANY_MAILBOXES` in `src/lib/email/mailboxes.ts`). The API already accepts `GET /api/email/threads?view=&mailbox=`.
 - The sidebar (`src/components/layout/app-sidebar.tsx`) has a single “Correo” entry pointing at `/correo`, with the Recibidos unread badge. It does not expand. On mobile the app menu is a drawer (`md` breakpoint, 768 px).
-- Access remains Admin-only (APIs use `requireAdmin`, plus RLS). There is no per-mailbox ACL: an Admin sees both `hola@` and `ociel@`. Seller, Viewer and the visitor demo do not use the inbox (the nav entry is hidden from the visitor; the APIs return 403).
+- Access is Admin and Seller (APIs use `requireCorreoAccess`, plus RLS). There is no per-mailbox ACL: they see both `hola@` and `ociel@`. Viewer and the visitor demo do not use the inbox (the nav entry is hidden; the APIs return 403). Signature settings, backfill, purge and the legacy draft import stay Admin-only.
 - Unread counts refresh every 60 s, when the tab becomes visible, and on the `correo:unread-changed` event. **The thread list does not reload on its own** when new mail arrives.
 
 #### Requirements
@@ -276,7 +276,7 @@ The prefix is **`/correo`** (singular), confirmed by Ociel. Permanent redirects 
 - `/correo` → `/correo/recibidos`
 - any other path under `/correo/…` that is not a known folder → the matching folder, or `/correo/recibidos` if there is no match
 
-No Spam folder is added. `/email` is not redirected. The new routes join the same access lists as `/correo` (safe redirect after login, hidden from the visitor, Admin only).
+No Spam folder is added. `/email` permanently redirects to `/correo/borradores`. Correo is Admin and Seller; hidden from the visitor and Viewer.
 
 The default folder is Recibidos. An open thread is shareable and survives a reload: `/correo/{folder}/{threadId}` (UUID), keeping the account in the query string when it applies. Drafts has no thread path; opening a draft opens the compose view in the content area.
 
@@ -324,7 +324,7 @@ Why a query and not `/correo/hola/recibidos`: folder and mailbox are already ort
 #### Acceptance criteria
 
 - [ ] An Admin opens `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` and `/correo/borradores`, and sees the folder the URL names. Reloading or sharing the URL keeps the folder.
-- [ ] `/correo` redirects to `/correo/recibidos`. `/email` is unchanged.
+- [ ] `/correo` redirects to `/correo/recibidos`. `/email` redirects to `/correo/borradores`.
 - [ ] Entering Correo replaces the general sidebar with the email sidebar (Back, Nuevo, the five folders, Cuentas and the list). The wide area shows only the open thread, the compose view, or an empty state.
 - [ ] Back at the top of the email sidebar restores the app’s general sidebar (previous page or dashboard).
 - [ ] Choosing a folder navigates to its route. Choosing Todas / hola@ / ociel@ applies the filter and stays on the current folder, with `?cuenta=` in the URL (Todas may omit the parameter).
@@ -333,7 +333,7 @@ Why a query and not `/correo/hola/recibidos`: folder and mailbox are already ort
 - [ ] On desktop (`md` and up), the email sidebar and the content area are visible at the same time; the list is not in the wide area.
 - [ ] Below 768 px, the email sidebar is a collapsible drawer (menu button; closes on tapping a thread, the overlay or the X) and never permanently covers the content. A thread causes no horizontal scrolling. Back on the sidebar returns to the app’s general menu.
 - [ ] With the inbox open, a new email that belongs in the current view appears in the list within 60 s (the same pace as the counters; also when the tab becomes visible), and badges update, without a manual reload.
-- [ ] `/email` is untouched, Spam is not added, and the permission model is unchanged beyond applying the existing one to the new routes.
+- [ ] Spam is not added. Correo is available to Admin and Seller. `/email` redirects to `/correo/borradores`.
 
 #### Out of scope
 

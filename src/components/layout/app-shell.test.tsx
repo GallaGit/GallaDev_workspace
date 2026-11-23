@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
     ready: true,
     pending: false,
     isAdmin: true,
+    canUseCorreo: true,
     isVisitor: false,
   },
   providerProps: [] as { enabled?: boolean; backHref?: string }[],
@@ -49,7 +50,7 @@ function shell() {
 beforeEach(() => {
   cleanup();
   state.pathname = "/leads";
-  state.access = { ready: true, pending: false, isAdmin: true, isVisitor: false };
+  state.access = { ready: true, pending: false, isAdmin: true, canUseCorreo: true, isVisitor: false };
   state.providerProps = [];
 });
 
@@ -82,22 +83,31 @@ describe("AppShell: barra de correo en lugar de la general", () => {
     expect(screen.queryByTestId("correo-sidebar")).toBeNull();
   });
 
-  it("Seller y Viewer conservan la barra general y no piden datos del buzón", () => {
+  it("Seller sustituye la barra general por la de correo", () => {
     state.pathname = "/correo/recibidos";
-    state.access = { ready: true, pending: false, isAdmin: false, isVisitor: false };
+    state.access = { ready: true, pending: false, isAdmin: false, canUseCorreo: true, isVisitor: false };
+    render(shell());
+    expect(screen.getByTestId("correo-sidebar")).toBeTruthy();
+    expect(screen.queryByTestId("app-sidebar")).toBeNull();
+    expect(state.providerProps.at(-1)?.enabled).toBe(true);
+  });
+
+  it("Viewer conserva la barra general y no pide datos del buzón", () => {
+    state.pathname = "/correo/recibidos";
+    state.access = { ready: true, pending: false, isAdmin: false, canUseCorreo: false, isVisitor: false };
     render(shell());
     expect(screen.getByTestId("app-sidebar")).toBeTruthy();
     expect(screen.queryByTestId("correo-sidebar")).toBeNull();
   });
 
-  it("el buzón solo se consulta con la sesión Admin lista", () => {
+  it("el buzón solo se consulta con la sesión de Correo lista", () => {
     state.pathname = "/correo/recibidos";
-    state.access = { ready: false, pending: false, isAdmin: false, isVisitor: false };
+    state.access = { ready: false, pending: false, isAdmin: false, canUseCorreo: false, isVisitor: false };
     const { rerender } = render(shell());
     expect(screen.getByTestId("correo-sidebar")).toBeTruthy();
     expect(state.providerProps.at(-1)?.enabled).toBe(false);
 
-    state.access = { ready: true, pending: false, isAdmin: true, isVisitor: false };
+    state.access = { ready: true, pending: false, isAdmin: false, canUseCorreo: true, isVisitor: false };
     rerender(shell());
     expect(state.providerProps.at(-1)?.enabled).toBe(true);
   });

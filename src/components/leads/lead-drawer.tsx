@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   X,
   ExternalLink,
@@ -34,6 +35,7 @@ import {
   combineNotes,
 } from "@/lib/utils/email-plain";
 import { pickLeadEmail } from "@/lib/utils/gmail-compose";
+import { defaultMailbox } from "@/lib/email/mailboxes";
 import { statusColor, useUiStore } from "@/store/ui-store";
 import { useSessionAccess } from "@/components/session-access";
 import type { TeamMember } from "@/app/api/team/route";
@@ -118,6 +120,7 @@ function LeadDrawerBody({
   const [notes, setNotes] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [correoDraftId, setCorreoDraftId] = useState<string | null>(null);
   const [activity, setActivity] = useState<
     { at: string; type: string; message: string }[]
   >([]);
@@ -130,7 +133,8 @@ function LeadDrawerBody({
   const [analyzeEmpty, setAnalyzeEmpty] = useState(false);
   const [apiAnalysis, setApiAnalysis] = useState<unknown>(null);
   const doloresRef = useRef<HTMLElement | null>(null);
-  const { canWriteLeads, isAdmin, isVisitor, userId } = useSessionAccess();
+  const { canWriteLeads, canUseCorreo, isAdmin, isVisitor, userId } = useSessionAccess();
+  const router = useRouter();
 
   function copy(text: string, label: string) {
     void navigator.clipboard.writeText(text);
@@ -150,6 +154,7 @@ function LeadDrawerBody({
         );
         setEmailSubject(data.lead.emailSubject ?? "");
         setEmailBody(data.lead.emailBody ?? "");
+        setCorreoDraftId(null);
         setActivity(data.activity ?? []);
         setApiAnalysis(null);
         setAnalyzeEmpty(false);
@@ -164,6 +169,32 @@ function LeadDrawerBody({
       cancelled = true;
     };
   }, [selectedLeadId, upsertLead, t]);
+
+  useEffect(() => {
+    if (!canUseCorreo || isVisitor) return;
+    let cancelled = false;
+    fetch(`/api/email/drafts?leadId=${encodeURIComponent(selectedLeadId)}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          draft?: {
+            id?: string;
+            subject?: string | null;
+            body_text?: string | null;
+          } | null;
+        };
+        if (cancelled || !data.draft) return;
+        setEmailSubject(data.draft.subject ?? "");
+        setEmailBody(data.draft.body_text ?? "");
+        setCorreoDraftId(data.draft.id ?? null);
+      })
+      .catch(() => {
+        // Si falla, se mantienen las columnas heredadas del lead.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLeadId, canUseCorreo, isVisitor]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -198,6 +229,42 @@ function LeadDrawerBody({
       toast.success(t("saved"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("saveError"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveCorreoDraft() {
+    if (!lead || !canWriteLeads) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/email/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upsertByLead: true,
+          mailbox: defaultMailbox(),
+          to: pickLeadEmail(lead) ?? "",
+          subject: emailSubject,
+          bodyText: emailBody,
+          leadId: lead.id,
+          ...(correoDraftId ? { id: correoDraftId } : {}),
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        draft?: { id?: string };
+      };
+      if (!res.ok) throw new Error(data.error || t("draftSaveError"));
+      if (data.draft?.id) setCorreoDraftId(data.draft.id);
+      toast.success(t("draftSaved"), {
+        action: {
+          label: t("openDrafts"),
+          onClick: () => router.push("/correo/borradores"),
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("draftSaveError"));
     } finally {
       setSaving(false);
     }
@@ -564,13 +631,7 @@ function LeadDrawerBody({
                 onBodyChange={setEmailBody}
                 saving={saving}
                 readOnly={!canWriteLeads}
-                allowCompose={!isVisitor}
-                onSave={() =>
-                  void savePatch({
-                    emailSubject,
-                    emailBody,
-                  })
-                }
+                onSave={() => void saveCorreoDraft()}
                 onCopy={() =>
                   copy(`${emailSubject}\n\n${emailBody}`, t("email"))
                 }
@@ -584,8 +645,8 @@ function LeadDrawerBody({
               />
             </Section>
 
-            {isAdmin && !isVisitor ? (
-              <LeadEmailsSection leadId={lead.id} canUnlink={isAdmin} />
+            {canUseCorreo && !isVisitor ? (
+              <LeadEmailsSection leadId={lead.id} canUnlink={canUseCorreo} />
             ) : null}
 
             <Section title={t("activity")}>

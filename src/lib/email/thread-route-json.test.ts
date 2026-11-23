@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const requireAdmin = vi.hoisted(() =>
+const requireCorreoAccess = vi.hoisted(() =>
   vi.fn(async (): Promise<Response | null> => null),
 );
 
 vi.mock("@/lib/api-auth", () => ({
-  requireAdmin,
+  requireCorreoAccess,
 }));
 
 vi.mock("@/lib/email/sanitize-email-html", () => {
@@ -23,7 +23,7 @@ function threadRequest(): Request {
 describe("GET /api/email/threads/[id] si el sanitizer no carga", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireAdmin.mockResolvedValue(null);
+    requireCorreoAccess.mockResolvedValue(null);
   });
 
   it("el módulo carga y responde JSON 500, no un cuerpo vacío", async () => {
@@ -46,7 +46,7 @@ describe("GET /api/email/threads/[id] si el sanitizer no carga", () => {
   });
 
   it("un throw antes del try también responde JSON", async () => {
-    requireAdmin.mockRejectedValue(new Error("auth down"));
+    requireCorreoAccess.mockRejectedValue(new Error("auth down"));
     const { GET } = await import("@/app/api/email/threads/[id]/route");
     const res = await GET(threadRequest(), {
       params: Promise.resolve({ id: THREAD_ID }),

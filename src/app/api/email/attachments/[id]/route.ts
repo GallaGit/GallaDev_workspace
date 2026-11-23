@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/supabase/lead-lookup";
@@ -21,12 +21,12 @@ const RATE_MAX = 30;
  * GET /api/email/attachments/[id]
  *
  * Devuelve una URL firmada temporal de Resend para el adjunto.
- * Auth: requireAdmin + RLS. El id es el UUID de email_attachments
+ * Auth: requireCorreoAccess + RLS. El id es el UUID de email_attachments
  * (nunca un id de Resend en la URL → evita IDOR entre correos).
  * El fichero se sirve vía proxy en /api/email/attachments/[id]/file.
  */
 async function getAttachment(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;

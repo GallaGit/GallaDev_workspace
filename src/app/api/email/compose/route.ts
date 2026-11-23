@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseComposeBody } from "@/lib/email/email-payload";
 import { readOutboundRequest } from "@/lib/email/outbound-request";
@@ -19,7 +19,7 @@ const RATE_MAX = 10;
  * Auth: Admin.
  */
 async function postCompose(request: Request) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
 

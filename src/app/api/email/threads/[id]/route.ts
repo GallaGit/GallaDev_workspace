@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
@@ -14,10 +14,10 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/email/threads/[id] — hilo con sus mensajes y adjuntos.
- * Auth: requireAdmin y RLS.
+ * Auth: requireCorreoAccess y RLS.
  */
 async function getThread(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;
@@ -89,12 +89,12 @@ async function getThread(request: Request, ctx: Ctx) {
 /**
  * PATCH /api/email/threads/[id] — leído/no leído, archivar, papelera,
  * enlazar a lead.
- * Auth: requireAdmin y RLS.
+ * Auth: requireCorreoAccess y RLS.
  * Body: { is_read?: boolean, lead_id?: string | null,
  *         archived?: boolean, trashed?: boolean }
  */
 async function patchThread(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;

@@ -3,10 +3,6 @@ import { cleanup, screen, fireEvent } from "@testing-library/react";
 import { EmailEditor } from "@/components/leads/email-editor";
 import { renderWithIntl } from "@/test/i18n-wrapper";
 
-vi.mock("@/lib/utils/gmail-compose", () => ({
-  openGmailCompose: vi.fn(),
-}));
-
 describe("EmailEditor", () => {
   beforeEach(() => cleanup());
 

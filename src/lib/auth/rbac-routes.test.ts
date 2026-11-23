@@ -312,53 +312,48 @@ describe("análisis IA", () => {
   });
 });
 
-describe("correo: solo Admin", () => {
-  it.each(["Seller", "Viewer"] as const)(
-    "%s no lista hilos de un lead ni ejecuta el backfill de vinculación",
-    async (role) => {
-      asRole(role);
-      const threads = await import("@/app/api/email/threads/route");
-      const item = await import("@/app/api/email/threads/[id]/route");
-      const backfill = await import("@/app/api/email/backfill-lead-links/route");
-      const ctx = {
-        params: Promise.resolve({
-          id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+describe("correo: Admin y Seller usan el buzón; Viewer y Admin-only fuera", () => {
+  it("Viewer no lista hilos de un lead ni ejecuta el backfill de vinculación", async () => {
+    asRole("Viewer");
+    const threads = await import("@/app/api/email/threads/route");
+    const item = await import("@/app/api/email/threads/[id]/route");
+    const backfill = await import("@/app/api/email/backfill-lead-links/route");
+    const ctx = {
+      params: Promise.resolve({
+        id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+      }),
+    };
+    await expectForbidden(
+      await threads.GET(
+        new Request(
+          "http://localhost/api/email/threads?lead_id=11111111-1111-4111-8111-111111111111",
+        ),
+      ),
+    );
+    await expectForbidden(
+      await item.PATCH(
+        jsonRequest("http://localhost/api/email/threads/x", "PATCH", {
+          lead_id: null,
         }),
-      };
-      await expectForbidden(
-        await threads.GET(
-          new Request(
-            "http://localhost/api/email/threads?lead_id=11111111-1111-4111-8111-111111111111",
-          ),
+        ctx,
+      ),
+    );
+    await expectForbidden(
+      await backfill.POST(
+        jsonRequest(
+          "http://localhost/api/email/backfill-lead-links",
+          "POST",
+          {},
         ),
-      );
-      await expectForbidden(
-        await item.PATCH(
-          jsonRequest("http://localhost/api/email/threads/x", "PATCH", {
-            lead_id: null,
-          }),
-          ctx,
-        ),
-      );
-      await expectForbidden(
-        await backfill.POST(
-          jsonRequest(
-            "http://localhost/api/email/backfill-lead-links",
-            "POST",
-            {},
-          ),
-        ),
-      );
-      expect(adminClient).not.toHaveBeenCalled();
-    },
-  );
+      ),
+    );
+    expect(adminClient).not.toHaveBeenCalled();
+  });
 
-  it("Seller recibe 403 en hilos y en la respuesta, sin cliente admin", async () => {
-    asRole("Seller");
+  it("Viewer recibe 403 en hilos, respuesta y adjuntos; Seller sí pasa el gate", async () => {
     const threads = await import("@/app/api/email/threads/route");
     const item = await import("@/app/api/email/threads/[id]/route");
     const reply = await import("@/app/api/email/threads/[id]/reply/route");
-    const backfill = await import("@/app/api/email/backfill-bodies/route");
     const attachments = await import("@/app/api/email/attachments/[id]/route");
     const attachmentFile = await import(
       "@/app/api/email/attachments/[id]/file/route"
@@ -368,6 +363,8 @@ describe("correo: solo Admin", () => {
         id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
       }),
     };
+
+    asRole("Viewer");
     await expectForbidden(
       await threads.GET(new Request("http://localhost/api/email/threads")),
     );
@@ -380,11 +377,6 @@ describe("correo: solo Admin", () => {
           text: "hola",
         }),
         ctx,
-      ),
-    );
-    await expectForbidden(
-      await backfill.POST(
-        jsonRequest("http://localhost/api/email/backfill-bodies", "POST", {}),
       ),
     );
     await expectForbidden(
@@ -403,53 +395,105 @@ describe("correo: solo Admin", () => {
         ctx,
       ),
     );
-    expect(adminClient).not.toHaveBeenCalled();
+
+    asRole("Seller");
+    const sellerGet = await threads.GET(
+      new Request("http://localhost/api/email/threads"),
+    );
+    expect(sellerGet.status).not.toBe(401);
+    expect(sellerGet.status).not.toBe(403);
+    const sellerPatch = await item.PATCH(
+      jsonRequest(
+        "http://localhost/api/email/threads/ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
+        "PATCH",
+        { lead_id: "not-a-uuid" },
+      ),
+      ctx,
+    );
+    expect(sellerPatch.status).toBe(400);
   });
 
-  it.each(["Seller", "Viewer"] as const)(
-    "%s no obtiene hilos de ninguna carpeta ni cuenta de las rutas /correo",
-    async (role) => {
-      asRole(role);
-      const threads = await import("@/app/api/email/threads/route");
-      const unread = await import("@/app/api/email/threads/unread-count/route");
-      for (const view of ["inbox", "sent", "archived", "trash"]) {
-        for (const mailbox of ["", "&mailbox=hola%40galladev.com", "&mailbox=ociel%40galladev.com"]) {
-          await expectForbidden(
-            await threads.GET(
-              new Request(`http://localhost/api/email/threads?view=${view}${mailbox}`),
-            ),
-          );
-        }
-      }
-      await expectForbidden(
-        await unread.GET(
-          new Request(
-            "http://localhost/api/email/threads/unread-count?mailbox=hola%40galladev.com",
-          ),
-        ),
-      );
-      expect(adminClient).not.toHaveBeenCalled();
-    },
-  );
-
-  it("Seller recibe 403 en acciones masivas y contador de no leídos", async () => {
+  it("Seller no ejecuta backfill, retención ni importación heredada", async () => {
     asRole("Seller");
-    const threads = await import("@/app/api/email/threads/route");
-    const unread = await import("@/app/api/email/threads/unread-count/route");
+    const backfillBodies = await import("@/app/api/email/backfill-bodies/route");
+    const backfillLinks = await import(
+      "@/app/api/email/backfill-lead-links/route"
+    );
+    const legacy = await import(
+      "@/app/api/email/drafts/import-legacy-leads/route"
+    );
+    const signatures = await import("@/app/api/email/signatures/route");
     await expectForbidden(
-      await threads.PATCH(
-        jsonRequest("http://localhost/api/email/threads", "PATCH", {
-          ids: ["ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd"],
-          archived: true,
+      await backfillBodies.POST(
+        jsonRequest("http://localhost/api/email/backfill-bodies", "POST", {}),
+      ),
+    );
+    await expectForbidden(
+      await backfillLinks.POST(
+        jsonRequest("http://localhost/api/email/backfill-lead-links", "POST", {}),
+      ),
+    );
+    await expectForbidden(
+      await legacy.POST(
+        jsonRequest(
+          "http://localhost/api/email/drafts/import-legacy-leads",
+          "POST",
+          { dryRun: true },
+        ),
+      ),
+    );
+    await expectForbidden(
+      await signatures.PUT(
+        jsonRequest("http://localhost/api/email/signatures", "PUT", {
+          mailbox: "hola@galladev.com",
+          signature: "x",
         }),
       ),
     );
+    expect(adminClient).not.toHaveBeenCalled();
+  });
+
+  it("Viewer no obtiene hilos de ninguna carpeta ni cuenta de las rutas /correo", async () => {
+    asRole("Viewer");
+    const threads = await import("@/app/api/email/threads/route");
+    const unread = await import("@/app/api/email/threads/unread-count/route");
+    for (const view of ["inbox", "sent", "archived", "trash"]) {
+      for (const mailbox of ["", "&mailbox=hola%40galladev.com", "&mailbox=ociel%40galladev.com"]) {
+        await expectForbidden(
+          await threads.GET(
+            new Request(`http://localhost/api/email/threads?view=${view}${mailbox}`),
+          ),
+        );
+      }
+    }
     await expectForbidden(
       await unread.GET(
-        new Request("http://localhost/api/email/threads/unread-count"),
+        new Request(
+          "http://localhost/api/email/threads/unread-count?mailbox=hola%40galladev.com",
+        ),
       ),
     );
     expect(adminClient).not.toHaveBeenCalled();
+  });
+
+  it("Seller pasa el gate en acciones masivas y en el contador de no leídos", async () => {
+    asRole("Seller");
+    const threads = await import("@/app/api/email/threads/route");
+    const unread = await import("@/app/api/email/threads/unread-count/route");
+    const bulk = await threads.PATCH(
+      jsonRequest("http://localhost/api/email/threads", "PATCH", {
+        ids: ["no-uuid"],
+        archived: true,
+      }),
+    );
+    // Pasa el rol; el body inválido o la consulta no debe ser un 403.
+    expect(bulk.status).not.toBe(401);
+    expect(bulk.status).not.toBe(403);
+    const count = await unread.GET(
+      new Request("http://localhost/api/email/threads/unread-count"),
+    );
+    expect(count.status).not.toBe(401);
+    expect(count.status).not.toBe(403);
   });
 
   it("Admin no enlaza un lead_id que no es UUID", async () => {
