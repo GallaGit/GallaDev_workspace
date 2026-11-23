@@ -1,19 +1,29 @@
-"use client";
+import { permanentRedirect } from "next/navigation";
+import { correoPath, isThreadId, parseAccountParam } from "@/lib/email/correo-routes";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { InboxPage } from "@/components/correo/inbox-page";
-import { isUuid } from "@/lib/supabase/lead-lookup";
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-function CorreoContent() {
-  const thread = useSearchParams().get("thread");
-  return <InboxPage initialThreadId={thread && isUuid(thread) ? thread : null} />;
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
-export default function Page() {
-  return (
-    <Suspense fallback={null}>
-      <CorreoContent />
-    </Suspense>
+/**
+ * /correo no tiene contenido propio: va a Recibidos (308). El enlace antiguo
+ * /correo?thread=<id> (ficha del lead) abre ese hilo; la carpeta real la
+ * corrige el cliente si el hilo no está en Recibidos.
+ */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+  const thread = first(params.thread);
+  permanentRedirect(
+    correoPath(
+      "inbox",
+      isThreadId(thread) ? thread : null,
+      parseAccountParam(first(params.cuenta)),
+    ),
   );
 }

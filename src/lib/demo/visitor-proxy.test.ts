@@ -88,10 +88,20 @@ describe("proxy de visitante", () => {
     expect(createServerClient).not.toHaveBeenCalled();
   });
 
-  it("redirige settings y email a /leads", async () => {
+  it("redirige settings, email y todas las rutas de /correo a /leads", async () => {
     const { proxy } = await import("@/proxy");
     const token = signVisitorToken(SECRET).token;
-    for (const path of ["/settings", "/email"]) {
+    for (const path of [
+      "/settings",
+      "/email",
+      "/correo",
+      "/correo/recibidos",
+      "/correo/enviados",
+      "/correo/archivados",
+      "/correo/papelera",
+      "/correo/borradores",
+      "/correo/recibidos/11111111-1111-4111-8111-111111111111",
+    ]) {
       const res = await proxy(request(path, token));
       expect(res.status).toBeGreaterThanOrEqual(300);
       expect(res.status).toBeLessThan(400);

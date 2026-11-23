@@ -406,6 +406,32 @@ describe("correo: solo Admin", () => {
     expect(adminClient).not.toHaveBeenCalled();
   });
 
+  it.each(["Seller", "Viewer"] as const)(
+    "%s no obtiene hilos de ninguna carpeta ni cuenta de las rutas /correo",
+    async (role) => {
+      asRole(role);
+      const threads = await import("@/app/api/email/threads/route");
+      const unread = await import("@/app/api/email/threads/unread-count/route");
+      for (const view of ["inbox", "sent", "archived", "trash"]) {
+        for (const mailbox of ["", "&mailbox=hola%40galladev.com", "&mailbox=ociel%40galladev.com"]) {
+          await expectForbidden(
+            await threads.GET(
+              new Request(`http://localhost/api/email/threads?view=${view}${mailbox}`),
+            ),
+          );
+        }
+      }
+      await expectForbidden(
+        await unread.GET(
+          new Request(
+            "http://localhost/api/email/threads/unread-count?mailbox=hola%40galladev.com",
+          ),
+        ),
+      );
+      expect(adminClient).not.toHaveBeenCalled();
+    },
+  );
+
   it("Seller recibe 403 en acciones masivas y contador de no leídos", async () => {
     asRole("Seller");
     const threads = await import("@/app/api/email/threads/route");

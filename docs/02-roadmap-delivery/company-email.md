@@ -202,7 +202,7 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 ## 8. Future: folders (partial)
 
-**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). Gmail-like dense list (sender, subject, last-message snippet, short date, attachment clip, bold when unread), filterable by `mailbox_address`. **Inbox / Sent / Archived / Trash** views (Sent: PR #106) with unread counts per view and on the Correo sidebar entry, and “Load more” pagination (50). Read/unread, archive, trash and restore, single or bulk via checkboxes. Compose/reply via Resend. No Spam folder. **Reply drafts** on an open thread exist (`email_drafts.thread_id`, per-thread autosave; see the Spanish spec, Phase 3). Compose, reply and forward support Cc/Bcc, a per-mailbox signature and outbound attachments (see the Spanish spec, «Redactar: Cc/Cco, autoguardado, firma y adjuntos»). Folder, mailbox and the open thread live in client state, not in the URL: there is a single route, `/correo`. Point 7 in section 9 changes that.
+**Today.** Correo is a **per-thread timeline** plus **new-message drafts** (`email_drafts`, Borradores pill). Gmail-like dense list (sender, subject, last-message snippet, short date, attachment clip, bold when unread), filterable by `mailbox_address`. **Inbox / Sent / Archived / Trash** views (Sent: PR #106) with unread counts per view and on the Correo sidebar entry, and “Load more” pagination (50). Read/unread, archive, trash and restore, single or bulk via checkboxes. Compose/reply via Resend. No Spam folder. **Reply drafts** on an open thread exist (`email_drafts.thread_id`, per-thread autosave; see the Spanish spec, Phase 3). Compose, reply and forward support Cc/Bcc, a per-mailbox signature and outbound attachments (see the Spanish spec, «Redactar: Cc/Cco, autoguardado, firma y adjuntos»). Since point 7, folder, account and the open thread live in the URL (`/correo/<folder>[/<id>]?cuenta=`); before that there was a single route, `/correo`.
 
 **Folders (Oct 9, 2026).** Migration `20261009180000_email_thread_inbox_state.sql` (apply manually in the SQL editor **before** deploying): `email_threads.archived_at`, `trashed_at`, `last_snippet`, `has_attachments` (the last two kept up to date by triggers, with backfill). RLS unchanged. API: `GET /api/email/threads?view=`, bulk `PATCH /api/email/threads`, `PATCH /api/email/threads/[id]` (`archived`, `trashed`), `GET /api/email/threads/unread-count`, all `requireAdmin` + zod. **Trash purge (PR #106):** the `GET /api/cron/retention` cron counts (and, if `RETENTION_ENABLED=true`, deletes) threads whose `trashed_at` is older than 30 days. The migration `20261118220000_purge_trashed_email_threads.sql` must have been applied by hand. Without that variable the cron stays in dry-run and only reports counts.
 
@@ -237,11 +237,13 @@ These improvements were agreed with Ociel after Phases 1–3. The work order was
 | 4 | Persist inbound attachments in Storage when `EMAIL_ATTACHMENTS_BUCKET` is set | Done (PR #106) |
 | 5 | Cc/Bcc, autosave, per-mailbox signature and outbound attachments | Done (PR #108; see the Spanish spec, «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
 | 6 | Automatic thread↔lead linking, auto/manual source, and a “Correos” section on the lead record | In [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), not merged yet |
-| 7 | Refresh the list when new mail arrives; per-folder routes; dedicated email sidebar; Cuentas; mobile layout | **Documented, pending implementation** (detail below) |
+| 7 | Refresh the list when new mail arrives; per-folder routes; dedicated email sidebar; Cuentas; mobile layout | **Done** (per-folder routes, email sidebar, Cuentas, 60 s refresh and mobile drawer; detail below) |
 
 ### Point 7 — Per-folder routes, email sidebar, Cuentas, and mobile layout
 
-**Status:** Documented, pending implementation.
+**Status:** Done.
+
+**Implementation.** Routes `/correo/recibidos|enviados|archivados|papelera|borradores[/<thread-id>]` with `?cuenta=`; `/correo` redirects (308) to `/correo/recibidos`, and legacy `/correo?thread=<id>` links keep working. State lives in the URL and changing folder, account or thread does not hit the server (`history.pushState`). `AppShell` swaps `AppSidebar` for `CorreoSidebar` on `/correo/*` (Admin only). The list refreshes every 60 s, on tab visibility and on `correo:unread-changed`, without losing scroll or the open thread. Compose and reply reuse `ComposeDialog` (inline variant in the wide area). No database migrations.
 
 #### Problem
 
@@ -311,10 +313,11 @@ Why a query and not `/correo/hola/recibidos`: folder and mailbox are already ort
 
 **Mobile** (below `md`, 768 px, the same cut-off as the general menu drawer): the split is the same as on desktop (email sidebar / content), but the two are not shown at the same time.
 
-- The email sidebar is the full-width screen: Back, Nuevo, folders, Cuentas and the list. The message body is not visible at the same time.
-- Opening a thread shows the content full screen, with a **Back** button that returns to the email sidebar (same folder, same account, and, when reasonable, the same scroll position).
+- **Implementation decision (Ociel's requirement, overrides the full-screen draft):** on mobile the email sidebar is a **collapsible drawer**, never a permanent column covering the content. A menu button in the header opens it; it closes when tapping a thread, the overlay, the X or Escape. With the drawer closed, the wide area shows the thread, the compose view or the empty state (with an “Abrir bandeja” button).
+- The drawer holds Back, Nuevo, search, folders, Cuentas and the list (with its own vertical scroll). Choosing a folder or account keeps the drawer open; opening a thread closes it.
 - **Back** at the top of the email sidebar restores the app’s general menu (previous page or dashboard).
-- **Nuevo** opens the compose view full screen, also with Back to the email sidebar.
+- **Nuevo** opens the compose view in the content area and closes the drawer.
+- **No horizontal scrolling.** The HTML email body runs in an isolated iframe with fitting CSS (`max-width:100%`, responsive images and tables, `overflow-wrap:anywhere`, wrapping `pre`/`code`); only a wide table may scroll inside its own box. Header, attachments and list use `min-w-0` and `overflow-x-hidden`.
 
 **Refresh the list when new mail arrives** (the original scope of point 7; it stays). If a new message belongs to the folder and account being viewed, the list updates without a manual page reload and without losing the selection, the scroll position, or an open thread. Unread badges in the email sidebar update as well, even if the message lands in another folder. The interval is **every 60 s**, the same as the counters, and also when the tab becomes visible and on the `correo:unread-changed` event. This delivery does not require a WebSocket. It does not replace an out-of-app notification (that remains question 3 in section 7).
 
@@ -328,7 +331,7 @@ Why a query and not `/correo/hola/recibidos`: folder and mailbox are already ort
 - [ ] `?cuenta=hola` on Recibidos lists only threads for `hola@galladev.com`. The filter can be combined with the existing search.
 - [ ] Seller, Viewer and the visitor demo do not see the new routes or their APIs (same rule as `/correo`). A visitor does not see “Correo” in the general menu.
 - [ ] On desktop (`md` and up), the email sidebar and the content area are visible at the same time; the list is not in the wide area.
-- [ ] Below 768 px, the email sidebar (folders and list) is full screen. Opening a thread shows the content full screen, with Back to the email sidebar. Back on that sidebar returns to the app’s general menu.
+- [ ] Below 768 px, the email sidebar is a collapsible drawer (menu button; closes on tapping a thread, the overlay or the X) and never permanently covers the content. A thread causes no horizontal scrolling. Back on the sidebar returns to the app’s general menu.
 - [ ] With the inbox open, a new email that belongs in the current view appears in the list within 60 s (the same pace as the counters; also when the tab becomes visible), and badges update, without a manual reload.
 - [ ] `/email` is untouched, Spam is not added, and the permission model is unchanged beyond applying the existing one to the new routes.
 

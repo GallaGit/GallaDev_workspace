@@ -239,7 +239,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 ## 8. Futuro: bandejas (parcial)
 
-**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Enviados / Archivados / Papelera** (Enviados: PR #106) con contador de no leídos por vista y en la entrada Correo de la barra lateral, y paginación «Cargar más» (50). Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Spam. Los borradores de **respuesta** ya existen (`email_drafts.thread_id`, autoguardado por hilo; ver Fase 3). Compose, responder y reenviar admiten Cc/Cco, firma por buzón y adjuntos salientes (ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos»). La carpeta, el buzón y el hilo abierto viven en el estado del cliente, no en la URL: hay una sola ruta, `/correo`. El punto 7 de la sección 9 lo cambia.
+**Hoy.** Correo es un **timeline por hilo** más **borradores de mensajes nuevos** (`email_drafts`, pill Borradores). Lista densa tipo Gmail (remitente, asunto, fragmento del último mensaje, fecha corta, clip de adjunto, negrita si no leído), filtrable por `mailbox_address`. Vistas **Recibidos / Enviados / Archivados / Papelera** (Enviados: PR #106) con contador de no leídos por vista y en la entrada Correo de la barra lateral, y paginación «Cargar más» (50). Leído/no leído, archivar, papelera y restaurar, uno a uno o en bloque con casillas. Compose/reply vía Resend. No hay Spam. Los borradores de **respuesta** ya existen (`email_drafts.thread_id`, autoguardado por hilo; ver Fase 3). Compose, responder y reenviar admiten Cc/Cco, firma por buzón y adjuntos salientes (ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos»). Desde el punto 7 la carpeta, la cuenta y el hilo abierto viven en la URL (`/correo/<carpeta>[/<id>]?cuenta=`); antes había una sola ruta, `/correo`.
 
 **Bandejas (9 Oct 2026).** Migración `20261009180000_email_thread_inbox_state.sql` (aplicar a mano en el SQL editor **antes** de desplegar):
 
@@ -281,11 +281,13 @@ Estas mejoras se acordaron con Ociel después de las Fases 1–3. El orden de tr
 | 4 | Persistir adjuntos entrantes en Storage cuando existe `EMAIL_ATTACHMENTS_BUCKET` | Hecho (PR #106) |
 | 5 | Cc/Cco, autoguardado, firma por buzón y adjuntos salientes | Hecho (PR #108; ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
 | 6 | Vinculación automática hilo↔lead, origen auto/manual y sección «Correos» en la ficha del lead | En el [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), pendiente de fusionar |
-| 7 | Actualizar la lista al llegar correo nuevo; rutas por carpeta; barra lateral dedicada al correo; Cuentas; vista móvil | **Documentado, pendiente de implementar** (detalle abajo) |
+| 7 | Actualizar la lista al llegar correo nuevo; rutas por carpeta; barra lateral dedicada al correo; Cuentas; vista móvil | **Hecho** (rutas por carpeta, barra de correo, Cuentas, refresco cada 60 s y drawer móvil; detalle abajo) |
 
 ### Punto 7 — Rutas por carpeta, barra lateral de correo, Cuentas y vista móvil
 
-**Estado:** Documentado, pendiente de implementar.
+**Estado:** Hecho.
+
+**Implementación.** Rutas `/correo/recibidos|enviados|archivados|papelera|borradores[/<id-del-hilo>]` con `?cuenta=`; `/correo` redirige (308) a `/correo/recibidos`, y los enlaces antiguos `/correo?thread=<id>` siguen funcionando. El estado vive en la URL y el cambio de carpeta, cuenta o hilo no recarga el servidor (`history.pushState`). `AppShell` sustituye `AppSidebar` por `CorreoSidebar` en `/correo/*` (solo Admin). La lista se refresca cada 60 s, al volver a la pestaña y con `correo:unread-changed`, sin perder el scroll ni el hilo abierto. Redactar y responder reutilizan `ComposeDialog` (variante en línea en el área ancha). No hay migraciones de base de datos.
 
 #### Problema
 
@@ -355,10 +357,11 @@ Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son e
 
 **Móvil** (por debajo de `md`, 768 px, el mismo corte que el cajón del menú general): la división es la misma que en escritorio (barra de correo / contenido), pero no se ven a la vez.
 
-- La barra de correo es la pantalla a ancho completo: Atrás, Nuevo, carpetas, Cuentas y lista. No se ve el cuerpo del mensaje al mismo tiempo.
-- Al abrir un hilo, el contenido ocupa toda la pantalla, con un botón **Atrás** que vuelve a la barra de correo (misma carpeta, misma cuenta y, si es razonable, la misma posición de scroll).
+- **Decisión de implementación (requisito de Ociel, prevalece sobre el borrador a pantalla completa):** en el móvil la barra de correo es un **cajón (drawer) plegable**, nunca una columna permanente que tape el contenido. Un botón de menú en la cabecera lo abre; se cierra al tocar un hilo, el fondo oscuro (overlay), la X o Escape. Con el cajón cerrado, el área ancha muestra el hilo, la redacción o el estado vacío (con un botón «Abrir bandeja»).
+- El cajón contiene Atrás, Nuevo, búsqueda, carpetas, Cuentas y la lista (con su propio scroll vertical). Elegir carpeta o cuenta mantiene el cajón abierto; abrir un hilo lo cierra.
 - El **Atrás** de la parte superior de la barra de correo restaura el menú general de la app (página anterior o dashboard).
-- **Nuevo** abre la vista de redacción a pantalla completa, también con Atrás a la barra de correo.
+- **Nuevo** abre la vista de redacción en el área de contenido y cierra el cajón.
+- **Sin scroll horizontal.** El cuerpo HTML del correo va en un iframe aislado con CSS de ajuste (`max-width:100%`, imágenes y tablas adaptables, `overflow-wrap:anywhere`, `pre`/`code` con salto de línea); solo una tabla ancha puede desplazarse dentro de su propia caja. La cabecera, los adjuntos y la lista usan `min-w-0` y `overflow-x-hidden`.
 
 **Actualizar la lista al llegar correo nuevo** (el alcance original del punto 7; se mantiene). Si llega un mensaje nuevo que pertenece a la carpeta y cuenta que se están viendo, la lista se actualiza sin recargar la página a mano ni perder la selección, el scroll o un hilo abierto. Las insignias de no leídos de la barra de correo se actualizan también, incluso si el mensaje cae en otra carpeta. El intervalo es **cada 60 s**, el mismo que los contadores, y también al volver a la pestaña y con el evento `correo:unread-changed`. Esta entrega no exige WebSocket. No sustituye un aviso push fuera de la app (eso sigue siendo la pregunta 3 de la sección 7).
 
@@ -372,7 +375,7 @@ Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son e
 - [ ] `?cuenta=hola` en Recibidos solo lista hilos de `hola@galladev.com`. El filtro se puede combinar con la búsqueda que ya existe.
 - [ ] Seller, Viewer y la demo de visitante no ven las nuevas rutas ni sus APIs (el mismo criterio que `/correo`). Un visitante no ve «Correo» en el menú general.
 - [ ] En escritorio (`md` y superior) se ven a la vez la barra de correo y el área de contenido; la lista no está en el área ancha.
-- [ ] En un ancho menor de 768 px, la barra de correo (carpetas y lista) ocupa toda la pantalla. Al abrir un hilo, el contenido ocupa toda la pantalla, con Atrás a la barra de correo. El Atrás de esa barra vuelve al menú general de la app.
+- [ ] En un ancho menor de 768 px, la barra de correo es un cajón plegable (botón de menú; se cierra al tocar un hilo, el overlay o la X) y nunca tapa el contenido de forma permanente. El hilo no produce scroll horizontal. El Atrás de la barra vuelve al menú general de la app.
 - [ ] Con la bandeja abierta, un correo nuevo que encaja en la vista aparece en la lista en no más de 60 s (el mismo ritmo que los contadores; también al volver a la pestaña), y las insignias se actualizan, sin recargar a mano.
 - [ ] No se toca `/email`, no se añade Spam, y no se cambia el modelo de permisos más allá de aplicar el que ya existe a las rutas nuevas.
 

@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { CorreoSidebar } from "@/components/correo/correo-sidebar";
+import { CorreoWorkspaceProvider } from "@/components/correo/correo-workspace";
+import { isCorreoPath } from "@/lib/email/correo-routes";
 import { AuthFlashBanner } from "@/components/auth-flash-banner";
 import { PendingAccess } from "@/components/auth/pending-access";
 import { DemoBanner } from "@/components/demo/demo-banner";
@@ -15,7 +18,32 @@ import {
 const EDGE_PX = 24;
 const SWIPE_DX = 50;
 
-function AppShellChrome({ children }: { children: React.ReactNode }) {
+/**
+ * Última página fuera de /correo: a ella vuelve el botón Atrás de la barra de
+ * correo (o al dashboard si se entró directamente). Se ajusta durante el render
+ * para que el valor esté ya en el primer pintado de /correo.
+ */
+function useReturnPath(pathname: string): string {
+  const [state, setState] = useState<{ pathname: string; outside: string | null }>(
+    () => ({ pathname, outside: isCorreoPath(pathname) ? null : pathname }),
+  );
+  if (state.pathname !== pathname) {
+    setState({
+      pathname,
+      outside: isCorreoPath(pathname) ? state.outside : pathname,
+    });
+  }
+  return state.outside ?? "/";
+}
+
+function AppShellChrome({
+  children,
+  correoChrome,
+}: {
+  children: React.ReactNode;
+  /** true: la barra de correo sustituye a la barra general. */
+  correoChrome: boolean;
+}) {
   const { open, setOpen, close } = useNavChrome();
   const touchRef = useRef<{
     x: number;
@@ -26,6 +54,7 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   const onTouchStart = useCallback(
     (e: TouchEvent) => {
+      if (correoChrome) return;
       if (window.matchMedia("(min-width: 768px)").matches) return;
       const t = e.touches[0];
       if (!t) return;
@@ -43,7 +72,7 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
         onSidebar,
       };
     },
-    [open],
+    [open, correoChrome],
   );
 
   const onTouchMove = useCallback(
@@ -89,8 +118,8 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="flex h-full min-h-0 overflow-hidden bg-sidebar text-fg">
-      <AppSidebar />
-      {open ? (
+      {correoChrome ? <CorreoSidebar /> : <AppSidebar />}
+      {open && !correoChrome ? (
         <div
           className="fixed inset-0 z-40 bg-black/40 md:hidden"
           onClick={close}
@@ -113,6 +142,7 @@ function AppShellChrome({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const access = useSessionAccess();
+  const returnPath = useReturnPath(pathname);
   // El login se muestra sin el chrome de la app.
   if (pathname === "/login") {
     return (
@@ -125,9 +155,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/pending" || (access.ready && access.pending)) {
     return <PendingAccess />;
   }
-  return (
+  // En /correo la barra general se sustituye por la de correo. Seller y Viewer
+  // (sin acceso al buzón) conservan la general; mientras se carga la sesión se
+  // asume Admin para no parpadear.
+  const correoChrome =
+    isCorreoPath(pathname) && !access.isVisitor && (!access.ready || access.isAdmin);
+  const chrome = (
     <NavChromeProvider>
-      <AppShellChrome>{children}</AppShellChrome>
+      <AppShellChrome correoChrome={correoChrome}>{children}</AppShellChrome>
     </NavChromeProvider>
+  );
+  if (!correoChrome) return chrome;
+  return (
+    <CorreoWorkspaceProvider
+      enabled={access.ready && access.isAdmin}
+      backHref={returnPath}
+    >
+      {chrome}
+    </CorreoWorkspaceProvider>
   );
 }

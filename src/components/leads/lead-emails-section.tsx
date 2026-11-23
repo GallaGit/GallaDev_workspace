@@ -8,6 +8,7 @@ import { ExternalLink, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { readJsonResponse } from "@/lib/http/read-json";
 import { formatThreadDate } from "@/lib/email/thread-state";
+import { correoPath } from "@/lib/email/correo-routes";
 
 export interface LeadEmailThread {
   id: string;
@@ -111,7 +112,7 @@ export function LeadEmailsSection({
               >
                 <div className="flex items-start gap-2">
                   <Link
-                    href={`/correo?thread=${thread.id}`}
+                    href={correoPath("inbox", thread.id)}
                     title={t("open")}
                     className={`min-w-0 flex-1 truncate hover:underline ${
                       thread.is_read ? "text-(--fg)" : "font-semibold text-(--fg)"

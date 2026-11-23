@@ -24,10 +24,20 @@ const DB_DOT: Record<string, string> = {
   down: "bg-red-500",
 };
 
+/** Botón de menú propio de la página (p. ej. el cajón de la barra de correo). */
+export type TopbarMenu = {
+  open: boolean;
+  onToggle: () => void;
+  controlsId: string;
+  openLabel: string;
+  closeLabel: string;
+};
+
 export function Topbar({
   title,
   subtitle,
-}: { title: string; subtitle?: string }) {
+  menu,
+}: { title: string; subtitle?: string; menu?: TopbarMenu }) {
   const format = useFormatter();
   const t = useTranslations();
   const { theme, setTheme, mounted } = useTheme();
@@ -37,9 +47,11 @@ export function Topbar({
   const dbProvider = useUiStore((s) => s.dbProvider);
   const dbHealth = useUiStore((s) => s.dbHealth);
   const nav = useNavChromeOptional();
-  const navOpen = nav?.open ?? false;
-  const navId = nav?.navId;
-  const navToggle = nav?.toggle;
+  const navOpen = menu ? menu.open : (nav?.open ?? false);
+  const navId = menu ? menu.controlsId : nav?.navId;
+  const navToggle = menu ? menu.onToggle : nav?.toggle;
+  const openLabel = menu ? menu.openLabel : t("topbar.openMenu");
+  const closeLabel = menu ? menu.closeLabel : t("topbar.closeMenu");
 
   useEffect(() => {
     void refreshDbStatus();
@@ -58,9 +70,7 @@ export function Topbar({
             onClick={navToggle}
             aria-expanded={navOpen}
             aria-controls={navId}
-            aria-label={
-              navOpen ? t("topbar.closeMenu") : t("topbar.openMenu")
-            }
+            aria-label={navOpen ? closeLabel : openLabel}
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </Button>

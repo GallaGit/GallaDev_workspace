@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithIntl } from "@/test/i18n-wrapper";
 import { ThreadList } from "./thread-list";
-import type { EmailThread } from "./inbox-page";
+import type { EmailThread } from "./types";
 
 function thread(overrides: Partial<EmailThread>): EmailThread {
   return {
