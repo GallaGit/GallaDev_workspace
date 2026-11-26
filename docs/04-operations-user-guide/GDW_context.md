@@ -22,8 +22,8 @@ Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` 
 - `/kanban`: the nine pipeline states. There is no inline “add card” control.
 - `/stats`: statistics. Chart type selector: Barras, Circular (donut), Área (`localStorage` key `gdw-stats-chart-type`).
 - `/duplicates`: duplicate groups.
-- `/correo`: company inbox (`hola@` and `ociel@`). Unified inbox with filter, chip, Nuevo (Resend compose), Drafts, read/reply, link to lead. Admin only. No Inbox/Sent/Spam folders (see company-email spec).
-- `/email`: draft review and Gmail Compose support. Visitors are redirected to `/leads`.
+- `/correo`: company inbox (`hola@` and `ociel@`), with folder routes, compose, drafts, read/reply and link to lead. Admin and Seller. Viewer and visitors have no access (see company-email spec).
+- `/email`: permanent redirect to `/correo/borradores`. Visitors are redirected to `/leads`.
 - `/settings`: integration status, security, and masked configuration. Visitors are redirected to `/leads`.
 
 ## Daily operation

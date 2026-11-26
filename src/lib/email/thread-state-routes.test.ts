@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const requireAdmin = vi.hoisted(() =>
+const requireCorreoAccess = vi.hoisted(() =>
   vi.fn(async (): Promise<Response | null> => null),
 );
 const createSupabaseServerClient = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/api-auth", () => ({ requireAdmin }));
+vi.mock("@/lib/api-auth", () => ({ requireCorreoAccess }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient }));
 vi.mock("@/lib/email/sanitize-email-html", () => ({
   prepareEmailHtml: (value: string | null) => value,
@@ -60,12 +60,12 @@ function patchRequest(body: unknown): Request {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireAdmin.mockResolvedValue(null);
+  requireCorreoAccess.mockResolvedValue(null);
 });
 
 describe("PATCH /api/email/threads (masivo)", () => {
   it("sin Admin devuelve la denegación y no abre Supabase", async () => {
-    requireAdmin.mockResolvedValue(
+    requireCorreoAccess.mockResolvedValue(
       new Response(JSON.stringify({ ok: false }), { status: 403 }),
     );
     const { PATCH } = await import("@/app/api/email/threads/route");
@@ -170,7 +170,7 @@ describe("PATCH /api/email/threads/[id] (vinculación a lead)", () => {
   });
 
   it("sin Admin no toca la BD", async () => {
-    requireAdmin.mockResolvedValue(new Response(null, { status: 403 }));
+    requireCorreoAccess.mockResolvedValue(new Response(null, { status: 403 }));
     const { res, update } = await patchLead({ lead_id: null });
     expect(res.status).toBe(403);
     expect(update).toBeUndefined();
@@ -212,7 +212,7 @@ describe("GET /api/email/threads?lead_id= (ficha del lead)", () => {
   });
 
   it("sin Admin (Seller/Viewer) no devuelve correo", async () => {
-    requireAdmin.mockResolvedValue(new Response(null, { status: 403 }));
+    requireCorreoAccess.mockResolvedValue(new Response(null, { status: 403 }));
     const { GET } = await import("@/app/api/email/threads/route");
     const res = await GET(
       new Request(`http://localhost/api/email/threads?lead_id=${B}`),
@@ -306,7 +306,7 @@ describe("GET /api/email/threads/unread-count", () => {
   });
 
   it("sin Admin no abre Supabase", async () => {
-    requireAdmin.mockResolvedValue(new Response(null, { status: 401 }));
+    requireCorreoAccess.mockResolvedValue(new Response(null, { status: 401 }));
     const { GET } = await import("@/app/api/email/threads/unread-count/route");
     const res = await GET(new Request("http://localhost/api/email/threads/unread-count"));
     expect(res.status).toBe(401);
@@ -414,7 +414,7 @@ describe("GET /api/email/threads?q= (búsqueda)", () => {
   });
 
   it("sin Admin no busca", async () => {
-    requireAdmin.mockResolvedValue(new Response(null, { status: 403 }));
+    requireCorreoAccess.mockResolvedValue(new Response(null, { status: 403 }));
     const { GET } = await import("@/app/api/email/threads/route");
     const res = await GET(new Request("http://localhost/api/email/threads?q=ana"));
     expect(res.status).toBe(403);

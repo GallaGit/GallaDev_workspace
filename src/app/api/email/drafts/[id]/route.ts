@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { isUuid } from "@/lib/supabase/lead-lookup";
@@ -13,7 +13,7 @@ type Ctx = { params: Promise<{ id: string }> };
  * DELETE /api/email/drafts/[id] — eliminar borrador (Admin).
  */
 async function deleteDraft(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;

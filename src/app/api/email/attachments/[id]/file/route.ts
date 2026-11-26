@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/supabase/lead-lookup";
@@ -65,11 +65,11 @@ function errorResponse(reason: keyof typeof ERRORS) {
  * GET /api/email/attachments/[id]/file
  *
  * Proxy en streaming del fichero (mismo origen). Mismas comprobaciones que
- * /api/email/attachments/[id]: requireAdmin + RLS + rate limit. La URL
+ * /api/email/attachments/[id]: requireCorreoAccess + RLS + rate limit. La URL
  * firmada de Resend nunca llega al navegador.
  */
 async function getAttachmentFile(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;

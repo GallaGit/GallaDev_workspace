@@ -155,11 +155,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/pending" || (access.ready && access.pending)) {
     return <PendingAccess />;
   }
-  // En /correo la barra general se sustituye por la de correo. Seller y Viewer
-  // (sin acceso al buzón) conservan la general; mientras se carga la sesión se
-  // asume Admin para no parpadear.
+  // En /correo la barra general se sustituye por la de correo. Viewer
+  // (sin acceso al buzón) conserva la general; mientras se carga la sesión se
+  // asume acceso al buzón para no parpadear.
   const correoChrome =
-    isCorreoPath(pathname) && !access.isVisitor && (!access.ready || access.isAdmin);
+    isCorreoPath(pathname) && !access.isVisitor && (!access.ready || access.canUseCorreo);
   const chrome = (
     <NavChromeProvider>
       <AppShellChrome correoChrome={correoChrome}>{children}</AppShellChrome>
@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!correoChrome) return chrome;
   return (
     <CorreoWorkspaceProvider
-      enabled={access.ready && access.isAdmin}
+      enabled={access.ready && access.canUseCorreo}
       backHref={returnPath}
     >
       {chrome}

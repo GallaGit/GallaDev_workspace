@@ -78,7 +78,7 @@ describe("parseDraftBody", () => {
     if (parsed.ok) {
       expect(parsed.value.mailbox).toBe("hola@galladev.com");
       expect(parsed.value.to).toBe("ana");
-      expect(parsed.value.leadId).toBeNull();
+      expect(parsed.value.leadId).toBeUndefined();
     }
   });
 
@@ -88,6 +88,29 @@ describe("parseDraftBody", () => {
       error: "Buzón de origen no válido",
     });
     expect(parseDraftBody({ id: "draft-1", bodyText: "x" }).ok).toBe(false);
+  });
+
+  it("omite leadId si no viene y acepta leadId nulo de forma explícita", () => {
+    const omitted = parseDraftBody({ bodyText: "x" });
+    expect(omitted.ok).toBe(true);
+    if (omitted.ok) expect(omitted.value.leadId).toBeUndefined();
+    const cleared = parseDraftBody({ bodyText: "x", leadId: null });
+    expect(cleared.ok).toBe(true);
+    if (cleared.ok) expect(cleared.value.leadId).toBeNull();
+  });
+
+  it("exige leadId si upsertByLead es true", () => {
+    expect(parseDraftBody({ bodyText: "x", upsertByLead: true })).toMatchObject({
+      ok: false,
+      error: "Identificador no válido",
+    });
+    const lead = "11111111-1111-4111-8111-111111111111";
+    const parsed = parseDraftBody({ bodyText: "x", upsertByLead: true, leadId: lead });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.upsertByLead).toBe(true);
+      expect(parsed.value.leadId).toBe(lead);
+    }
   });
 });
 

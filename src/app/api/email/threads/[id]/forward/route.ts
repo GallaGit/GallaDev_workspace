@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseForwardBody } from "@/lib/email/email-payload";
 import { readOutboundRequest } from "@/lib/email/outbound-request";
@@ -19,12 +19,12 @@ const RATE_MAX = 10;
 /**
  * POST /api/email/threads/[id]/forward — reenviar el último mensaje del hilo.
  *
- * Auth: requireAdmin antes del cliente admin; el hilo se lee con la sesión (RLS).
+ * Auth: requireCorreoAccess antes del cliente admin; el hilo se lee con la sesión (RLS).
  * Body JSON: { to, text?, cc?, bcc? } o multipart/form-data con `payload` (ese
  * JSON) y `files` (adjuntos nuevos). Los adjuntos originales van por URL firmada de Resend.
  */
 async function postForward(request: Request, ctx: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireCorreoAccess();
   if (denied) return denied;
   const requestId = requestIdFrom(request);
   const { id } = await ctx.params;

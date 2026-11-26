@@ -11,7 +11,6 @@
     "leads": "Leads",
     "kanban": "Kanban",
     "statistics": "Statistics",
-    "email": "Email",
     "correo": "Inbox",
     "duplicates": "Duplicates",
     "settings": "Settings",
@@ -130,7 +129,14 @@
     "subtitle": "Today's actionable queues. Open a queue to filter leads and work on the first one.",
     "syncing": "Syncing…",
     "empty": "Nothing pending",
-    "openQueue": "Open queue"
+    "openQueue": "Open queue",
+    "emailsListos": {
+      "title": "Emails ready",
+      "description": "Mail drafts ready to send",
+      "open": "Open drafts",
+      "empty": "No drafts",
+      "hint": "Opens all drafts in Mail; there may be several."
+    }
   },
   "queues": {
     "pendiente_revisar": {
@@ -140,10 +146,6 @@
     "faltan_datos": {
       "title": "Missing data",
       "description": "No email, phone, or website"
-    },
-    "emails_listos": {
-      "title": "Emails ready",
-      "description": "Drafts in New, Pending review, Validated, or Email ready"
     },
     "followup_overdue": {
       "title": "Overdue follow-up",
@@ -341,6 +343,9 @@
       "notes": "Notes",
       "notesLimit": "Near the Notion limit (~2000). Any overflow is saved in the page body.",
       "saveNotes": "Save notes",
+      "draftSaved": "Draft saved in Mail",
+      "openDrafts": "View drafts",
+      "draftSaveError": "Could not save the draft",
       "preparedEmail": "Email ready",
       "activity": "Activity",
       "noEvents": "No events yet.",
@@ -357,15 +362,12 @@
     "emailEditor": {
       "subject": "Subject",
       "body": "Body (plain text)",
-      "compose": "Compose email",
       "save": "Save email",
       "copy": "Copy",
       "markPrepared": "Mark as ready",
       "applyTemplate": "Apply template",
       "recipient": "Recipient: {email}",
-      "missingEmail": "This lead has no email. Add one or fill it in Gmail.",
-      "missingContent": "Add a subject or body before composing",
-      "missingRecipient": "No recipient: Gmail will open without a To address"
+      "missingEmail": "This lead has no email. Add one on the record."
     },
     "ai": {
       "title": "Pain points",
@@ -717,17 +719,6 @@
     "linkSourceAuto": "automatic",
     "linkSourceManual": "manual",
     "linkSourceHint": "Automatic link: the email matches a single lead. Use “Change lead” to fix it."
-  },
-  "email": {
-    "title": "Email",
-    "draftCount": "Drafts · {count}",
-    "empty": "No generated emails. Apply the template from a lead.",
-    "select": "Select a lead with a draft on the left.",
-    "noEmail": "No email",
-    "saved": "Saved",
-    "saveError": "Error saving",
-    "replaceTemplate": "The body is not empty. Replace it with the outreach-v1 template?",
-    "copied": "Email copied"
   },
   "duplicates": {
     "title": "Duplicates",

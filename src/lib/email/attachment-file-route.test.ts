@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireCorreoAccess } from "@/lib/api-auth";
 import {
   resolveAttachmentContext,
   resolveAttachmentDownload,
 } from "@/lib/email/attachment-download";
 import { GET } from "@/app/api/email/attachments/[id]/file/route";
 
-vi.mock("@/lib/api-auth", () => ({ requireAdmin: vi.fn(async () => null) }));
+vi.mock("@/lib/api-auth", () => ({ requireCorreoAccess: vi.fn(async () => null) }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
@@ -55,7 +55,7 @@ function resolved(contentType: string, filename = "factura.pdf") {
 describe("GET /api/email/attachments/[id]/file", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(requireAdmin).mockResolvedValue(null);
+    vi.mocked(requireCorreoAccess).mockResolvedValue(null);
     vi.stubEnv("EMAIL_ATTACHMENTS_BUCKET", undefined);
     vi.mocked(resolveAttachmentContext).mockResolvedValue(null);
     vi.stubGlobal(
@@ -68,8 +68,8 @@ describe("GET /api/email/attachments/[id]/file", () => {
     vi.unstubAllEnvs();
   });
 
-  it("respeta requireAdmin", async () => {
-    vi.mocked(requireAdmin).mockResolvedValue(
+  it("respeta requireCorreoAccess", async () => {
+    vi.mocked(requireCorreoAccess).mockResolvedValue(
       NextResponse.json({ ok: false }, { status: 403 }) as never,
     );
     expect((await call()).status).toBe(403);

@@ -48,16 +48,15 @@ const createMockLead = (overrides: Partial<Lead> = {}): Lead => {
 }
 
 describe('work-queues - buildWorkQueues', () => {
-  it('returns 5 queues with correct IDs', () => {
+  it('returns 4 queues with correct IDs', () => {
     const leads = [createMockLead({ id: '1' })]
     const queues = buildWorkQueues(leads)
 
-    expect(queues).toHaveLength(5)
+    expect(queues).toHaveLength(4)
     expect(queues.map((q) => q.id)).toEqual([...WORK_QUEUE_IDS])
     expect(queues.map((q) => q.id)).toEqual([
       'pendiente_revisar',
       'faltan_datos',
-      'emails_listos',
       'followup_overdue',
       'duplicados',
     ])
@@ -120,69 +119,6 @@ describe('work-queues - buildWorkQueues', () => {
 
       expect(queue?.count).toBe(1)
       expect(queue?.firstLeadId).toBe('1')
-    })
-  })
-
-  describe('emails_listos queue', () => {
-    it('includes leads with status Email preparado', () => {
-      const leads = [
-        createMockLead({ id: '1', status: 'Email preparado' }),
-        createMockLead({ id: '2', status: 'Validado' }),
-      ]
-
-      const queues = buildWorkQueues(leads)
-      const queue = queues.find((q) => q.id === 'emails_listos')
-
-      expect(queue?.count).toBe(1)
-      expect(queue?.firstLeadId).toBe('1')
-    })
-
-    it('includes leads with email draft in Nuevo', () => {
-      const leads = [
-        createMockLead({ id: '1', status: 'Nuevo', emailBody: 'Draft email', emailSubject: 'Subject' }),
-        createMockLead({ id: '2', status: 'Nuevo', emailBody: '', emailSubject: '' }),
-      ]
-
-      const queues = buildWorkQueues(leads)
-      const queue = queues.find((q) => q.id === 'emails_listos')
-
-      expect(queue?.count).toBe(1)
-      expect(queue?.firstLeadId).toBe('1')
-    })
-
-    it('includes leads with email draft in Pendiente revisar', () => {
-      const leads = [
-        createMockLead({ id: '1', status: 'Pendiente revisar', emailBody: 'Draft', emailSubject: 'Subj' }),
-      ]
-
-      const queues = buildWorkQueues(leads)
-      const queue = queues.find((q) => q.id === 'emails_listos')
-
-      expect(queue?.count).toBe(1)
-    })
-
-    it('includes leads with email draft in Validado', () => {
-      const leads = [
-        createMockLead({ id: '1', status: 'Validado', emailBody: 'Draft', emailSubject: 'Subj' }),
-      ]
-
-      const queues = buildWorkQueues(leads)
-      const queue = queues.find((q) => q.id === 'emails_listos')
-
-      expect(queue?.count).toBe(1)
-    })
-
-    it('excludes leads without email draft in Nuevo/Pendiente/Validado', () => {
-      const leads = [
-        createMockLead({ id: '1', status: 'Nuevo', emailBody: '', emailSubject: '' }),
-        createMockLead({ id: '2', status: 'Pendiente revisar', emailBody: '', emailSubject: '' }),
-        createMockLead({ id: '3', status: 'Validado', emailBody: '', emailSubject: '' }),
-      ]
-
-      const queues = buildWorkQueues(leads)
-      const queue = queues.find((q) => q.id === 'emails_listos')
-
-      expect(queue?.count).toBe(0)
     })
   })
 
@@ -321,11 +257,10 @@ describe('work-queues - buildWorkQueues', () => {
   })
 
   describe('WorkQueueId type', () => {
-    it('includes all 5 queue IDs', () => {
+    it('includes all 4 queue IDs', () => {
       const validIds: WorkQueueId[] = [
         'pendiente_revisar',
         'faltan_datos',
-        'emails_listos',
         'followup_overdue',
         'duplicados',
       ]

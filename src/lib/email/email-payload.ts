@@ -67,10 +67,16 @@ export type DraftPayload = {
   /** Texto libre de Cc/Cco (puede tener direcciones a medio escribir). */
   cc?: string;
   bcc?: string;
-  leadId: string | null;
+  /** undefined = no vino en el body (al actualizar, no tocar lead_id). */
+  leadId?: string | null;
   /** Borrador de respuesta de un hilo (uno por hilo). */
   threadId?: string;
   replyMode?: "reply" | "replyAll";
+  /**
+   * Si es true, se actualiza el borrador de mensaje nuevo de ese lead
+   * (thread_id IS NULL) o se crea uno. Exige leadId.
+   */
+  upsertByLead?: boolean;
 };
 
 export type ThreadPatch = {
@@ -204,9 +210,10 @@ const draftSchema = z.strictObject(
       .string({ error: "Cco debe ser texto" })
       .max(MAX_RECIPIENT_FIELD_CHARS, { error: "Cco es demasiado largo" })
       .optional(),
-    leadId: uuidField.nullable(),
+    leadId: uuidField.nullable().optional(),
     threadId: uuidField.optional(),
     replyMode: z.enum(["reply", "replyAll"], { error: "Modo de respuesta no válido" }).optional(),
+    upsertByLead: z.boolean({ error: "upsertByLead debe ser sí o no" }).optional(),
   },
   { error: objectError },
 );
@@ -396,18 +403,26 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
     "leadId",
     "threadId",
     "replyMode",
+    "upsertByLead",
   ]);
   if (unknown) return { ok: false, error: unknown };
   const id = optionalUuid(raw, "id");
   if (!id.ok) return id;
   const threadId = optionalUuid(raw, "threadId");
   if (!threadId.ok) return threadId;
-  let leadId: string | null = null;
-  if ("leadId" in raw && raw.leadId != null && raw.leadId !== "") {
-    if (typeof raw.leadId !== "string" || !isUuid(raw.leadId.trim())) {
-      return { ok: false, error: "Identificador no válido" };
+  let leadId: string | null | undefined;
+  if ("leadId" in raw) {
+    if (raw.leadId != null && raw.leadId !== "") {
+      if (typeof raw.leadId !== "string" || !isUuid(raw.leadId.trim())) {
+        return { ok: false, error: "Identificador no válido" };
+      }
+      leadId = raw.leadId.trim();
+    } else if (raw.leadId === null) {
+      leadId = null;
     }
-    leadId = raw.leadId.trim();
+  }
+  if (raw.upsertByLead !== undefined && typeof raw.upsertByLead !== "boolean") {
+    return { ok: false, error: "upsertByLead debe ser sí o no" };
   }
   const mailboxRaw = typeof raw.mailbox === "string" ? raw.mailbox.trim().toLowerCase() : "";
   const mailbox = mailboxRaw ? mailboxRaw : defaultMailbox();
@@ -416,8 +431,9 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
     to: typeof raw.to === "string" ? raw.to.trim() : raw.to ?? "",
     subject: typeof raw.subject === "string" ? raw.subject : raw.subject ?? "",
     bodyText: typeof raw.bodyText === "string" ? raw.bodyText : raw.bodyText ?? "",
-    leadId,
   };
+  if (leadId !== undefined) normalized.leadId = leadId;
+  if (raw.upsertByLead === true) normalized.upsertByLead = true;
   if (raw.cc !== undefined) normalized.cc = typeof raw.cc === "string" ? raw.cc.trim() : raw.cc;
   if (raw.bcc !== undefined) normalized.bcc = typeof raw.bcc === "string" ? raw.bcc.trim() : raw.bcc;
   if (id.value) normalized.id = id.value;
@@ -427,6 +443,9 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   if (!isCompanyMailbox(parsed.data.mailbox)) {
     return { ok: false, error: "Buzón de origen no válido" };
+  }
+  if (parsed.data.upsertByLead && !parsed.data.leadId) {
+    return { ok: false, error: "Identificador no válido" };
   }
   return {
     ok: true,
@@ -438,12 +457,14 @@ export function parseDraftBody(raw: unknown): EmailPayloadResult<DraftPayload> {
       bodyText: parsed.data.bodyText,
       ...(parsed.data.cc ? { cc: parsed.data.cc } : {}),
       ...(parsed.data.bcc ? { bcc: parsed.data.bcc } : {}),
-      leadId: parsed.data.leadId,
+      ...(parsed.data.leadId !== undefined ? { leadId: parsed.data.leadId } : {}),
       ...(parsed.data.threadId ? { threadId: parsed.data.threadId } : {}),
       ...(parsed.data.replyMode ? { replyMode: parsed.data.replyMode } : {}),
+      ...(parsed.data.upsertByLead ? { upsertByLead: true } : {}),
     },
   };
 }
+
 
 export function parseThreadPatch(raw: unknown): ThreadPatchResult {
   if (!isRecord(raw)) return { ok: false, error: EMAIL_PAYLOAD_ERROR };

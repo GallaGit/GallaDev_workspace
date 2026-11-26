@@ -4,7 +4,7 @@ import { renderWithIntl } from "@/test/i18n-wrapper";
 import { UNREAD_CHANGED_EVENT } from "@/lib/email/thread-state";
 import { AppSidebar } from "./app-sidebar";
 
-const access = vi.hoisted(() => ({ isAdmin: true, isVisitor: false }));
+const access = vi.hoisted(() => ({ isAdmin: true, canUseCorreo: true, isVisitor: false }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/correo",
@@ -30,6 +30,7 @@ beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
   access.isAdmin = true;
+  access.canUseCorreo = true;
   access.isVisitor = false;
   inboxUnread = 4;
   vi.stubGlobal(
@@ -59,12 +60,22 @@ describe("AppSidebar: contador de Correo", () => {
     await waitFor(() => expect(screen.queryByTestId("correo-unread-badge")).toBeNull());
   });
 
-  it("sin Admin no pide el contador", async () => {
+  it("Seller pide el contador de no leídos", async () => {
     access.isAdmin = false;
+    access.canUseCorreo = true;
     renderWithIntl(<AppSidebar />);
-    await screen.findByText("Correo");
-    expect(screen.getByText("WORKSPACE")).toBeInTheDocument();
-    expect(screen.getByAltText("GallaDev")).toHaveAttribute("src", "/brand/logo.png");
+    const badge = await screen.findByTestId("correo-unread-badge");
+    expect(badge.textContent).toBe("4");
+    expect(fetch).toHaveBeenCalledWith("/api/email/threads/unread-count");
+  });
+
+  it("Viewer no ve Correo ni pide el contador", async () => {
+    access.isAdmin = false;
+    access.canUseCorreo = false;
+    renderWithIntl(<AppSidebar />);
+    await screen.findByText("WORKSPACE");
+    expect(screen.queryByText("Correo")).toBeNull();
+    expect(screen.queryByText("Email")).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
     expect(screen.queryByTestId("correo-unread-badge")).toBeNull();
   });

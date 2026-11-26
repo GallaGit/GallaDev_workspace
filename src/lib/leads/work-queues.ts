@@ -4,7 +4,6 @@ import { getDuplicateLeadIds as detectDuplicateLeadIds } from "@/lib/leads/detec
 export const WORK_QUEUE_IDS = [
   "pendiente_revisar",
   "faltan_datos",
-  "emails_listos",
   "followup_overdue",
   "duplicados",
 ] as const;
@@ -41,14 +40,6 @@ export function matchesWorkQueue(lead: Lead, queueId: WorkQueueId, duplicateIds:
       return lead.status === "Nuevo" || lead.status === "Pendiente revisar";
     case "faltan_datos":
       return !lead.email && !lead.phone && !lead.website;
-    case "emails_listos":
-      if (lead.status === "Email preparado") return true;
-      return Boolean(
-        lead.emailBody?.trim() &&
-          (lead.status === "Nuevo" ||
-            lead.status === "Validado" ||
-            lead.status === "Pendiente revisar"),
-      );
     case "followup_overdue": {
       if (!lead.nextFollowUp) return false;
       if (lead.status === "Cliente" || lead.status === "Descartado") return false;
@@ -72,11 +63,6 @@ const QUEUE_META: Record<
   faltan_datos: {
     title: "Faltan datos",
     description: "Sin correo, teléfono ni web",
-  },
-  emails_listos: {
-    title: "Emails listos",
-    description:
-      "Borradores en Nuevo, Pendiente revisar, Validado o Email preparado",
   },
   followup_overdue: {
     title: "Follow-up vencido",

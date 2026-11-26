@@ -12,7 +12,6 @@ const PREFIXES = [
   "/stats",
   "/duplicates",
   "/settings",
-  "/email",
   "/correo",
   "/login",
   "/pending",

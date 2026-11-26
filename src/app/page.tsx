@@ -67,7 +67,6 @@ export default function HomePage() {
         key: "emailsPrepared",
         label: t("dashboard.kpis.emailsPrepared"),
         value: by("Email preparado"),
-        queue: "emails_listos",
       },
       {
         key: "emailsSent",
@@ -110,9 +109,17 @@ export default function HomePage() {
   }, [leads, queueCount, t]);
 
   function openValidated() {
+    openStatus("Validado");
+  }
+
+  function openEmailPreparados() {
+    openStatus("Email preparado");
+  }
+
+  function openStatus(status: "Validado" | "Email preparado") {
     setActiveQueue(null);
     resetFilters();
-    setFilters({ status: ["Validado"] });
+    setFilters({ status: [status] });
     setSelectedLeadId(null);
     router.push("/leads");
   }
@@ -167,12 +174,12 @@ export default function HomePage() {
                 </button>
               );
             }
-            if (k.key === "validated") {
+            if (k.key === "validated" || k.key === "emailsPrepared") {
               return (
                 <button
                   key={k.key}
                   type="button"
-                  onClick={openValidated}
+                  onClick={k.key === "validated" ? openValidated : openEmailPreparados}
                   className="rounded-lg border border-(--border) bg-(--panel) p-3 text-left transition-colors hover:border-(--accent)"
                 >
                   {content}

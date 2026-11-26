@@ -12,7 +12,7 @@ Allowlist de producto: `hola@galladev.com` (empresa) y `ociel@galladev.com` (per
 
 La entrada y la salida pasan por Resend. La entrada es [Resend Inbound](https://resend.com/docs/dashboard/receiving/introduction) (receiving): un registro MX en `galladev.com` que apunta a Resend, y Resend manda un webhook por cada correo recibido.
 
-El buzón es el módulo **Correo** dentro de GDW (`/correo`). Reutiliza auth, RBAC y Supabase. No es una app aparte. Esa ruta no es el banco de trabajo `/email` (borradores de leads). `/email` se queda como está.
+El buzón es el módulo **Correo** dentro de GDW (`/correo`). Reutiliza auth, RBAC y Supabase. No es una app aparte. Los borradores desde la ficha del lead se guardan en `email_drafts` y se ven en `/correo/borradores`. `/email` redirige ahí de forma permanente.
 
 V1 UI: un solo inbox unificado, filtro `Todos | hola@ | ociel@`, chip por hilo, reply From = `mailbox_address` del hilo, botón **Nuevo** (compose vía Resend) y pill **Borradores** (`email_drafts`). Sin carpetas Entrada/Enviados/Spam. Sin Gmail.
 
@@ -41,7 +41,7 @@ Hechos al 27 Sep 2026, vigentes el 29 Sep 2026. Sin valores de secretos.
 | Buzón | `/correo` recibe en `hola@` y `ociel@` (allowlist). Columna `email_threads.mailbox_address`. Filtro UI + chip. Reply From = buzón del hilo. Dual mailbox V1, 30 Sep 2026. Compose + borradores de mensajes nuevos (`email_drafts`, botón Nuevo), 30 Sep 2026. |
 | Apex MX | MX publicado en Cloudflare (apex, DNS-only) apuntando a Resend inbound. |
 | Storage | El repo no usa Supabase Storage. No hay buckets. La spec del portal de cliente propone un bucket privado `project-files`; no está creado. |
-| `/email` | Banco de borradores de leads. No es un buzón. |
+| `/email` | Redirección permanente a `/correo/borradores`. |
 
 Registros DNS de correo que hay que dejar quietos (DNS-only, no Proxied):
 
@@ -149,7 +149,7 @@ Ruta: `src/app/api/email/inbound/route.ts` (el App Router vive bajo `src/app`; l
 
 ### Fase 2 — UI del buzón
 
-**Alcance.** `/correo` dentro de GDW: lista de hilos, vista del hilo, leído y no leído, y un modo de enlazar un hilo con un lead. Usa la sesión y el RBAC que ya existen. El acceso es Admin por defecto. Qué otros roles pueden abrirlo es una pregunta abierta (sección 7); hasta que se responda, Seller, Viewer y la demo de visitante no ven el buzón (la misma idea que otras zonas solo Admin: la demo ya redirige `/email`).
+**Alcance.** `/correo` dentro de GDW: lista de hilos, vista del hilo, leído y no leído, y un modo de enlazar un hilo con un lead. Usa la sesión y el RBAC que ya existen. El acceso es Admin y Seller. Viewer y la demo de visitante no ven el buzón (la demo ya redirige `/email` y `/correo` a `/leads`).
 
 **Aceptación.**
 
@@ -208,7 +208,7 @@ await (await fetch("/api/email/backfill-lead-links", {
 
 **UI.**
 
-- Ficha del lead (`LeadDrawer`): sección **Correos** (`LeadEmailsSection`) con los hilos vinculados (asunto, fragmento, fecha, nº de mensajes, etiqueta «No leído»), cada uno enlazado a `/correo?thread=<id>`, y botón **Desvincular** (`PATCH` con `lead_id: null`). Solo se monta para Admin (el Correo es solo Admin por API y RLS); Seller, Viewer y la demo de visitante no la ven ni pueden llamar a la API (`GET /api/email/threads?lead_id=<uuid>`, `requireAdmin`; excluye la Papelera).
+- Ficha del lead (`LeadDrawer`): sección **Correos** (`LeadEmailsSection`) con los hilos vinculados (asunto, fragmento, fecha, nº de mensajes, etiqueta «No leído»), cada uno enlazado a `/correo?thread=<id>`, y botón **Desvincular** (`PATCH` con `lead_id: null`). Se monta para Admin y Seller (las APIs del buzón usan `requireCorreoAccess` y RLS). Viewer y la demo de visitante no la ven ni pueden llamar a la API. Excluye la Papelera.
 - `/correo?thread=<uuid>` abre ese hilo en su bandeja (Recibidos, Archivados o Papelera); si no existe, avisa.
 - Vista del hilo: la etiqueta de lead muestra «Lead vinculado · automático» (con ayuda) o «· manual». El origen viene de `GET /api/email/threads/[id]` (`lead_link_source`). Tras responder, la vista se resincroniza por si la respuesta vinculó el hilo.
 
@@ -231,7 +231,7 @@ await (await fetch("/api/email/backfill-lead-links", {
 
 ## 7. Preguntas abiertas
 
-1. ¿Qué roles además de Admin pueden ver el buzón? (Seller, Viewer, ninguno.)
+1. ¿Qué roles además de Admin pueden ver el buzón? **Respondido: Seller sí, Viewer no.**
 2. ¿Cuánto tiempo se conservan los bytes de los adjuntos, si es que se guardan?
 3. ¿A quién se avisa cuando llega correo nuevo, y por qué canal?
 
@@ -264,7 +264,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 **Restricciones.**
 
-- No reutilizar `/email` ni su modelo de borradores de leads para borradores de respuesta del buzón.
+- Los borradores de respuesta siguen en `email_drafts` con `thread_id`; los de mensaje nuevo de un lead usan `lead_id` y `thread_id IS NULL`.
 - El filtro por `mailbox_address` (allowlist) es ortogonal a las bandejas: un hilo de `ociel@` puede estar en Entrada o Enviados.
 - Spam y retención de adjuntos siguen abiertos (sección 7).
 - Criterio de arranque: solo tras validar dual mailbox V1 en uso real.
@@ -287,7 +287,7 @@ Estas mejoras se acordaron con Ociel después de las Fases 1–3. El orden de tr
 
 **Estado:** Hecho.
 
-**Implementación.** Rutas `/correo/recibidos|enviados|archivados|papelera|borradores[/<id-del-hilo>]` con `?cuenta=`; `/correo` redirige (308) a `/correo/recibidos`, y los enlaces antiguos `/correo?thread=<id>` siguen funcionando. El estado vive en la URL y el cambio de carpeta, cuenta o hilo no recarga el servidor (`history.pushState`). `AppShell` sustituye `AppSidebar` por `CorreoSidebar` en `/correo/*` (solo Admin). La lista se refresca cada 60 s, al volver a la pestaña y con `correo:unread-changed`, sin perder el scroll ni el hilo abierto. Redactar y responder reutilizan `ComposeDialog` (variante en línea en el área ancha). No hay migraciones de base de datos.
+**Implementación.** Rutas `/correo/recibidos|enviados|archivados|papelera|borradores[/<id-del-hilo>]` con `?cuenta=`; `/correo` redirige (308) a `/correo/recibidos`, y los enlaces antiguos `/correo?thread=<id>` siguen funcionando. El estado vive en la URL y el cambio de carpeta, cuenta o hilo no recarga el servidor (`history.pushState`). `AppShell` sustituye `AppSidebar` por `CorreoSidebar` en `/correo/*` (Admin y Seller). La lista se refresca cada 60 s, al volver a la pestaña y con `correo:unread-changed`, sin perder el scroll ni el hilo abierto. Redactar y responder reutilizan `ComposeDialog` (variante en línea en el área ancha). No hay migraciones de base de datos.
 
 #### Problema
 
@@ -295,12 +295,12 @@ En el móvil el panel izquierdo de `/correo` (ancho fijo de 320 px: carpetas Rec
 
 #### Estado actual (código; este documento no lo cambia)
 
-- La ruta del módulo es **`/correo`**: una sola página (`src/app/correo/page.tsx` → `InboxPage`), sin segmentos de carpeta. El banco de trabajo de borradores de leads, `/email`, no forma parte de este módulo y no se toca.
+- La ruta del módulo es **`/correo`**: una sola página (`src/app/correo/page.tsx` → `InboxPage`), sin segmentos de carpeta. El banco `/email` se eliminó; `/email` redirige a `/correo/borradores`.
 - Las carpetas no tienen URL. Viven en el estado del cliente: `view` es `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` en `src/lib/email/thread-state.ts`). Borradores es un `listMode` aparte (`drafts`): hoy un botón junto a los chips de buzón, no una entrada de esa lista de vistas.
 - Etiquetas en la UI (es): Recibidos, Enviados, Archivados, Papelera, Borradores. No hay carpeta Spam.
 - El filtro de cuenta es también estado del cliente (`Todos` / `hola@` / `ociel@`; allowlist `COMPANY_MAILBOXES` en `src/lib/email/mailboxes.ts`). La API ya acepta `GET /api/email/threads?view=&mailbox=`.
 - La barra lateral (`src/components/layout/app-sidebar.tsx`) tiene una sola entrada «Correo» que apunta a `/correo`, con la insignia de no leídos de Recibidos. No se despliega. En el móvil el menú de la app es un cajón (breakpoint `md`, 768 px).
-- El acceso sigue siendo solo Admin (APIs con `requireAdmin`, RLS). No hay permisos distintos por buzón: un Admin ve `hola@` y `ociel@`. Seller, Viewer y la demo de visitante no usan el buzón (la entrada se oculta al visitante; las APIs responden 403).
+- El acceso es Admin y Seller (APIs con `requireCorreoAccess`, RLS). No hay permisos distintos por buzón: ven `hola@` y `ociel@`. Viewer y la demo de visitante no usan el buzón (la entrada se oculta; las APIs responden 403). Ajustes de firma, backfill, purga e importación de borradores antiguos siguen siendo solo Admin.
 - Los contadores de no leídos se refrescan cada 60 s, al volver a la pestaña y con el evento `correo:unread-changed`. **La lista de hilos no se recarga sola** cuando llega correo nuevo.
 
 #### Requisitos
@@ -320,7 +320,7 @@ El prefijo es **`/correo`** (singular), confirmado por Ociel. Redirecciones perm
 - `/correo` → `/correo/recibidos`
 - cualquier otra ruta bajo `/correo/…` que no sea una carpeta conocida → la carpeta equivalente, o `/correo/recibidos` si no hay equivalente
 
-No se crea una carpeta Spam. `/email` no se redirige. Las rutas nuevas entran en las mismas listas de acceso que `/correo` (redirección segura tras el login, oculta al visitante, solo Admin).
+No se crea una carpeta Spam. `/email` redirige de forma permanente a `/correo/borradores`. Correo es Admin y Seller; queda oculto al visitante y al Viewer.
 
 La carpeta por defecto es Recibidos. Un hilo abierto es compartible y sobrevive a un recargo: `/correo/{carpeta}/{threadId}` (UUID), conservando la cuenta en la query si aplica. En Borradores no hay esta ruta de hilo; abrir un borrador abre la vista de redacción en el área de contenido.
 
@@ -368,7 +368,7 @@ Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son e
 #### Criterios de aceptación
 
 - [ ] Un Admin abre `/correo/recibidos`, `/correo/enviados`, `/correo/archivados`, `/correo/papelera` y `/correo/borradores`, y ve la carpeta que indica la URL. Recargar o compartir la URL conserva la carpeta.
-- [ ] `/correo` redirige a `/correo/recibidos`. `/email` no cambia.
+- [ ] `/correo` redirige a `/correo/recibidos`. `/email` redirige a `/correo/borradores`.
 - [ ] Al entrar en Correo, la barra lateral general se sustituye por la barra de correo (Atrás, Nuevo, las cinco carpetas, Cuentas y la lista). El área ancha solo muestra el hilo abierto, la vista de redacción o un estado vacío.
 - [ ] El Atrás de la parte superior de la barra de correo restaura la barra general de la app (página anterior o dashboard).
 - [ ] Elegir una carpeta navega a su ruta. Elegir Todas / hola@ / ociel@ aplica el filtro y se queda en la carpeta actual, con `?cuenta=` en la URL (Todas puede omitir el parámetro).
@@ -377,7 +377,7 @@ Por qué un query y no `/correo/hola/recibidos`: la carpeta y el buzón ya son e
 - [ ] En escritorio (`md` y superior) se ven a la vez la barra de correo y el área de contenido; la lista no está en el área ancha.
 - [ ] En un ancho menor de 768 px, la barra de correo es un cajón plegable (botón de menú; se cierra al tocar un hilo, el overlay o la X) y nunca tapa el contenido de forma permanente. El hilo no produce scroll horizontal. El Atrás de la barra vuelve al menú general de la app.
 - [ ] Con la bandeja abierta, un correo nuevo que encaja en la vista aparece en la lista en no más de 60 s (el mismo ritmo que los contadores; también al volver a la pestaña), y las insignias se actualizan, sin recargar a mano.
-- [ ] No se toca `/email`, no se añade Spam, y no se cambia el modelo de permisos más allá de aplicar el que ya existe a las rutas nuevas.
+- [ ] No se añade Spam. Correo queda disponible para Admin y Seller. `/email` redirige a `/correo/borradores`.
 
 #### Fuera de alcance
 

@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const requireAdmin = vi.hoisted(() =>
   vi.fn(async (): Promise<Response | null> => null),
 );
+const requireCorreoAccess = vi.hoisted(() =>
+  vi.fn(async (): Promise<Response | null> => null),
+);
 const getApiSession = vi.hoisted(() =>
   vi.fn(async () => ({
     id: "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd",
@@ -13,7 +16,7 @@ const getApiSession = vi.hoisted(() =>
 const createSupabaseServerClient = vi.hoisted(() => vi.fn());
 const consumeRateLimit = vi.hoisted(() => vi.fn(async () => false));
 
-vi.mock("@/lib/api-auth", () => ({ requireAdmin, getApiSession }));
+vi.mock("@/lib/api-auth", () => ({ requireAdmin, requireCorreoAccess, getApiSession }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
@@ -41,12 +44,13 @@ function selectClient(result: { data?: unknown; error?: { code: string } | null 
 beforeEach(() => {
   vi.clearAllMocks();
   requireAdmin.mockResolvedValue(null);
+  requireCorreoAccess.mockResolvedValue(null);
   consumeRateLimit.mockResolvedValue(false);
 });
 
 describe("GET /api/email/signatures", () => {
-  it("sin Admin devuelve la denegación y no abre Supabase", async () => {
-    requireAdmin.mockResolvedValue(
+  it("sin acceso al buzón devuelve la denegación y no abre Supabase", async () => {
+    requireCorreoAccess.mockResolvedValue(
       new Response(JSON.stringify({ ok: false }), { status: 403 }),
     );
     const res = await GET(new Request("http://localhost/api/email/signatures"));

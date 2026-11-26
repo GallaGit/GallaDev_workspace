@@ -11,7 +11,6 @@
     "leads": "Leads",
     "kanban": "Kanban",
     "statistics": "Statistics",
-    "email": "Email",
     "correo": "Correo",
     "duplicates": "Duplicados",
     "settings": "Settings",
@@ -130,7 +129,14 @@
     "subtitle": "Colas accionables del día. Abre una cola para filtrar leads y trabajar el primero.",
     "syncing": "Sincronizando…",
     "empty": "Nada pendiente",
-    "openQueue": "Abrir cola"
+    "openQueue": "Abrir cola",
+    "emailsListos": {
+      "title": "Emails listos",
+      "description": "Borradores de correo listos para enviar",
+      "open": "Abrir borradores",
+      "empty": "No hay borradores",
+      "hint": "Se abren todos en Correo; puede haber varios."
+    }
   },
   "queues": {
     "pendiente_revisar": {
@@ -140,10 +146,6 @@
     "faltan_datos": {
       "title": "Faltan datos",
       "description": "Sin correo, teléfono ni web"
-    },
-    "emails_listos": {
-      "title": "Emails listos",
-      "description": "Borradores en Nuevo, Pendiente revisar, Validado o Email preparado"
     },
     "followup_overdue": {
       "title": "Follow-up vencido",
@@ -341,6 +343,9 @@
       "notes": "Notas",
       "notesLimit": "Cerca del límite Notion (~2000). El excedente se guarda en el cuerpo de la página.",
       "saveNotes": "Guardar notas",
+      "draftSaved": "Borrador guardado en Correo",
+      "openDrafts": "Ver en borradores",
+      "draftSaveError": "Error al guardar el borrador",
       "preparedEmail": "Email preparado",
       "activity": "Actividad",
       "noEvents": "Sin eventos todavía.",
@@ -357,15 +362,12 @@
     "emailEditor": {
       "subject": "Asunto",
       "body": "Cuerpo (texto plano)",
-      "compose": "Redactar email",
       "save": "Guardar email",
       "copy": "Copiar",
       "markPrepared": "Marcar preparado",
       "applyTemplate": "Aplicar plantilla",
       "recipient": "Destinatario: {email}",
-      "missingEmail": "Este lead no tiene correo. Añádelo o complétalo en Gmail.",
-      "missingContent": "Añade asunto o cuerpo antes de redactar",
-      "missingRecipient": "Sin destinatario: se abrirá Gmail sin campo Para"
+      "missingEmail": "Este lead no tiene correo. Añádelo en la ficha."
     },
     "ai": {
       "title": "Dolores",
@@ -717,17 +719,6 @@
     "linkSourceAuto": "automático",
     "linkSourceManual": "manual",
     "linkSourceHint": "Vinculación automática: el email coincide con un único lead. Usa «Cambiar lead» para corregirla."
-  },
-  "email": {
-    "title": "Email",
-    "draftCount": "Borradores · {count}",
-    "empty": "No hay emails generados. Aplica la plantilla desde un lead.",
-    "select": "Selecciona un lead con borrador a la izquierda.",
-    "noEmail": "Sin correo",
-    "saved": "Guardado",
-    "saveError": "Error al guardar",
-    "replaceTemplate": "El cuerpo no está vacío. ¿Sustituir por la plantilla outreach-v1?",
-    "copied": "Email copiado"
   },
   "duplicates": {
     "title": "Duplicados",
