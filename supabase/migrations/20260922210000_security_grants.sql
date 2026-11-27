@@ -10,5 +10,13 @@ REVOKE ALL ON FUNCTION public.current_app_role() FROM anon;
 GRANT EXECUTE ON FUNCTION public.current_app_role() TO authenticated;
 
 -- rls_auto_enable: no es función de la app; nadie externo debe ejecutarla.
-REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM anon, authenticated;
+-- Solo existe en el proyecto alojado (no la crea ninguna migración), así que
+-- se protege con una comprobación para que la migración también corra en un
+-- Supabase local limpio (E2E en CI). En el proyecto alojado el efecto es el mismo.
+DO $$
+BEGIN
+  IF to_regprocedure('public.rls_auto_enable()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM anon, authenticated;
+  END IF;
+END $$;

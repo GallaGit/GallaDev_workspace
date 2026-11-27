@@ -3,7 +3,8 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * Smoke E2E tras el corte a Supabase Auth.
  *
- * Requiere un usuario real en Supabase Auth + fila en public.profiles.
+ * Requiere un usuario en Supabase Auth + fila en public.profiles (en CI lo
+ * siembra scripts/e2e-seed.mjs en un Supabase local).
  * Credenciales vía E2E_TEST_EMAIL / E2E_TEST_PASSWORD (GitHub Secrets en CI).
  * Si faltan, se omite el login smoke (el redirect sin sesión sí se ejecuta).
  */

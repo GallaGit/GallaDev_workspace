@@ -1,0 +1,17 @@
+# Configuración mínima para `supabase start` en local y en el job E2E de CI.
+# Las migraciones de supabase/migrations se aplican solas al arrancar.
+# No apunta a ningún proyecto remoto ni contiene secretos.
+project_id = "gallacrm-e2e"
+
+[api]
+enabled = true
+
+[db]
+major_version = 17
+
+[auth]
+enabled = true
+enable_signup = false
+
+[auth.email]
+enable_confirmations = false

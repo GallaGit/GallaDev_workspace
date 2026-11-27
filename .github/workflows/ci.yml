@@ -62,13 +62,17 @@ jobs:
       contents: read
       actions: write
     env:
-      # NEXT_PUBLIC_* deben existir en el build para el cliente browser.
-      SUPABASE_URL: "https://rafgpbiiwofrqmfpqrij.supabase.co"
-      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9"
-      NEXT_PUBLIC_SUPABASE_URL: "https://rafgpbiiwofrqmfpqrij.supabase.co"
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_0y6b9TMvbTpD96Eo2O1iEQ_DNIv9DV9"
       AUTH_DISABLED: "false"
       PORT: "3000"
+      # Usuarios fake solo para el Supabase local del job. No son secretos.
+      E2E_ADMIN_EMAIL: admin@e2e.test
+      E2E_ADMIN_PASSWORD: e2e-admin-pass-1
+      E2E_SELLER_EMAIL: seller@e2e.test
+      E2E_SELLER_PASSWORD: e2e-seller-pass-1
+      E2E_VIEWER_EMAIL: viewer@e2e.test
+      E2E_VIEWER_PASSWORD: e2e-viewer-pass-1
+      E2E_TEST_EMAIL: admin@e2e.test
+      E2E_TEST_PASSWORD: e2e-admin-pass-1
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -76,23 +80,37 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Supabase local (migraciones de supabase/migrations)
+        run: |
+          supabase start -x realtime,storage-api,imgproxy,edge-runtime,studio,mailpit,logflare,vector,supavisor,postgres-meta
+          supabase status -o env > /tmp/supabase.env
+          get() { grep "^$1=" /tmp/supabase.env | cut -d= -f2- | tr -d '"'; }
+          URL="$(get API_URL)"; ANON="$(get ANON_KEY)"; SERVICE="$(get SERVICE_ROLE_KEY)"
+          for v in "$URL" "$ANON" "$SERVICE"; do [ -n "$v" ] || { echo "supabase status incompleto"; exit 1; }; done
+          echo "::add-mask::$ANON"
+          echo "::add-mask::$SERVICE"
+          {
+            echo "SUPABASE_URL=$URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$URL"
+            echo "SUPABASE_PUBLISHABLE_KEY=$ANON"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
+          } >> "$GITHUB_ENV"
+      - name: Sembrar usuarios y leads fake
+        run: node scripts/e2e-seed.mjs
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npm run test:e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
-          # Vacío si el secret no existe: critical-paths omite el login smoke.
-          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
-          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
-          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
-          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-          E2E_SELLER_EMAIL: ${{ secrets.E2E_SELLER_EMAIL }}
-          E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
-          E2E_VIEWER_EMAIL: ${{ secrets.E2E_VIEWER_EMAIL }}
-          E2E_VIEWER_PASSWORD: ${{ secrets.E2E_VIEWER_PASSWORD }}
-          # El servidor de Playwright usa el secret si existe (≥ 16). Si no, genera uno.
+          # El servidor de Playwright usa el secret si existe (>= 16). Si no, genera uno.
           DEMO_MODE_ENABLED: "true"
           DEMO_SESSION_SECRET: ${{ secrets.E2E_DEMO_SESSION_SECRET }}
+      - if: always()
+        run: supabase stop --no-backup
       - uses: actions/upload-artifact@v4
         if: always()
         with:
