@@ -103,6 +103,10 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/login")) {
     return forward();
   }
+  // Página pública «¿Qué es?»: se lee sin sesión.
+  if (pathname === "/que-es" || pathname.startsWith("/que-es/")) {
+    return forward();
+  }
   if (isAuthDisabled()) {
     return forward();
   }
@@ -175,5 +179,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/health).*)"],
+  // Los estáticos de public/ (imágenes, fuentes) no pasan por la puerta de
+  // sesión: sin esta exclusión, /what-it-is/*.webp y /brand/* redirigían a
+  // /login para un visitante sin sesión y se veían rotos.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/health|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|txt|xml|webmanifest)$).*)",
+  ],
 };

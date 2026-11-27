@@ -16,8 +16,8 @@ export const WHAT_IT_IS_SHOTS = [
     height: 1000,
   },
   {
-    src: "/what-it-is/stats-light.webp",
-    key: "stats",
+    src: "/what-it-is/correo-light.webp",
+    key: "correo",
     width: 1600,
     height: 1000,
   },
@@ -45,6 +45,7 @@ export function WhatIsItSection() {
         <p>{t("p1")}</p>
         <p>{t("p2")}</p>
         <p>{t("p3")}</p>
+        <p>{t("p4")}</p>
       </div>
       <ul className="mt-6 space-y-6">
         {WHAT_IT_IS_SHOTS.map((shot) => (

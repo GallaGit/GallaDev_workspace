@@ -28,6 +28,7 @@ const VISITOR_PAGES = [
   "/inbox",
   "/duplicates",
   "/login",
+  "/que-es",
 ];
 
 const RESERVED_LEAD_SEGMENTS = new Set(["score", "merge", "pain-analysis", "duplicates"]);
