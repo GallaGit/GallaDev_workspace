@@ -9,7 +9,9 @@ import { test, expect, type Page } from "@playwright/test";
  * asignar el rol con SQL en el SQL Editor:
  *   UPDATE public.profiles SET role = 'Admin' WHERE id = '<uuid_admin>';
  *
+ * En CI los crea scripts/e2e-seed.mjs contra un Supabase local (ver ci.yml).
  * Las credenciales se leen de variables de entorno (ver playwright.config.ts).
+ * Sin ellas el bloque se omite.
  */
 const adminEmail = (process.env.E2E_ADMIN_EMAIL ?? "").trim();
 const adminPassword = (process.env.E2E_ADMIN_PASSWORD ?? "").trim();
@@ -32,6 +34,7 @@ async function syncCount(page: Page) {
     ok: boolean;
     count: number;
     provider: string;
+    leads: { companyName: string }[];
   };
 }
 
@@ -51,7 +54,8 @@ authDescribe("Login real + sync + roles", () => {
 
     const body = await syncCount(page);
     expect(body.ok).toBe(true);
-    expect(body.count).toBeGreaterThan(0);
+    // scripts/e2e-seed.mjs siembra 6 leads: el Admin los ve todos.
+    expect(body.count).toBeGreaterThanOrEqual(6);
     expect(body.provider).toBe("supabase");
   });
 
@@ -67,9 +71,12 @@ authDescribe("Login real + sync + roles", () => {
 
     const body = await syncCount(page);
     expect(body.ok).toBe(true);
-    // Seller ve leads sin responsable o asignados a él. En datasets futuros
-    // este valor será menor que el de Admin; hoy aceptamos >= 0.
-    expect(body.count).toBeGreaterThanOrEqual(0);
+    // Desde SEC-003 el Seller solo ve los leads donde es responsable: 3 de los
+    // 6 sembrados (2 sin asignar y 1 del Admin quedan fuera por RLS).
+    expect(body.count).toBe(3);
+    expect(body.leads.map((l) => l.companyName)).toEqual(
+      expect.arrayContaining(["Seller Uno SL"]),
+    );
 
     await ctx.close();
   });
