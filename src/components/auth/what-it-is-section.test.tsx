@@ -36,6 +36,11 @@ describe("WhatIsItSection", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/análisis de dolores por IA/)).toBeInTheDocument();
     expect(screen.getByText(/No hay alta pública/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Incluye el buzón de empresa (Correo, hola@): bandeja de entrada, borradores vinculados a leads, enviados y adjuntos.",
+      ),
+    ).toBeInTheDocument();
 
     const images = screen.getAllByRole("img");
     expect(images).toHaveLength(WHAT_IT_IS_SHOTS.length);
@@ -70,5 +75,10 @@ describe("WhatIsItSection", () => {
       "/what-it-is/leads-light.webp",
     );
     expect(screen.getByText("Lead list.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "It includes the company mailbox (Correo, hola@): inbox, drafts linked to leads, sent mail, and attachments.",
+      ),
+    ).toBeInTheDocument();
   });
 });

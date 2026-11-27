@@ -53,7 +53,8 @@
         "rate": "Demasiados intentos. Prueba más tarde.",
         "config": "Supabase no está configurado.",
         "network": "Error de red. Inténtalo de nuevo."
-      }
+      },
+      "whatIsItLink": "¿Qué es?"
     },
     "pending": {
       "title": "Acceso pendiente",
@@ -74,21 +75,24 @@
       "p1": "GallaDev Workspace es un CRM para revisar, cualificar y gestionar leads de asesorías y gestorías.",
       "p2": "Supabase (PostgreSQL) es la fuente de verdad. Los leads entran por la ingesta web o por un alta manual. El equipo los cualifica con un análisis de dolores por IA, los sigue en un Kanban, consulta estadísticas y trabaja con roles: Admin, Seller y Viewer.",
       "p3": "Esta explicación se lee sin iniciar sesión. Entrar al CRM sigue pidiendo email y contraseña. No hay alta pública. Con la demo encendida, «Entrar como visitante» abre la misma herramienta en solo lectura, con datos ficticios.",
+      "p4": "Incluye el buzón de empresa (Correo, hola@): bandeja de entrada, borradores vinculados a leads, enviados y adjuntos.",
+      "back": "Volver a entrar",
+      "brand": "WORKSPACE",
       "shots": {
         "leads": {
           "lead": "Lista de leads.",
           "caption": "Empresas ficticias, con filtro y estado. No son clientes reales.",
-          "alt": "Lista de leads en tema claro: tres asesorías ficticias con estado y ciudad de ejemplo."
+          "alt": "Lista de leads en tema claro: asesorías ficticias con estado, ciudad y score de ejemplo."
         },
         "kanban": {
           "lead": "Kanban.",
           "caption": "Los nueve estados del pipeline, de Nuevo a Cliente o Descartado, con tarjetas de ejemplo.",
           "alt": "Tablero Kanban en tema claro con columnas del pipeline y tarjetas de empresas ficticias."
         },
-        "stats": {
-          "lead": "Estadísticas.",
-          "caption": "Volumen y distribución del pipeline. Cifras inventadas.",
-          "alt": "Página de estadísticas en tema claro: gráfico de barras con cifras ficticias del pipeline."
+        "correo": {
+          "lead": "Correo.",
+          "caption": "Bandeja de entrada del buzón de empresa, con mensajes de ejemplo de example.com.",
+          "alt": "Bandeja de entrada de Correo en tema claro: hilos ficticios de remitentes de example.com."
         },
         "detail": {
           "lead": "Detalle de un lead.",

@@ -3,7 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
 import { AuthFlashBanner } from "@/components/auth-flash-banner";
-import { WhatIsItSection } from "@/components/auth/what-it-is-section";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { isDemoConfigured } from "@/lib/demo/config";
 import { BrandMark } from "@/components/brand/brand-mark";
@@ -26,9 +25,9 @@ export default async function LoginPage() {
   }).split(linkText);
 
   return (
-    <div className="flex min-h-full flex-1 items-start justify-center p-6 lg:items-center">
-      <div className="flex w-full max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-14">
-        <div className="w-full max-w-sm shrink-0 rounded-lg bg-white p-8 shadow-md dark:bg-gris-800 lg:sticky lg:top-6">
+    <div className="flex min-h-full flex-1 items-start justify-center p-6 sm:items-center">
+      <div className="w-full max-w-sm">
+        <div className="w-full rounded-lg bg-white p-8 shadow-md dark:bg-gris-800">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -53,7 +52,17 @@ export default async function LoginPage() {
             <LoginForm demoEnabled={isDemoConfigured()} />
           </Suspense>
         </div>
-        <WhatIsItSection />
+        <p className="mt-4 text-center text-sm">
+          <a
+            href="/que-es"
+            target="_blank"
+            rel="noopener"
+            data-testid="what-it-is-link"
+            className="text-gray-500 underline hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            {t("whatIsItLink")}
+          </a>
+        </p>
       </div>
     </div>
   );

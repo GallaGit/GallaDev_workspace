@@ -144,7 +144,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const access = useSessionAccess();
   const returnPath = useReturnPath(pathname);
   // El login se muestra sin el chrome de la app.
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/que-es") {
     return (
       <main className="h-full min-h-0 overflow-auto bg-sidebar text-fg">
         {children}

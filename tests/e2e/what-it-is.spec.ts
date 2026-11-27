@@ -1,81 +1,92 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Sección pública «¿Qué es?» en /login. No pide sesión ni depende de
- * DEMO_MODE_ENABLED (el servidor de Playwright la deja encendida, así que
- * también se comprueba que convive con «Entrar como visitante»).
+ * «¿Qué es?» vive en la página pública /que-es. /login solo enseña un botón
+ * discreto que la abre en una pestaña nueva. Ninguna de las dos pide sesión.
  */
-test("la sección Qué es se ve sin sesión y no bloquea el formulario", async ({
+const SHOTS = [
+  "/what-it-is/leads-light.webp",
+  "/what-it-is/kanban-light.webp",
+  "/what-it-is/correo-light.webp",
+  "/what-it-is/detail-light.webp",
+];
+
+test("/login no incluye la sección y enseña el enlace ¿Qué es?", async ({
   page,
 }) => {
-  await page.route("**/what-it-is/**", (route) => route.abort());
   await page.goto("/login");
-
-  const section = page.getByTestId("what-it-is");
-  await expect(section).toBeVisible();
-  await expect(
-    page.getByRole("heading", { level: 2, name: "¿Qué es?" }),
-  ).toBeVisible();
-  await expect(
-    section.getByText(
-      "GallaDev Workspace es un CRM para revisar, cualificar y gestionar leads de asesorías y gestorías.",
-    ),
-  ).toBeVisible();
-
+  await expect(page.getByTestId("what-it-is")).toHaveCount(0);
   await expect(page.getByTestId("login-email")).toBeVisible();
-  await expect(page.getByTestId("login-password")).toBeVisible();
-  await page.getByTestId("login-email").fill("ana@example.com");
-  await page.getByTestId("login-password").fill("secret");
-  await expect(page.getByTestId("login-submit")).toBeEnabled();
+  const link = page.getByTestId("what-it-is-link");
+  await expect(link).toHaveText("¿Qué es?");
+  await expect(link).toHaveAttribute("href", "/que-es");
+  await expect(link).toHaveAttribute("target", "_blank");
+});
 
-  await expect(page.getByTestId("demo-enter")).toBeVisible();
+test("el enlace abre /que-es en una pestaña nueva sin sesión", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.getByTestId("what-it-is-link").click(),
+  ]);
+  await expect(popup).toHaveURL(/\/que-es$/);
+  await expect(
+    popup.getByRole("heading", { level: 2, name: "¿Qué es?" }),
+  ).toBeVisible();
+  await expect(popup.getByText(/^Incluye el buzón de empresa/)).toBeVisible();
+  await popup.getByTestId("what-it-is-back").click();
+  await expect(popup).toHaveURL(/\/login/);
+});
+
+test("las capturas se sirven con HTTP 200 y se cargan sin sesión", async ({
+  page,
+  request,
+}) => {
+  for (const src of SHOTS) {
+    const res = await request.get(src, { maxRedirects: 0 });
+    expect(res.status(), src).toBe(200);
+    expect(res.headers()["content-type"]).toContain("image/webp");
+  }
+  await page.goto("/que-es");
+  const imgs = page.locator('[data-testid="what-it-is"] img');
+  await expect(imgs).toHaveCount(SHOTS.length);
+  for (let i = 0; i < SHOTS.length; i++) {
+    const img = imgs.nth(i);
+    await img.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth))
+      .toBeGreaterThan(0);
+  }
 });
 
 test("las capturas tienen pie y texto alternativo", async ({ page }) => {
-  await page.goto("/login");
+  await page.goto("/que-es");
   const section = page.getByTestId("what-it-is");
-
   await expect(
     section.getByRole("img", {
-      name: "Lista de leads en tema claro: tres asesorías ficticias con estado y ciudad de ejemplo.",
+      name: /Bandeja de entrada de Correo en tema claro/,
     }),
-  ).toBeVisible();
-  await expect(
-    section.getByRole("img", {
-      name: "Tablero Kanban en tema claro con columnas del pipeline y tarjetas de empresas ficticias.",
-    }),
-  ).toBeVisible();
-  await expect(
-    section.getByRole("img", {
-      name: "Página de estadísticas en tema claro: gráfico de barras con cifras ficticias del pipeline.",
-    }),
-  ).toBeVisible();
-  await expect(
-    section.getByRole("img", {
-      name: "Panel de un lead ficticio en tema claro, con el bloque de análisis de dolores visible.",
-    }),
-  ).toBeVisible();
-
+  ).toBeAttached();
+  await expect(section.getByRole("img")).toHaveCount(4);
   await expect(section.getByText("Lista de leads.")).toBeVisible();
   await expect(section.getByText("Kanban.")).toBeVisible();
-  await expect(section.getByText("Estadísticas.")).toBeVisible();
+  await expect(section.getByText("Correo.")).toBeVisible();
   await expect(section.getByText("Detalle de un lead.")).toBeVisible();
 });
 
-test("en inglés la sección muestra What is it?", async ({ page }) => {
-  await page.goto("/login");
+test("en inglés /que-es muestra What is it?", async ({ page }) => {
+  await page.goto("/que-es");
   await page.getByTestId("locale-trigger").click();
   await expect(
     page.getByRole("heading", { level: 2, name: "What is it?" }),
   ).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText(/^It includes the company mailbox/)).toBeVisible();
   await expect(
-    page.getByText(
-      /GallaDev Workspace is a CRM for reviewing, qualifying, and managing leads/,
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("img", {
-      name: "Light-theme lead list: three fictional advisory firms with sample status and city.",
-    }),
-  ).toBeVisible();
+    page.getByRole("img", { name: /Light-theme Correo inbox/ }),
+  ).toBeAttached();
+  await expect(page.getByTestId("what-it-is-back")).toHaveText(
+    "Back to sign in",
+  );
 });
