@@ -266,7 +266,7 @@ Hasta que se responda: solo Admin, adjuntos solo con metadatos si no hay bucket,
 
 - Los borradores de respuesta siguen en `email_drafts` con `thread_id`; los de mensaje nuevo de un lead usan `lead_id` y `thread_id IS NULL`.
 - El filtro por `mailbox_address` (allowlist) es ortogonal a las bandejas: un hilo de `ociel@` puede estar en Entrada o Enviados.
-- Spam y retención de adjuntos siguen abiertos (sección 7).
+- Spam sigue abierto (sección 7). La retención de adjuntos está resuelta: el cron de retención borra también los archivos en Storage de los hilos purgados (PR #106).
 - Criterio de arranque: solo tras validar dual mailbox V1 en uso real.
 
 ## 9. Mejoras de la bandeja (puntos 1–7)
@@ -278,9 +278,9 @@ Estas mejoras se acordaron con Ociel después de las Fases 1–3. El orden de tr
 | 1 | Paginación / «Cargar más» (páginas de 50) | Hecho (PR #106) |
 | 2 | Purga real de la Papelera a los 30 días (cron de retención) | Hecho (PR #106; migración `20261118220000_purge_trashed_email_threads.sql`) |
 | 3 | Bandeja Enviados (hilos con al menos un mensaje `outbound` y que no están en Papelera) | Hecho (PR #106) |
-| 4 | Persistir adjuntos entrantes en Storage cuando existe `EMAIL_ATTACHMENTS_BUCKET` | Hecho (PR #106) |
+| 4 | Persistir adjuntos entrantes en Storage cuando existe `EMAIL_ATTACHMENTS_BUCKET` | Hecho (PR #106). Configurado en producción el 27 nov 2026: bucket privado `email-attachments` y variable `EMAIL_ATTACHMENTS_BUCKET` en Vercel. |
 | 5 | Cc/Cco, autoguardado, firma por buzón y adjuntos salientes | Hecho (PR #108; ver «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
-| 6 | Vinculación automática hilo↔lead, origen auto/manual y sección «Correos» en la ficha del lead | En el [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), pendiente de fusionar |
+| 6 | Vinculación automática hilo↔lead, origen auto/manual y sección «Correos» en la ficha del lead | Hecho ([PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109); ampliado en el [PR #115](https://github.com/GallaGit/GallaDev_workspace/pull/115) con borradores desde la ficha y acceso Seller) |
 | 7 | Actualizar la lista al llegar correo nuevo; rutas por carpeta; barra lateral dedicada al correo; Cuentas; vista móvil | **Hecho** (rutas por carpeta, barra de correo, Cuentas, refresco cada 60 s y drawer móvil; detalle abajo) |
 
 ### Punto 7 — Rutas por carpeta, barra lateral de correo, Cuentas y vista móvil
@@ -293,7 +293,7 @@ Estas mejoras se acordaron con Ociel después de las Fases 1–3. El orden de tr
 
 En el móvil el panel izquierdo de `/correo` (ancho fijo de 320 px: carpetas Recibidos, Enviados, Archivados y Papelera, el filtro de buzón, Borradores y la lista de hilos) comparte fila con la vista de lectura y no se oculta. En una pantalla estrecha tapa o deja casi sin espacio el correo abierto. No hay una pantalla de lista a ancho completo ni un botón para volver.
 
-#### Estado actual (código; este documento no lo cambia)
+#### Estado previo al PR #114 (histórico)
 
 - La ruta del módulo es **`/correo`**: una sola página (`src/app/correo/page.tsx` → `InboxPage`), sin segmentos de carpeta. El banco `/email` se eliminó; `/email` redirige a `/correo/borradores`.
 - Las carpetas no tienen URL. Viven en el estado del cliente: `view` es `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` en `src/lib/email/thread-state.ts`). Borradores es un `listMode` aparte (`drafts`): hoy un botón junto a los chips de buzón, no una entrada de esa lista de vistas.

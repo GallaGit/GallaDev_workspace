@@ -222,7 +222,7 @@ Until those are answered: Admin only, metadata-only attachments if no bucket exi
 
 - Reply drafts stay in `email_drafts` with `thread_id`; new-message drafts from a lead use `lead_id` and `thread_id IS NULL`.
 - The `mailbox_address` filter (allowlist) is orthogonal to folders: an `ociel@` thread can sit in Inbox or Sent.
-- Spam and attachment retention remain open (section 7).
+- Spam remains open (section 7). Attachment retention is solved: the retention cron also deletes the Storage files of purged threads (PR #106).
 - Start criterion: only after dual mailbox V1 is validated in real use.
 
 ## 9. Inbox improvements (points 1–7)
@@ -234,9 +234,9 @@ These improvements were agreed with Ociel after Phases 1–3. The work order was
 | 1 | Pagination / “Load more” (pages of 50) | Done (PR #106) |
 | 2 | Real Trash purge after 30 days (retention cron) | Done (PR #106; migration `20261118220000_purge_trashed_email_threads.sql`) |
 | 3 | Sent folder (threads with at least one `outbound` message that are not in Trash) | Done (PR #106) |
-| 4 | Persist inbound attachments in Storage when `EMAIL_ATTACHMENTS_BUCKET` is set | Done (PR #106) |
+| 4 | Persist inbound attachments in Storage when `EMAIL_ATTACHMENTS_BUCKET` is set | Done (PR #106). Configured in production on 27 Nov 2026: private bucket `email-attachments` and `EMAIL_ATTACHMENTS_BUCKET` set in Vercel. |
 | 5 | Cc/Bcc, autosave, per-mailbox signature and outbound attachments | Done (PR #108; see the Spanish spec, «Redactar: Cc/Cco, autoguardado, firma y adjuntos») |
-| 6 | Automatic thread↔lead linking, auto/manual source, and a “Correos” section on the lead record | In [PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109), not merged yet |
+| 6 | Automatic thread↔lead linking, auto/manual source, and a “Correos” section on the lead record | Done ([PR #109](https://github.com/GallaGit/GallaDev_workspace/pull/109); extended in [PR #115](https://github.com/GallaGit/GallaDev_workspace/pull/115) with drafts from the lead record and Seller access) |
 | 7 | Refresh the list when new mail arrives; per-folder routes; dedicated email sidebar; Cuentas; mobile layout | **Done** (per-folder routes, email sidebar, Cuentas, 60 s refresh and mobile drawer; detail below) |
 
 ### Point 7 — Per-folder routes, email sidebar, Cuentas, and mobile layout
@@ -249,7 +249,7 @@ These improvements were agreed with Ociel after Phases 1–3. The work order was
 
 On mobile, the left panel of `/correo` (fixed 320 px width: Recibidos, Enviados, Archivados and Papelera, the mailbox filter, Borradores, and the thread list) shares a row with the reading view and is never hidden. On a narrow screen it covers the open email or leaves almost no room for it. There is no full-width list screen and no back button.
 
-#### Current state (code; this document does not change it)
+#### State before PR #114 (historical)
 
 - The module route is **`/correo`**: a single page (`src/app/correo/page.tsx` → `InboxPage`), with no folder segments. The old `/email` workbench was removed; `/email` redirects to `/correo/borradores`.
 - Folders have no URL. They live in client state: `view` is `inbox` / `sent` / `archived` / `trash` (`THREAD_VIEWS` in `src/lib/email/thread-state.ts`). Drafts is a separate `listMode` (`drafts`): today a button next to the mailbox chips, not an entry in that view list.
