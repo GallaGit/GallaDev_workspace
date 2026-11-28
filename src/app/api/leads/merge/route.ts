@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiSession, requireLeadWriter } from "@/lib/api-auth";
+import { logLeadMerged } from "@/lib/audit/events";
 import { canWriteLead } from "@/lib/leads/lead-access";
 import {
   buildEmptyFieldMerge,
@@ -79,6 +80,8 @@ export async function POST(request: Request) {
     if (!archive.archived) {
       await repo.archive(archiveId);
     }
+
+    await logLeadMerged({ keepId, mergedIds: [archiveId], filledKeys });
 
     // Re-read keeper after activity/update for fresh lastEditedTime
     const fresh = (await repo.get(keepId)) ?? updated;

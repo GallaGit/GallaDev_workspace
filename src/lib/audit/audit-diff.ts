@@ -16,6 +16,12 @@ export const AUDIT_ACTIONS = [
   "settings.changed",
   "auth.login",
   "auth.logout",
+  "email.received",
+  "email.replied",
+  "email.linked",
+  "email.archived",
+  "lead.merged",
+  "lead.ai_analyzed",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -27,6 +33,8 @@ export interface AuditDiff {
   fields: string[];
   /** Antes → después solo para campos no sensibles. */
   changes?: Record<string, { from: AuditScalar; to: AuditScalar }>;
+  /** Metadatos no sensibles (ids, contadores, nombre de modelo). Nunca texto libre. */
+  meta?: Record<string, AuditScalar | string[]>;
 }
 
 /**

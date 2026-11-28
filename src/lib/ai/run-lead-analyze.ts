@@ -15,6 +15,7 @@ import {
   toApiPainAnalysis,
 } from "@/lib/ai/pain-analysis-api";
 import type { Lead } from "@/lib/domain/lead";
+import { logLeadAiAnalyzed } from "@/lib/audit/events";
 import { getApiSession } from "@/lib/api-auth";
 import { canWriteLead } from "@/lib/leads/lead-access";
 import { getSessionLeadRepository } from "@/lib/repository/get-repository";
@@ -108,6 +109,9 @@ export async function runLeadAnalyze(
     return { ok: true, status: 200, body: emptySuccess(lead) };
   }
 
+  const auditAnalysis = (success: boolean) =>
+    logLeadAiAnalyzed({ leadId: id, model: currentModel(), success });
+
   let analysis;
   try {
     analysis = await analyzeBusinessPains(lead);
@@ -116,9 +120,11 @@ export async function runLeadAnalyze(
       e instanceof PainAnalysisError &&
       (e.code === "empty" || e.code === "invalid")
     ) {
+      await auditAnalysis(false);
       return { ok: true, status: 200, body: emptySuccess(lead) };
     }
     logFailure(e, 502);
+    await auditAnalysis(false);
     const message =
       e instanceof Error ? e.message : "Error al analizar el lead";
     return {
@@ -129,8 +135,10 @@ export async function runLeadAnalyze(
   }
 
   if (isPainAnalysisEmpty(analysis)) {
+    await auditAnalysis(false);
     return { ok: true, status: 200, body: emptySuccess(lead) };
   }
+  await auditAnalysis(true);
 
   const text = formatPainAnalysis(analysis);
   const apiAnalysis = toApiPainAnalysis(analysis, analysisMeta());

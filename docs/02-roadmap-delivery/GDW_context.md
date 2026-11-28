@@ -61,13 +61,13 @@ It sits alongside “Entrar como visitante”. The visible title is «¿Qué es?
 - **Viewer E2E 403 tests.** CI E2E credentials are Admin and Seller only (`E2E_ADMIN_*`, `E2E_SELLER_*`, plus `E2E_TEST_*`). There is no Viewer secret, so the 403 write paths are covered by unit tests (`src/lib/auth/rbac-routes.test.ts`) and not by Playwright.
 - ~~**Distributed rate limiting.**~~ **Done (commit `657c539`).** `src/lib/rate-limit.ts` uses a persistent Upstash quota (`@upstash/ratelimit`) when configured, with a per-instance in-memory fallback.
 - ~~**Personal data retention.**~~ **Done (commit `833e856`).** Automatic deletion of personal data (12 months / 6 years).
-- **Audit trail.** First delivery implemented (leads, settings, roles, login/logout). Correo, merges and AI analysis pending. See below.
+- **Audit trail.** Implemented (leads, settings, roles, login/logout, Correo, merges and AI analysis). See below.
 
-### Audit trail (partially implemented)
+### Audit trail (implemented)
 
 Who-did-what history for team work is specified in
 [`audit-trail.md`](./audit-trail.md) (ES: [`audit-trail.es.md`](./audit-trail.es.md)).
-Per-user identity (Supabase Auth + `profiles.role`) is in place. The first delivery records lead, settings, role and login/logout events; Correo, merges and AI analysis are the second delivery.
+Per-user identity (Supabase Auth + `profiles.role`) is in place. The first delivery records lead, settings, role and login/logout events; the second adds `email.received`, `email.replied`, `email.linked`, `email.archived`, `lead.merged` and `lead.ai_analyzed` (no migration, no email bodies or AI text).
 
 ### Proposed — pending validation
 

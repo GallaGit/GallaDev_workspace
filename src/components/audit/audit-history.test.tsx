@@ -115,3 +115,30 @@ describe("LeadHistorySection", () => {
     );
   });
 });
+
+describe("acciones de la segunda entrega", () => {
+  it("etiqueta correos, fusión y análisis IA; el webhook se muestra como Sistema", async () => {
+    vi.stubGlobal(
+      "fetch",
+      respond({
+        entries: [
+          entry({ action: "email.received", actor_id: null, actor_email: null, actor_role: null, entity: "email_thread" }),
+          entry({ action: "email.replied" }),
+          entry({ action: "email.linked", diff: { fields: ["lead_id"] } }),
+          entry({ action: "email.archived" }),
+          entry({ action: "lead.merged" }),
+          entry({ action: "lead.ai_analyzed" }),
+        ],
+        total: 6,
+      }),
+    );
+    renderWithIntl(<LeadHistorySection leadId={LEAD_ID} />);
+    await waitFor(() => expect(screen.getByText(/recibió un correo/)).toBeTruthy());
+    expect(screen.getByText("Sistema")).toBeTruthy();
+    expect(screen.getByText(/respondió un correo/)).toBeTruthy();
+    expect(screen.getByText(/vinculó un correo a un lead/)).toBeTruthy();
+    expect(screen.getByText(/archivó o restauró un correo/)).toBeTruthy();
+    expect(screen.getByText(/fusionó leads/)).toBeTruthy();
+    expect(screen.getByText(/analizó el lead con IA/)).toBeTruthy();
+  });
+});

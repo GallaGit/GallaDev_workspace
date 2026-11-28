@@ -846,6 +846,7 @@
     "showingLatest": "Showing the {count} most recent.",
     "you": "You",
     "unknownActor": "Unknown user",
+    "system": "System",
     "anotherPerson": "Someone else",
     "yes": "Yes",
     "no": "No",
@@ -874,6 +875,12 @@
       "settings_changed": "changed settings",
       "auth_login": "signed in",
       "auth_logout": "signed out",
+      "email_received": "received an email",
+      "email_replied": "replied to an email",
+      "email_linked": "linked an email to a lead",
+      "email_archived": "archived or restored an email",
+      "lead_merged": "merged leads",
+      "lead_ai_analyzed": "analyzed the lead with AI",
       "create": "created",
       "update": "updated",
       "delete": "deleted",
@@ -896,7 +903,9 @@
       "notes": "Notes",
       "notesOverflow": "Notes (extra)",
       "email": "Email",
-      "phone": "Phone"
+      "phone": "Phone",
+      "lead_id": "Lead",
+      "trashed": "Trash"
     },
     "emptyValue": "—"
   }

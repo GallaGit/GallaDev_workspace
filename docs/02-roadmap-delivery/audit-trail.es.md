@@ -1,11 +1,11 @@
 # Historial De Auditoría (Quién Hizo Qué)
 
-> **Estado:** implementado parcialmente (primera entrega) · **Actualizado:** 2026-11-28
+> **Estado:** implementado (primera y segunda entrega) · **Actualizado:** 2026-11-28
 > **Migraciones:** `20261024120000_audit_log.sql` (tabla) y
 > `20261128120000_audit_log_hardening.sql` (solidez, columnas y RLS).
 > Ociel las aplica a mano en producción.
-> **Pendiente (segunda entrega):** Correo, fusiones de leads y análisis IA
-> (ver §6).
+> La segunda entrega (Correo, fusiones y análisis IA) **no añade migración**
+> (la comprobación de formato de `action` ya admite los nombres nuevos).
 
 ## 1. Objetivo
 
@@ -29,6 +29,22 @@ cualquier futura facturación o reporte por usuario.
 | `settings.changed` | `PATCH /api/settings` | `ai.provider` y `ai.model` antes→después; claves API solo por nombre |
 | `auth.login` | `POST /api/auth/login` (solo logins correctos) | vacío |
 | `auth.logout` | `POST /api/auth/logout` (barra lateral y «cerrar en todos los dispositivos») | vacío |
+| `email.received` | `POST /api/email/inbound` (webhook; actor = sistema, `actor_id` nulo) | `meta`: `messageId`, asunto (≤80 car.), nº de adjuntos |
+| `email.replied` | `POST /api/email/threads/:id/reply` (solo si se envía) | `meta`: `messageId`, nº de adjuntos; `lead_id` del hilo |
+| `email.linked` | `PATCH /api/email/threads/:id` con `lead_id` (vincular/desvincular) | `["lead_id"]`, `meta.linked` |
+| `email.archived` | `PATCH /api/email/threads/:id` y `PATCH /api/email/threads` (masivo) con `archived`/`trashed` | `meta.state`: `archived`, `unarchived`, `trashed`, `restored` |
+| `lead.merged` | `POST /api/leads/merge` | campos rellenados por nombre; `meta.mergedIds` |
+| `lead.ai_analyzed` | `runLeadAnalyze` (`/api/leads/:id/analyze` y `/api/leads/pain-analysis` con id) | `meta`: `model`, `success` |
+
+Los eventos de correo usan `entity = email_thread` y `entity_id` = id del hilo;
+solo rellenan `lead_id` cuando el hilo está vinculado (así un Seller los ve en
+el Historial del lead). Nunca se guardan cuerpos, contenido de adjuntos ni
+direcciones de correo: solo ids, asunto truncado y contadores. El diff admite
+`meta` (ids, contadores, nombre de modelo; nunca prompts ni respuestas de IA).
+En la UI, el actor del webhook se muestra como «Sistema». El filtro del Admin
+es por acción, así que las acciones nuevas aparecen solas en el desplegable.
+Un fallo de análisis IA (error del proveedor o respuesta vacía/inválida)
+registra `success: false`.
 
 Cada fila guarda: `actor_id`, `actor_email`, `actor_role` (rol en el
 momento), `action`, `entity`, `entity_id`, `lead_id` (solo eventos de lead),
@@ -86,7 +102,7 @@ momento), `action`, `entity`, `entity_id`, `lead_id` (solo eventos de lead),
   reasignación (`src/lib/audit/*.test.ts`), componente
   (`src/components/audit`), migración y E2E contra Supabase local
   (`tests/e2e/audit-trail.spec.ts`).
-- [ ] Correo, fusiones y análisis IA (segunda entrega).
+- [x] Correo, fusiones y análisis IA (segunda entrega; tests en `src/lib/audit/events.test.ts` y en los tests de ruta).
 
 ## 5. Nota multiempresa
 
@@ -96,10 +112,9 @@ empresa tendría su propia BD con su `audit_log` (Modelo B: un proyecto por
 empresa, mismas migraciones). Sin decisión por ahora; la columna nullable
 `org_id` **no** existe todavía y se añadiría con una migración si hace falta.
 
-## 6. Segunda entrega (pendiente)
+## 6. Fuera de alcance
 
-- **Correo:** `lead.email_marked`, envío, vinculación/desvinculación de hilos.
-- **Fusiones:** `lead.merged` (hoy `src/app/api/leads/merge` no audita).
-- **Análisis IA:** `lead.ai_analyzed` (rutas `analyze`, `pain-analysis`, `score`).
+- Vinculación automática de hilos (`autoLinkThread`, sistema) y `score` no
+  se auditan todavía.
 - Intentos de login fallidos, exportación, feed en tiempo real y política de
   retención del historial siguen fuera de alcance.
