@@ -7,6 +7,7 @@ import {
 } from "@/lib/leads/enforce-lead-write";
 import { validateLeadPatch } from "@/lib/leads/validate-lead-patch";
 import { logAudit } from "@/lib/audit/log-audit";
+import { leadUpdateAction, leadUpdateDiff } from "@/lib/audit/audit-diff";
 
 export const dynamic = "force-dynamic";
 
@@ -59,14 +60,15 @@ export async function PATCH(request: Request, ctx: Ctx) {
     if (!gate.ok) {
       return NextResponse.json({ error: gate.error }, { status: gate.status });
     }
+    const before = actor ? await repo.get(id) : null;
     const lead = await repo.update(id, gate.patch);
     if (actor) {
       await logAudit({
-        actorId: actor.id,
-        action: "update",
+        actor,
+        action: leadUpdateAction(gate.patch),
         entity: "lead",
         entityId: id,
-        changedFields: Object.keys(gate.patch),
+        diff: leadUpdateDiff(before as Record<string, unknown> | null, gate.patch),
       });
     }
     return NextResponse.json({ lead });
@@ -90,8 +92,8 @@ export async function DELETE(request: Request, ctx: Ctx) {
     await repo.archive(id);
     if (actor) {
       await logAudit({
-        actorId: actor.id,
-        action: "delete",
+        actor,
+        action: "lead.archived",
         entity: "lead",
         entityId: id,
         changedFields: ["archived"],

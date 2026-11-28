@@ -15,6 +15,7 @@ import {
 } from "@/lib/leads/enforce-lead-write";
 import type { LeadFilters, LeadStatus } from "@/lib/domain/lead";
 import { logAudit } from "@/lib/audit/log-audit";
+import { leadUpdateAction, leadUpdateDiff } from "@/lib/audit/audit-diff";
 
 export const dynamic = "force-dynamic";
 
@@ -97,8 +98,8 @@ export async function POST(request: Request) {
     const repo = await getSessionLeadRepository();
     const lead = await repo.create(input);
     await logAudit({
-      actorId: actor.id,
-      action: "create",
+      actor,
+      action: "lead.created",
       entity: "lead",
       entityId: lead.id,
       changedFields: Object.keys(input),
@@ -139,15 +140,16 @@ export async function PATCH(request: Request) {
       if (!gate.ok) {
         return NextResponse.json({ error: gate.error }, { status: gate.status });
       }
+      const before = actor ? await repo.get(id) : null;
       const lead = await repo.update(id, gate.patch);
       updated.push(lead);
       if (actor) {
         await logAudit({
-          actorId: actor.id,
-          action: "update",
+          actor,
+          action: leadUpdateAction(gate.patch),
           entity: "lead",
           entityId: lead.id,
-          changedFields: Object.keys(gate.patch),
+          diff: leadUpdateDiff(before as Record<string, unknown> | null, gate.patch),
         });
       }
     }

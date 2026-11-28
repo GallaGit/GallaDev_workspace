@@ -16,10 +16,15 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: vi.fn(() => ({
     from: () => ({
-      select: async () => ({
-        data: [{ id: "admin-1", role: "Admin" }],
-        error: null,
-      }),
+      select: () => {
+        const result = {
+          data: [{ id: "admin-1", role: "Admin" }],
+          error: null,
+        };
+        return Object.assign(Promise.resolve(result), {
+          eq: () => ({ maybeSingle: async () => ({ data: { role: "Viewer" }, error: null }) }),
+        });
+      },
       upsert: async () => ({ error: null }),
     }),
     auth: {

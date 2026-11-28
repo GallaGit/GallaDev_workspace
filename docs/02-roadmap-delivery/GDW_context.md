@@ -61,13 +61,13 @@ It sits alongside “Entrar como visitante”. The visible title is «¿Qué es?
 - **Viewer E2E 403 tests.** CI E2E credentials are Admin and Seller only (`E2E_ADMIN_*`, `E2E_SELLER_*`, plus `E2E_TEST_*`). There is no Viewer secret, so the 403 write paths are covered by unit tests (`src/lib/auth/rbac-routes.test.ts`) and not by Playwright.
 - ~~**Distributed rate limiting.**~~ **Done (commit `657c539`).** `src/lib/rate-limit.ts` uses a persistent Upstash quota (`@upstash/ratelimit`) when configured, with a per-instance in-memory fallback.
 - ~~**Personal data retention.**~~ **Done (commit `833e856`).** Automatic deletion of personal data (12 months / 6 years).
-- **Audit trail.** Specified, not implemented. See below.
+- **Audit trail.** First delivery implemented (leads, settings, roles, login/logout). Correo, merges and AI analysis pending. See below.
 
-### Planned: audit trail (specified, not implemented)
+### Audit trail (partially implemented)
 
 Who-did-what history for team work is specified in
 [`audit-trail.md`](./audit-trail.md) (ES: [`audit-trail.es.md`](./audit-trail.es.md)).
-Per-user identity (Supabase Auth + `profiles.role`) is in place. The audit log itself is not. Do not treat it as current behavior.
+Per-user identity (Supabase Auth + `profiles.role`) is in place. The first delivery records lead, settings, role and login/logout events; Correo, merges and AI analysis are the second delivery.
 
 ### Proposed — pending validation
 

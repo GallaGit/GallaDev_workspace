@@ -19,6 +19,7 @@ export function SettingsSecurity() {
     setLoading(true);
     setError(null);
     try {
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
       const supabase = createSupabaseBrowserClient();
       const { error: signOutError } = await supabase.auth.signOut({
         scope: "global",

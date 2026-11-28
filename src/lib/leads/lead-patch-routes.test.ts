@@ -12,6 +12,8 @@ vi.mock("@/lib/api-auth", () => ({
   })),
 }));
 
+vi.mock("@/lib/audit/log-audit", () => ({ logAudit: vi.fn(async () => undefined) }));
+
 vi.mock("@/lib/repository/get-repository", () => ({
   getSessionLeadRepository: vi.fn(),
 }));
@@ -44,6 +46,7 @@ describe("PATCH /api/leads/:id", () => {
     update.mockClear();
     vi.mocked(getSessionLeadRepository).mockResolvedValue({
       update,
+      get: vi.fn(async () => null),
     } as never);
   });
 
@@ -178,6 +181,7 @@ describe("PATCH /api/leads bulk", () => {
     update.mockClear();
     vi.mocked(getSessionLeadRepository).mockResolvedValue({
       update,
+      get: vi.fn(async () => null),
     } as never);
   });
 

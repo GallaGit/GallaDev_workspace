@@ -8,10 +8,20 @@ import {
 import { resetRateLimits } from "@/lib/rate-limit";
 
 const signInWithPassword = vi.hoisted(() => vi.fn());
+const logAuditMock = vi.hoisted(() => vi.fn(async () => undefined));
+
+vi.mock("@/lib/audit/log-audit", () => ({ logAudit: logAuditMock }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => ({
     auth: { signInWithPassword },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: { role: "Seller" }, error: null }),
+        }),
+      }),
+    }),
   })),
 }));
 
@@ -29,6 +39,7 @@ function loginRequest(email: string, password: string, ip: string) {
 beforeEach(() => {
   resetRateLimits();
   signInWithPassword.mockReset();
+  logAuditMock.mockClear();
   signInWithPassword.mockResolvedValue({
     data: { user: null },
     error: { message: "Email not confirmed" },
@@ -93,7 +104,7 @@ describe("POST /api/auth/login", () => {
 
   it("borra la cookie de visitante cuando el acceso es válido", async () => {
     signInWithPassword.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: "user-1", email: "ana@example.com" } },
       error: null,
     });
     const { POST } = await import("@/app/api/auth/login/route");
@@ -101,5 +112,18 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("set-cookie") ?? "").toMatch(/gdw_visitor=/);
     expect(await res.json()).toEqual({ ok: true });
+    expect(logAuditMock).toHaveBeenCalledWith({
+      actor: { id: "user-1", email: "ana@example.com", role: "Seller" },
+      action: "auth.login",
+      entity: "session",
+      entityId: "user-1",
+      changedFields: [],
+    });
+  });
+
+  it("no registra auth.login si las credenciales fallan", async () => {
+    const { POST } = await import("@/app/api/auth/login/route");
+    await POST(loginRequest("ana@example.com", "mala", "203.0.113.11"));
+    expect(logAuditMock).not.toHaveBeenCalled();
   });
 });

@@ -4,11 +4,9 @@ vi.mock("server-only", () => ({}));
 
 const insertMock = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: vi.fn(async () => ({
-    from: () => ({
-      insert: insertMock,
-    }),
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: vi.fn(() => ({
+    from: () => ({ insert: insertMock }),
   })),
 }));
 
@@ -17,87 +15,79 @@ vi.mock("@/lib/demo/visitor-request", () => ({
   isVisitorRequest: (...args: unknown[]) => isVisitorRequestMock(...args),
 }));
 
+const LEAD_ID = "11111111-1111-4111-8111-111111111111";
+const actor = { id: "u1", email: "ana@example.com", role: "Seller" as const };
+
 describe("logAudit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("AUTH_DISABLED", "false");
+    vi.stubEnv("NODE_ENV", "test");
     isVisitorRequestMock.mockResolvedValue(false);
     insertMock.mockResolvedValue({ error: null });
   });
 
-  it("inserts correct row", async () => {
+  it("escribe con el actor de la sesión y el rol del momento", async () => {
     const { logAudit } = await import("./log-audit");
     await logAudit({
-      actorId: "u1",
-      action: "create",
+      actor,
+      action: "lead.created",
       entity: "lead",
-      entityId: "l1",
+      entityId: LEAD_ID,
       changedFields: ["name", "email", "name"],
     });
 
     expect(insertMock).toHaveBeenCalledWith({
       actor_id: "u1",
-      action: "create",
+      actor_email: "ana@example.com",
+      actor_role: "Seller",
+      action: "lead.created",
       entity: "lead",
-      entity_id: "l1",
+      entity_id: LEAD_ID,
+      lead_id: LEAD_ID,
       diff: { fields: ["email", "name"] },
     });
-    const row = insertMock.mock.calls[0][0];
-    expect(JSON.stringify(row)).not.toContain("Acme");
   });
 
-  it("stores empty field list when none given", async () => {
+  it("no rellena lead_id fuera de leads", async () => {
     const { logAudit } = await import("./log-audit");
-    await logAudit({ actorId: "u1", action: "delete", entity: "lead", entityId: "l1" });
-    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ diff: { fields: [] } }));
+    await logAudit({
+      actor,
+      action: "settings.changed",
+      entity: "settings",
+      entityId: "workspace",
+    });
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ lead_id: null, diff: { fields: [] } }),
+    );
   });
 
-  it("swallows insert errors and thrown errors", async () => {
-    const { createSupabaseServerClient } = await import("@/lib/supabase/server");
-    vi.mocked(createSupabaseServerClient).mockResolvedValueOnce({
-      from: () => ({
-        insert: vi.fn().mockResolvedValue({ error: { message: "fail" } }),
-      }),
-    } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
-
+  it("traga errores de inserción y excepciones", async () => {
+    insertMock.mockResolvedValueOnce({ error: { message: "fail" } });
     const { logAudit } = await import("./log-audit");
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(
-      logAudit({
-        actorId: "u1",
-        action: "update",
-        entity: "lead",
-        entityId: "l1",
-      }),
+      logAudit({ actor, action: "lead.updated", entity: "lead", entityId: LEAD_ID }),
     ).resolves.toBeUndefined();
 
-    vi.mocked(createSupabaseServerClient).mockRejectedValueOnce(new Error("boom"));
+    insertMock.mockRejectedValueOnce(new Error("boom"));
     await expect(
-      logAudit({
-        actorId: "u1",
-        action: "delete",
-        entity: "lead",
-        entityId: "l1",
-      }),
+      logAudit({ actor, action: "lead.archived", entity: "lead", entityId: LEAD_ID }),
     ).resolves.toBeUndefined();
+    spy.mockRestore();
   });
 
-  it("skips for visitor and AUTH_DISABLED", async () => {
+  it("no registra para visitante ni con AUTH_DISABLED", async () => {
     const { logAudit } = await import("./log-audit");
 
     isVisitorRequestMock.mockResolvedValueOnce(true);
-    await logAudit({
-      actorId: "u1",
-      action: "create",
-      entity: "lead",
-      entityId: "l1",
-    });
+    await logAudit({ actor, action: "lead.created", entity: "lead", entityId: LEAD_ID });
     expect(insertMock).not.toHaveBeenCalled();
 
-    isVisitorRequestMock.mockResolvedValueOnce(false);
     vi.stubEnv("AUTH_DISABLED", "true");
     await logAudit({
-      actorId: "u1",
-      action: "role_change",
+      actor,
+      action: "team.role_changed",
       entity: "profile",
       entityId: "u2",
       changedFields: ["role"],

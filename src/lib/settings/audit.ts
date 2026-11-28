@@ -13,3 +13,23 @@ export function settingsAuditChanges(
   ];
   return fields.filter(([, a, b]) => a !== b).map(([name]) => name);
 }
+
+/** Campos de ajustes cuyo valor no es secreto y puede guardarse antes→después. */
+export const SETTINGS_SAFE_FIELDS = ["ai.provider", "ai.model"] as const;
+
+/** Valores no secretos antes/después, para el diff del historial. */
+export function settingsAuditValues(
+  before: ResolvedSettings,
+  after: ResolvedSettings,
+): { before: Record<string, string>; after: Record<string, string> } {
+  return {
+    before: {
+      "ai.provider": before.ai.provider.value,
+      "ai.model": before.ai.model.value,
+    },
+    after: {
+      "ai.provider": after.ai.provider.value,
+      "ai.model": after.ai.model.value,
+    },
+  };
+}

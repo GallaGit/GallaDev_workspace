@@ -6,7 +6,13 @@ import {
   toPublicSettings,
   validateSettingsPatch,
 } from "@/lib/settings";
-import { settingsAuditChanges } from "@/lib/settings/audit";
+import {
+  SETTINGS_SAFE_FIELDS,
+  settingsAuditChanges,
+  settingsAuditValues,
+} from "@/lib/settings/audit";
+import { logAudit } from "@/lib/audit/log-audit";
+import { buildAuditDiff } from "@/lib/audit/audit-diff";
 import type { SettingsPatch } from "@/lib/settings/types";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +40,23 @@ export async function PATCH(request: Request) {
     const before = service.getRaw();
     const raw = service.patch(patch);
     const actor = await getApiSession();
-    logConfigChange(actor?.id ?? "unknown", settingsAuditChanges(before, raw));
+    const changed = settingsAuditChanges(before, raw);
+    logConfigChange(actor?.id ?? "unknown", changed);
+    if (actor && changed.length > 0) {
+      const values = settingsAuditValues(before, raw);
+      await logAudit({
+        actor,
+        action: "settings.changed",
+        entity: "settings",
+        entityId: "workspace",
+        diff: buildAuditDiff(
+          changed,
+          SETTINGS_SAFE_FIELDS,
+          values.before,
+          values.after,
+        ),
+      });
+    }
     return NextResponse.json(toPublicSettings(raw));
   } catch (e) {
     const message =

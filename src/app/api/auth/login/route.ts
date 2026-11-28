@@ -13,6 +13,8 @@ import {
 import { visitorCookieOptions } from "@/lib/demo/cookie";
 import { VISITOR_COOKIE } from "@/lib/demo/config";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
+import { isAppRole } from "@/lib/auth";
+import { logAudit } from "@/lib/audit/log-audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -79,11 +81,34 @@ export async function POST(request: Request) {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: rawEmail,
       password,
     });
     if (error) return json(401, LOGIN_GENERIC_ERROR);
+    const user = data?.user;
+    if (user) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        await logAudit({
+          actor: {
+            id: user.id,
+            email: user.email ?? rawEmail,
+            role: isAppRole(profile?.role) ? profile.role : null,
+          },
+          action: "auth.login",
+          entity: "session",
+          entityId: user.id,
+          changedFields: [],
+        });
+      } catch {
+        // El historial nunca bloquea el acceso.
+      }
+    }
   } catch (e) {
     const message = e instanceof Error ? e.message : "";
     if (message.includes("no configurados")) {
