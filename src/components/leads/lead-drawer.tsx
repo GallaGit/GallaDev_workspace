@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmailEditor } from "@/components/leads/email-editor";
 import { AiAnalysisPanel } from "@/components/leads/ai-analysis-panel";
+import { LeadHistorySection } from "@/components/audit/lead-history-section";
 import { LeadEmailsSection } from "@/components/leads/lead-emails-section";
 import { resolvePainAnalysis } from "@/lib/ai/pain-analysis";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/domain/lead";
@@ -673,6 +674,8 @@ function LeadDrawerBody({
                 </ul>
               )}
             </Section>
+
+            {!isVisitor ? <LeadHistorySection leadId={lead.id} /> : null}
           </div>
         ) : (
           <p className="p-4 text-(--muted-fg)">{t("notFound")}</p>

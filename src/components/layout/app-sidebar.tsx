@@ -126,6 +126,11 @@ export function AppSidebar() {
     }
     setAuthFlash("goodbye");
     try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // El historial es best-effort; la salida continúa.
+    }
+    try {
       const supabase = createSupabaseBrowserClient();
       await supabase.auth.signOut();
     } catch {

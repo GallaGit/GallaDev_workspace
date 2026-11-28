@@ -1,10 +1,11 @@
-# Audit Trail (Who Did What) — Future Requirement
+# Audit Trail (Who Did What)
 
-> **Status:** specified, not implemented · **Updated:** 2026-09-25
-> **Prerequisite:** met. Per-user identity exists (Supabase Auth email +
-> password, `profiles.role` of Admin / Seller / Viewer, PR #37 and #44).
-> The audit log itself is still not implemented. Do not present this as
-> current behavior: mutations are not written to `audit_log`.
+> **Status:** partially implemented (first delivery) · **Updated:** 2026-11-28
+> **Migrations:** `20261024120000_audit_log.sql` (table) and
+> `20261128120000_audit_log_hardening.sql` (hardening, columns and RLS).
+> Ociel applies them by hand in production.
+> **Remaining (second delivery):** Correo, lead merges and AI analysis
+> (see §6).
 
 ## 1. Goal
 
@@ -14,59 +15,90 @@ AI analysis, reassignments, settings changes, and logins. This is an
 operational and trust requirement for team work, and a precondition for
 any future billing or per-user SLA reporting.
 
-## 2. Scope (when implemented)
+## 2. What is recorded today (first delivery)
 
-Recorded per event:
+| Action (`action`) | Source | Diff |
+| --- | --- | --- |
+| `lead.created` | `POST /api/leads` | field names |
+| `lead.status_changed` | `PATCH /api/leads/:id` and `PATCH /api/leads` (bulk) | status before→after |
+| `lead.reassigned` | same | owner before→after |
+| `lead.note_edited` | same (`notes`/`notesOverflow`) | field name only |
+| `lead.updated` | same (other fields) | safe fields before→after; others by name only |
+| `lead.archived` | `DELETE /api/leads/:id` | `["archived"]` |
+| `team.role_changed` | `PATCH /api/team` | role before→after |
+| `settings.changed` | `PATCH /api/settings` | `ai.provider` and `ai.model` before→after; API keys by name only |
+| `auth.login` | `POST /api/auth/login` (successful logins only) | empty |
+| `auth.logout` | `POST /api/auth/logout` (sidebar and "sign out everywhere") | empty |
 
-- **actor**: `auth.users.id` + email + role at event time
-- **action**: e.g. `lead.status_changed`, `lead.note_edited`,
-  `lead.email_marked`, `lead.archived`, `lead.merged`,
-  `lead.ai_analyzed`, `lead.reassigned`, `settings.changed`,
-  `auth.login`, `auth.logout`
-- **entity**: table + row id (lead id, etc.)
-- **before/after**: minimal diff (old value → new value), never secrets
-- **at**: server timestamp
+Each row stores: `actor_id`, `actor_email`, `actor_role` (role at event
+time), `action`, `entity`, `entity_id`, `lead_id` (lead events only), `diff`
+and `created_at` (server time).
 
-Out of scope for the first version: real-time feed, export, retention
-policies beyond a documented default, and per-organization scoping UI
-(see §5).
+### Decisions
 
-## 3. Planned design
+- **Action names:** `entity.verb` as in the spec (`lead.status_changed`).
+  The closed CHECK was replaced by a format check
+  (`^[a-z][a-z_]*(\.[a-z][a-z_]*)?$`), so legacy rows (`create`, `update`,
+  `delete`, `role_change`) remain valid and the UI labels them.
+- **One row per mutation:** if a PATCH mixes fields, the action follows the
+  priority status > reassignment > note > other and the diff lists all
+  fields. Bulk PATCH writes one row per lead.
+- **Diff:** `{ "fields": [...], "changes": { field: { from, to } } }`.
+  `changes` only exists for the closed `LEAD_SAFE_FIELDS` list (status,
+  owner, favorite, archived, score, confidence, contact/follow-up dates),
+  role and non-secret settings. Email, phone, notes, messages, keys and any
+  other field store the field name only. Values are cut at 120 characters.
+- **Server-only writes:** `logAudit` uses `createSupabaseAdminClient`
+  (service_role) with the actor from `getApiSession`; it is never read from
+  the request body. An insert failure is logged and does not roll back the
+  mutation.
+- **No auditing** for demo visitors or when `AUTH_DISABLED` is on.
+- **Failed logins:** not recorded (out of this delivery).
 
-- New table `public.audit_log` (append-only; no UPDATE/DELETE policies
-  for app roles, inserts server-side only).
-- Columns include `actor_id uuid REFERENCES auth.users(id)`,
-  `actor_email text`, `actor_role app_role`, `action text`,
-  `entity_table text`, `entity_id uuid`, `diff jsonb`,
-  `org_id uuid NULL` (reserved for future multi-company; see §5),
-  `created_at timestamptz DEFAULT now()`.
-- RLS: Admin reads everything; Seller/Viewer read events on leads
-  visible to them (same visibility rule as `leads`); nobody edits.
-- Writes happen in the API routes after a successful mutation, using
-  the session user from `requireApiSession` (never trust a client-sent
-  actor). Fail-open for reads, fail-closed for writes: a logging
-  failure must not silently drop the business mutation, but it must be
-  surfaced (structured log + Sentry when available).
-- UI: per-lead timeline entry ("who did what") reusing the existing
-  activity timeline, plus an Admin-only global view with filters
-  (actor, action, date range). No new design system; Linear-compact
-  lists as elsewhere.
+## 3. Design
 
-## 4. Acceptance criteria (future)
+- `public.audit_log` is append-only: `anon` has no access; `authenticated`
+  has `SELECT` only; `service_role` has `SELECT` and `INSERT` only. No
+  insert policy.
+- Read RLS: **Admin** reads everything; **Seller and Viewer** read events
+  whose `lead_id` points to a lead they can see (the `EXISTS` over
+  `public.leads` applies the same RLS as leads: Seller only their own,
+  Viewer all); non-lead events (settings, login, roles) are Admin-only.
+- API: `GET /api/leads/:id/history` (any signed-in role, filtered by RLS)
+  and `GET /api/audit` (Admin only; filters `actor`, `action`, `from`, `to`,
+  `page`; 25 per page).
+- UI: a "History" section on the lead card (compact: who, what, when,
+  before→after) and an Admin global view in Settings → "Change history"
+  with user, action and date filters plus pagination. ES/EN i18n
+  (`messages/*.json`, `audit` block).
+- Owners are shown by email to Admin only; Seller and Viewer see "You" or
+  "Someone else".
 
-- Every mutation in §2 creates exactly one `audit_log` row with a
-  correct actor, including actions performed via bulk PATCH and merge.
-- An Admin can list events filtered by actor/action/date; a Seller
+## 4. Acceptance criteria
+
+- [x] Every mutation in §2 creates a row with the correct actor, including
+  bulk PATCH (one per lead).
+- [x] An Admin can list events filtered by actor/action/date; a Seller
   cannot see events on leads outside their visibility.
-- Direct PostgREST writes to `audit_log` with an app-role key are
-  rejected (append-only enforced by RLS).
-- Automated tests cover actor attribution for status change, note
-  edit, and reassignment.
+- [x] Direct PostgREST writes with an app-role key are rejected.
+- [x] Tests: attribution for status change, note edit (field name only) and
+  reassignment (`src/lib/audit/*.test.ts`), component
+  (`src/components/audit`), migration and E2E against local Supabase
+  (`tests/e2e/audit-trail.spec.ts`).
+- [ ] Correo, merges and AI analysis (second delivery).
 
 ## 5. Multi-company note
 
-If the workspace ever serves external companies, `org_id` scopes
-events per organization (Model A: shared DB + tenant column) or each
-company's own database carries its own `audit_log` (Model B: one
-project per company, same migrations). No decision needed now; the
-nullable column keeps both paths open.
+If the workspace ever serves external companies, `org_id` scopes events per
+organization (Model A: shared DB + tenant column) or each company's own
+database carries its own `audit_log` (Model B: one project per company, same
+migrations). No decision needed now; the nullable `org_id` column does
+**not** exist yet and would be added by a migration if needed.
+
+## 6. Second delivery (pending)
+
+- **Correo:** `lead.email_marked`, sending, thread link/unlink.
+- **Merges:** `lead.merged` (`src/app/api/leads/merge` does not audit today).
+- **AI analysis:** `lead.ai_analyzed` (`analyze`, `pain-analysis`, `score` routes).
+- Failed login attempts, export, real-time feed and a history retention
+  policy remain out of scope.

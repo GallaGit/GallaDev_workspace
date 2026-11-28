@@ -1,48 +1,65 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isVisitorRequest } from "@/lib/demo/visitor-request";
+import type { AppRole } from "@/lib/auth";
+import { isAuthDisabled } from "@/lib/auth";
+import type { AuditAction, AuditDiff } from "./audit-diff";
+import { auditFieldNames } from "./audit-diff";
 
-/** Sanitize to a sorted, de-duplicated list of field names (never values). */
-export function auditFieldNames(fields: readonly string[] | undefined): string[] {
-  if (!fields) return [];
-  return Array.from(
-    new Set(fields.filter((f) => typeof f === "string" && f.length > 0 && f.length <= 64)),
-  ).sort();
+export { auditFieldNames } from "./audit-diff";
+export type { AuditAction } from "./audit-diff";
+
+/** Actor tomado SIEMPRE de la sesión del servidor, nunca del cliente. */
+export interface AuditActor {
+  id: string;
+  email: string | null;
+  role: AppRole | null;
 }
 
-export type AuditAction = "create" | "update" | "delete" | "role_change";
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Inserta una fila en `audit_log` con service_role (el rol de la app no
+ * tiene INSERT). Un fallo se registra en log y no rompe la mutación.
+ */
 export async function logAudit(entry: {
-  actorId: string;
+  actor: AuditActor;
   action: AuditAction;
   entity: string;
   entityId: string;
-  /** Names of changed fields only. Values are never stored (no PII). */
+  diff?: AuditDiff;
+  /** Atajo: solo nombres de campo. */
   changedFields?: readonly string[];
 }): Promise<void> {
   try {
-    if (process.env.AUTH_DISABLED === "true") {
-      return;
-    }
-    if (await isVisitorRequest()) {
-      return;
-    }
+    if (isAuthDisabled()) return;
+    if (await isVisitorRequest()) return;
 
-    const sb = await createSupabaseServerClient();
+    const diff: AuditDiff = entry.diff ?? {
+      fields: auditFieldNames(entry.changedFields),
+    };
+    const sb = createSupabaseAdminClient();
     const { error } = await sb.from("audit_log").insert({
-      actor_id: entry.actorId,
+      actor_id: entry.actor.id,
+      actor_email: entry.actor.email,
+      actor_role: entry.actor.role,
       action: entry.action,
       entity: entry.entity,
       entity_id: entry.entityId,
-      diff: { fields: auditFieldNames(entry.changedFields) },
+      lead_id:
+        entry.entity === "lead" && UUID_RE.test(entry.entityId)
+          ? entry.entityId
+          : null,
+      diff,
     });
 
     if (error) {
-      console.warn("[audit] insert failed:", error.message);
+      console.error("[audit] insert failed:", error.message);
     }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.warn("[audit] error:", message);
+    console.error("[audit] error:", message);
   }
 }

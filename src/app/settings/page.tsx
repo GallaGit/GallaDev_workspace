@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { SettingsIntegrations } from "@/components/settings/settings-integrations";
 import { SettingsSignatures } from "@/components/settings/settings-signatures";
 import { SettingsSecurity } from "@/components/settings/settings-security";
+import { SettingsAuditLog } from "@/components/settings/settings-audit-log";
 import { SettingsTeam } from "@/components/settings/settings-team";
 
 export default function SettingsPage() {
@@ -18,6 +19,7 @@ export default function SettingsPage() {
           <SettingsTeam />
           <SettingsIntegrations />
           <SettingsSignatures />
+          <SettingsAuditLog />
           <SettingsSecurity />
         </div>
       </div>

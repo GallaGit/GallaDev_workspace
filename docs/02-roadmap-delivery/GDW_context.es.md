@@ -61,14 +61,15 @@ Convive con «Entrar como visitante». El título visible es «¿Qué es?» en e
 - **Tests E2E de Viewer (403).** Las credenciales E2E de CI son solo Admin y Seller (`E2E_ADMIN_*`, `E2E_SELLER_*`, más `E2E_TEST_*`). No hay secreto de Viewer, así que los 403 de escritura los cubren tests unitarios (`src/lib/auth/rbac-routes.test.ts`) y no Playwright.
 - ~~**Rate limiting distribuido.**~~ **Hecho (commit `657c539`).** `src/lib/rate-limit.ts` usa un cupo persistente con Upstash (`@upstash/ratelimit`) cuando está configurado, con fallback en memoria por instancia.
 - ~~**Retención de datos personales.**~~ **Hecho (commit `833e856`).** Borrado automático de datos personales (12 meses / 6 años).
-- **Historial de auditoría.** Especificado, no implementado. Ver abajo.
+- **Historial de auditoría.** Primera entrega implementada (leads, ajustes, roles, login/logout). Pendientes Correo, fusiones y análisis IA. Ver abajo.
 
-### Planificado: historial de auditoría (especificado, no implementado)
+### Historial de auditoría (implementado parcialmente)
 
 El quién-hizo-qué para trabajo en equipo está especificado en
 [`audit-trail.es.md`](./audit-trail.es.md) (EN: [`audit-trail.md`](./audit-trail.md)).
-La identidad por usuario (Supabase Auth + `profiles.role`) ya existe. El
-registro de auditoría en sí, no. No tratarlo como comportamiento actual.
+La identidad por usuario (Supabase Auth + `profiles.role`) ya existe. La
+primera entrega registra eventos de leads, ajustes, roles y login/logout;
+Correo, fusiones y análisis IA son la segunda entrega.
 
 ### Propuesto — pendiente de validación
 

@@ -4,6 +4,7 @@ import { isAppRole, type AppRole } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { clientIp, consumeRateLimit, readCappedJson } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit/log-audit";
+import { buildAuditDiff } from "@/lib/audit/audit-diff";
 
 const ROLE_RATE_WINDOW_MS = 60_000;
 const ROLE_RATE_MAX = 20;
@@ -129,6 +130,11 @@ export async function PATCH(request: Request) {
 
   try {
     const sb = createSupabaseAdminClient();
+    const { data: prev } = await sb
+      .from("profiles")
+      .select("role")
+      .eq("id", id)
+      .maybeSingle();
     const { error } = await sb.from("profiles").upsert(
       { id, role: role satisfies AppRole },
       { onConflict: "id" },
@@ -140,11 +146,16 @@ export async function PATCH(request: Request) {
       );
     }
     await logAudit({
-      actorId: actor.id,
-      action: "role_change",
+      actor,
+      action: "team.role_changed",
       entity: "profile",
       entityId: id,
-      changedFields: ["role"],
+      diff: buildAuditDiff(
+        ["role"],
+        ["role"],
+        { role: prev?.role ?? null },
+        { role },
+      ),
     });
     return NextResponse.json({ ok: true, member: { id, role } });
   } catch (e) {
