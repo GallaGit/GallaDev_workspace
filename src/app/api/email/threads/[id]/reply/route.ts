@@ -5,6 +5,7 @@ import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { parseReplyBody } from "@/lib/email/email-payload";
 import { readOutboundRequest } from "@/lib/email/outbound-request";
+import { logEmailReplied } from "@/lib/audit/events";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/supabase/lead-lookup";
@@ -71,7 +72,7 @@ async function postReply(request: Request, ctx: Ctx) {
     const supabase = await createSupabaseServerClient();
     const { data: thread } = await supabase
       .from("email_threads")
-      .select("id")
+      .select("id, lead_id")
       .eq("id", id)
       .single();
 
@@ -130,6 +131,13 @@ async function postReply(request: Request, ctx: Ctx) {
 
     // Borrador de respuesta del hilo: se borra al enviar (RLS Admin).
     await supabase.from("email_drafts").delete().eq("thread_id", id);
+
+    await logEmailReplied({
+      threadId: id,
+      messageId: result.messageId,
+      leadId: (thread as { lead_id?: string | null }).lead_id ?? null,
+      attachmentCount: read.attachments?.length ?? 0,
+    });
 
     return NextResponse.json(
       { ok: true, messageId: result.messageId },

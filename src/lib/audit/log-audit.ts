@@ -12,7 +12,8 @@ export type { AuditAction } from "./audit-diff";
 
 /** Actor tomado SIEMPRE de la sesión del servidor, nunca del cliente. */
 export interface AuditActor {
-  id: string;
+  /** null = evento del sistema (p. ej. webhook entrante). */
+  id: string | null;
   email: string | null;
   role: AppRole | null;
 }
@@ -20,10 +21,21 @@ export interface AuditActor {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function resolveLeadId(entry: {
+  entity: string;
+  entityId: string;
+  leadId?: string | null;
+}): string | null {
+  if (entry.entity === "lead" && UUID_RE.test(entry.entityId)) return entry.entityId;
+  return entry.leadId && UUID_RE.test(entry.leadId) ? entry.leadId : null;
+}
+
 /**
  * Inserta una fila en `audit_log` con service_role (el rol de la app no
  * tiene INSERT). Un fallo se registra en log y no rompe la mutación.
  */
+export const AUDIT_SYSTEM_ACTOR: AuditActor = { id: null, email: null, role: null };
+
 export async function logAudit(entry: {
   actor: AuditActor;
   action: AuditAction;
@@ -32,6 +44,8 @@ export async function logAudit(entry: {
   diff?: AuditDiff;
   /** Atajo: solo nombres de campo. */
   changedFields?: readonly string[];
+  /** lead_id explícito para entidades que no son lead (p. ej. hilo de correo). */
+  leadId?: string | null;
 }): Promise<void> {
   try {
     if (isAuthDisabled()) return;
@@ -48,10 +62,7 @@ export async function logAudit(entry: {
       action: entry.action,
       entity: entry.entity,
       entity_id: entry.entityId,
-      lead_id:
-        entry.entity === "lead" && UUID_RE.test(entry.entityId)
-          ? entry.entityId
-          : null,
+      lead_id: resolveLeadId(entry),
       diff,
     });
 

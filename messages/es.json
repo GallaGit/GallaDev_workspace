@@ -846,6 +846,7 @@
     "showingLatest": "Se muestran los {count} más recientes.",
     "you": "Tú",
     "unknownActor": "Usuario desconocido",
+    "system": "Sistema",
     "anotherPerson": "Otra persona",
     "yes": "Sí",
     "no": "No",
@@ -874,6 +875,12 @@
       "settings_changed": "cambió los ajustes",
       "auth_login": "inició sesión",
       "auth_logout": "cerró sesión",
+      "email_received": "recibió un correo",
+      "email_replied": "respondió un correo",
+      "email_linked": "vinculó un correo a un lead",
+      "email_archived": "archivó o restauró un correo",
+      "lead_merged": "fusionó leads",
+      "lead_ai_analyzed": "analizó el lead con IA",
       "create": "creó",
       "update": "actualizó",
       "delete": "eliminó",
@@ -896,7 +903,9 @@
       "notes": "Notas",
       "notesOverflow": "Notas (extra)",
       "email": "Email",
-      "phone": "Teléfono"
+      "phone": "Teléfono",
+      "lead_id": "Lead",
+      "trashed": "Papelera"
     },
     "emptyValue": "—"
   }

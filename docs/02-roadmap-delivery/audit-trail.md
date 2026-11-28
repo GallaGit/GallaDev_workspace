@@ -1,11 +1,11 @@
 # Audit Trail (Who Did What)
 
-> **Status:** partially implemented (first delivery) · **Updated:** 2026-11-28
+> **Status:** implemented (first and second delivery) · **Updated:** 2026-11-28
 > **Migrations:** `20261024120000_audit_log.sql` (table) and
 > `20261128120000_audit_log_hardening.sql` (hardening, columns and RLS).
 > Ociel applies them by hand in production.
-> **Remaining (second delivery):** Correo, lead merges and AI analysis
-> (see §6).
+> The second delivery (Correo, merges and AI analysis) **adds no migration**
+> (the `action` format check already accepts the new names).
 
 ## 1. Goal
 
@@ -29,6 +29,21 @@ any future billing or per-user SLA reporting.
 | `settings.changed` | `PATCH /api/settings` | `ai.provider` and `ai.model` before→after; API keys by name only |
 | `auth.login` | `POST /api/auth/login` (successful logins only) | empty |
 | `auth.logout` | `POST /api/auth/logout` (sidebar and "sign out everywhere") | empty |
+| `email.received` | `POST /api/email/inbound` (webhook; actor = system, null `actor_id`) | `meta`: `messageId`, subject (≤80 chars), attachment count |
+| `email.replied` | `POST /api/email/threads/:id/reply` (only when sent) | `meta`: `messageId`, attachment count; thread `lead_id` |
+| `email.linked` | `PATCH /api/email/threads/:id` with `lead_id` (link/unlink) | `["lead_id"]`, `meta.linked` |
+| `email.archived` | `PATCH /api/email/threads/:id` and `PATCH /api/email/threads` (bulk) with `archived`/`trashed` | `meta.state`: `archived`, `unarchived`, `trashed`, `restored` |
+| `lead.merged` | `POST /api/leads/merge` | filled fields by name; `meta.mergedIds` |
+| `lead.ai_analyzed` | `runLeadAnalyze` (`/api/leads/:id/analyze` and `/api/leads/pain-analysis` with id) | `meta`: `model`, `success` |
+
+Email events use `entity = email_thread` and `entity_id` = thread id; they
+only fill `lead_id` when the thread is linked (so a Seller sees them in the
+lead History). Bodies, attachment contents and email addresses are never
+stored: only ids, a truncated subject and counts. The diff supports `meta`
+(ids, counts, model name; never AI prompts or outputs). In the UI the webhook
+actor is shown as "System". The Admin filter is by action, so the new actions
+appear in the dropdown automatically. An AI analysis failure (provider error
+or empty/invalid answer) records `success: false`.
 
 Each row stores: `actor_id`, `actor_email`, `actor_role` (role at event
 time), `action`, `entity`, `entity_id`, `lead_id` (lead events only), `diff`
@@ -85,7 +100,7 @@ and `created_at` (server time).
   reassignment (`src/lib/audit/*.test.ts`), component
   (`src/components/audit`), migration and E2E against local Supabase
   (`tests/e2e/audit-trail.spec.ts`).
-- [ ] Correo, merges and AI analysis (second delivery).
+- [x] Correo, merges and AI analysis (second delivery; tests in `src/lib/audit/events.test.ts` and the route tests).
 
 ## 5. Multi-company note
 
@@ -95,10 +110,9 @@ database carries its own `audit_log` (Model B: one project per company, same
 migrations). No decision needed now; the nullable `org_id` column does
 **not** exist yet and would be added by a migration if needed.
 
-## 6. Second delivery (pending)
+## 6. Out of scope
 
-- **Correo:** `lead.email_marked`, sending, thread link/unlink.
-- **Merges:** `lead.merged` (`src/app/api/leads/merge` does not audit today).
-- **AI analysis:** `lead.ai_analyzed` (`analyze`, `pain-analysis`, `score` routes).
+- Automatic thread linking (`autoLinkThread`, system) and `score` are not
+  audited yet.
 - Failed login attempts, export, real-time feed and a history retention
   policy remain out of scope.

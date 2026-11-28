@@ -3,6 +3,7 @@ import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { verifyInboundWebhook } from "@/lib/email/inbound-verify";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { withJsonErrors } from "@/lib/api-handler";
+import { logEmailReceived } from "@/lib/audit/events";
 import { errorClassOf, logRouteError, requestIdFrom } from "@/lib/route-log";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,13 @@ async function postInbound(request: Request) {
         { status: 500 },
       );
     }
+
+    await logEmailReceived({
+      threadId: result.threadId,
+      messageId: result.messageId,
+      subject: verification.event.data.subject,
+      attachmentCount: verification.event.data.attachments?.length ?? 0,
+    });
 
     return NextResponse.json(
       { ok: true, threadId: result.threadId, messageId: result.messageId },

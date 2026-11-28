@@ -16,6 +16,12 @@ const KNOWN_ACTIONS = new Set([
   "settings.changed",
   "auth.login",
   "auth.logout",
+  "email.received",
+  "email.replied",
+  "email.linked",
+  "email.archived",
+  "lead.merged",
+  "lead.ai_analyzed",
   "create",
   "update",
   "delete",
@@ -40,6 +46,8 @@ const KNOWN_FIELDS = new Set([
   "notesOverflow",
   "email",
   "phone",
+  "lead_id",
+  "trashed",
 ]);
 
 export function AuditEntryItem({
@@ -60,7 +68,11 @@ export function AuditEntryItem({
   const actor =
     entry.actor_id && entry.actor_id === viewerId
       ? t("you")
-      : (entry.actor_email ?? t("unknownActor"));
+      : entry.actor_email
+        ? entry.actor_email
+        : entry.action === "email.received"
+          ? t("system")
+          : t("unknownActor");
   const action = KNOWN_ACTIONS.has(entry.action)
     ? t(`actions.${entry.action.replace(".", "_")}`)
     : entry.action;

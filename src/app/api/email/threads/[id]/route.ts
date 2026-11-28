@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logEmailThreadChange } from "@/lib/audit/events";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { threadUpdateFromBody } from "@/lib/email/thread-patch";
 import { threadDbPatch } from "@/lib/email/thread-state";
@@ -132,6 +133,11 @@ async function patchThread(request: Request, ctx: Ctx) {
       );
     }
 
+    await logEmailThreadChange(
+      [id],
+      parsed.patch,
+      (thread as { lead_id?: string | null }).lead_id ?? null,
+    );
     return NextResponse.json({ ok: true, thread });
   } catch (e) {
     logRouteError({

@@ -8,6 +8,7 @@ const sendCompose = vi.hoisted(() => vi.fn());
 const sendReply = vi.hoisted(() => vi.fn());
 const sendForward = vi.hoisted(() => vi.fn());
 const createSupabaseServerClient = vi.hoisted(() => vi.fn());
+const logEmailReplied = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("@/lib/api-auth", () => ({ requireCorreoAccess }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }));
@@ -17,6 +18,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => ({
   consumeRateLimit,
 }));
 vi.mock("@/lib/email/send-compose", () => ({ sendCompose }));
+vi.mock("@/lib/audit/events", () => ({ logEmailReplied }));
 vi.mock("@/lib/email/send-reply", () => ({ sendReply }));
 vi.mock("@/lib/email/send-forward", () => ({ sendForward }));
 
@@ -25,6 +27,7 @@ import { POST as reply } from "@/app/api/email/threads/[id]/reply/route";
 import { POST as forward } from "@/app/api/email/threads/[id]/forward/route";
 
 const THREAD = "ed07cdd4-c542-4f9a-8b8e-bd73e358c6cd";
+const LEAD = "33333333-3333-4333-8333-333333333333";
 
 function multipartRequest(url: string, payload: unknown, files: { name: string; content: string }[]): Request {
   const boundary = "----gdw-route-boundary";
@@ -66,7 +69,9 @@ beforeEach(() => {
   sendForward.mockResolvedValue({ sent: true, messageId: "m1", attached: 0, missing: [] });
   createSupabaseServerClient.mockResolvedValue({
     from: () => ({
-      select: () => ({ eq: () => ({ single: async () => ({ data: { id: THREAD } }) }) }),
+      select: () => ({
+        eq: () => ({ single: async () => ({ data: { id: THREAD, lead_id: LEAD } }) }),
+      }),
       delete: () => ({ eq: async () => ({ error: null }) }),
     }),
   });
@@ -157,6 +162,22 @@ describe("POST /api/email/threads/[id]/reply y /forward", () => {
     const input = sendReply.mock.calls[0][1];
     expect(input).toMatchObject({ threadId: THREAD, cc: ["ana@example.com"], bcc: ["jefe@example.com"] });
     expect(input.attachments).toHaveLength(1);
+    expect(logEmailReplied).toHaveBeenCalledWith({
+      threadId: THREAD,
+      messageId: "m1",
+      leadId: LEAD,
+      attachmentCount: 1,
+    });
+  });
+
+  it("reply fallido no registra auditoría", async () => {
+    sendReply.mockResolvedValue({ sent: false, reason: "send-failed" });
+    const res = await reply(
+      jsonRequest(`http://localhost/api/email/threads/${THREAD}/reply`, { text: "Hola" }),
+      ctx,
+    );
+    expect(res.status).toBe(502);
+    expect(logEmailReplied).not.toHaveBeenCalled();
   });
 
   it("forward: Cc y adjuntos llegan a sendForward", async () => {

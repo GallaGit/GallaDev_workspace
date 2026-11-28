@@ -19,6 +19,8 @@ const storeInboundEmail = vi.hoisted(() =>
   })),
 );
 
+const logEmailReceived = vi.hoisted(() => vi.fn(async () => undefined));
+
 const verifyInboundWebhook = vi.hoisted(() =>
   vi.fn<() => VerifyResult | VerifyError>(() => ({
     ok: true as const,
@@ -39,6 +41,7 @@ vi.mock("@/lib/email/inbound-verify", () => ({
   verifyInboundWebhook,
 }));
 
+vi.mock("@/lib/audit/events", () => ({ logEmailReceived }));
 vi.mock("@/lib/email/inbound-store", () => ({
   storeInboundEmail,
 }));
@@ -106,12 +109,19 @@ describe("POST /api/email/inbound", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.threadId).toBe("thread-1");
+    expect(logEmailReceived).toHaveBeenCalledWith({
+      threadId: "thread-1",
+      messageId: "msg-1",
+      subject: "Hola",
+      attachmentCount: 0,
+    });
   });
 
   it("200 on duplicate", async () => {
     storeInboundEmail.mockResolvedValue({ stored: false, reason: "duplicate" });
     const { POST } = await import("@/app/api/email/inbound/route");
     const res = await POST(webhookRequest());
+    expect(logEmailReceived).not.toHaveBeenCalled();
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCorreoAccess } from "@/lib/api-auth";
 import { withJsonErrors } from "@/lib/api-handler";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logEmailThreadChange } from "@/lib/audit/events";
 import { logRouteError, errorClassOf, requestIdFrom } from "@/lib/route-log";
 import { readCappedJson } from "@/lib/rate-limit";
 import { parseThreadBulkPatch } from "@/lib/email/email-payload";
@@ -212,6 +213,7 @@ async function bulkPatchThreads(request: Request) {
     }
 
     const updated = (data ?? []).map((row: { id: string }) => row.id);
+    await logEmailThreadChange(updated, parsed.value.patch);
     return NextResponse.json({ ok: true, updated });
   } catch (e) {
     logRouteError({

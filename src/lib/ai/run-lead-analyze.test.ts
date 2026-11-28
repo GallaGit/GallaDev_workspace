@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { analyzeBusinessPains } from "@/lib/ai/analyze-lead-pains";
 
 vi.mock("server-only", () => ({}));
 
@@ -18,6 +19,13 @@ vi.mock("@/lib/ai/analyze-lead-pains", () => ({
     code = "invalid";
   },
 }));
+
+vi.mock("@/lib/api-auth", () => ({
+  getApiSession: vi.fn(async () => ({ id: "u1", email: "a@b.c", role: "Admin" })),
+}));
+
+const logLeadAiAnalyzed = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("@/lib/audit/events", () => ({ logLeadAiAnalyzed }));
 
 vi.mock("@/lib/settings/service", () => ({
   getSettingsService: () => ({
@@ -91,5 +99,48 @@ describe("runLeadAnalyze repository", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe("runLeadAnalyze auditoría (lead.ai_analyzed)", () => {
+  const lead = { id: "lead-7", companyName: "Acme", responsibleId: "u1" };
+  const repository = {
+    get: vi.fn(async () => lead),
+    update: vi.fn(async () => lead),
+    getActivity: vi.fn(async () => []),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("éxito: registra modelo y success=true", async () => {
+    vi.mocked(analyzeBusinessPains).mockResolvedValue({
+      evidence: ["a"],
+      inference: [],
+      speculation: [],
+    });
+    const { runLeadAnalyze } = await import("./run-lead-analyze");
+    const result = await runLeadAnalyze("lead-7", { force: true, repository: repository as never });
+    expect(result.ok).toBe(true);
+    expect(logLeadAiAnalyzed).toHaveBeenCalledWith({
+      leadId: "lead-7",
+      model: "test-model",
+      success: true,
+    });
+  });
+
+  it("fallo del proveedor: registra success=false sin el mensaje", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(analyzeBusinessPains).mockRejectedValue(new Error("boom"));
+    const { runLeadAnalyze } = await import("./run-lead-analyze");
+    const result = await runLeadAnalyze("lead-7", { force: true, repository: repository as never });
+    expect(result).toMatchObject({ ok: false, status: 502 });
+    expect(logLeadAiAnalyzed).toHaveBeenCalledWith({
+      leadId: "lead-7",
+      model: "test-model",
+      success: false,
+    });
+    spy.mockRestore();
   });
 });

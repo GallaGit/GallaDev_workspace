@@ -4,8 +4,10 @@ const requireCorreoAccess = vi.hoisted(() =>
   vi.fn(async (): Promise<Response | null> => null),
 );
 const createSupabaseServerClient = vi.hoisted(() => vi.fn());
+const logEmailThreadChange = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("@/lib/api-auth", () => ({ requireCorreoAccess }));
+vi.mock("@/lib/audit/events", () => ({ logEmailThreadChange }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient }));
 vi.mock("@/lib/email/sanitize-email-html", () => ({
   prepareEmailHtml: (value: string | null) => value,
@@ -97,6 +99,7 @@ describe("PATCH /api/email/threads (masivo)", () => {
     expect(typeof patch.archived_at).toBe("string");
     expect(patch.trashed_at).toBeNull();
     expect(fake.calls.find((c) => c.method === "in")?.args).toEqual(["id", [A, B]]);
+    expect(logEmailThreadChange).toHaveBeenCalledWith([A], { archived: true });
   });
 
   it("error de Supabase responde 500 sin filtrar el mensaje", async () => {
@@ -137,6 +140,11 @@ describe("PATCH /api/email/threads/[id]", () => {
     expect(patch).not.toHaveProperty("archived_at");
     expect(patch).not.toHaveProperty("trashed");
     expect(fake.calls.find((c) => c.method === "eq")?.args).toEqual(["id", A]);
+    expect(logEmailThreadChange).toHaveBeenCalledWith(
+      [A],
+      { trashed: true, is_read: true },
+      null,
+    );
   });
 });
 
@@ -161,6 +169,7 @@ describe("PATCH /api/email/threads/[id] (vinculación a lead)", () => {
     const { res, update } = await patchLead({ lead_id: B });
     expect(res.status).toBe(200);
     expect(update).toEqual({ lead_id: B, lead_link_source: "manual" });
+    expect(logEmailThreadChange).toHaveBeenCalledWith([A], { lead_id: B }, null);
   });
 
   it("desvincular también es manual (el auto-vinculado no lo revierte)", async () => {
